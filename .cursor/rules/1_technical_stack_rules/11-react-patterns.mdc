@@ -1,0 +1,91 @@
+---
+description: React 19 and Modern Patterns Rule
+globs: ["**/*.tsx"]
+alwaysApply: true
+---
+## Description
+Enforces the use of modern React 19 patterns, hooks, and best practices within the Next.js App Router context.
+
+## Rule
+1. **Component Types**:
+   - Default to React Server Components (RSCs) for data fetching and non-interactive UI.
+   - Use Client Components (`'use client'`) *only* when necessary (event handlers, state hooks like `useState`/`useEffect`, browser APIs, specific libraries). Clearly justify the need for `'use client'`.
+2. **Hooks**:
+   - Utilize React 19 hooks where appropriate: `useOptimistic` for optimistic UI updates, `useFormStatus` for form pending states, `useActionState` for form actions with state updates.
+   - Use standard hooks (`useState`, `useEffect`, `useContext`, `useReducer`, `useCallback`, `useMemo`, `useRef`) correctly. Minimize `useEffect` usage; prefer derived state or server-driven updates where possible.
+3. **Composition**: Favor component composition over inheritance. Build complex UI by combining smaller, reusable components.
+4. **Props**: Define clear and strictly typed prop interfaces (using TypeScript rule `10-typescript-strict.mdc`). Use destructuring for props. Avoid prop drilling; use Context or state management solutions for deeply nested data.
+5. **Keys**: Always provide stable and unique `key` props when rendering lists of components. Avoid using array indices as keys if the list can change order or items can be inserted/deleted.
+6. **Performance**:
+   - Use `React.memo` judiciously for components that render often with the same props.
+   - Use `useCallback` and `useMemo` to optimize expensive calculations or prevent unnecessary re-renders caused by function/object identity changes, but only when profiling shows a benefit.
+   - Avoid anonymous functions directly in props (e.g., `onClick={() => ...}`) inside loops or frequently re-rendering components; use `useCallback` or define stable functions outside the render path.
+7. **Server Actions**: Utilize Next.js Server Actions for form submissions and mutations, leveraging hooks like `useFormStatus` and `useActionState`.
+8. **Suspense**: Use `Suspense` boundaries effectively for handling loading states, especially with Server Components and asynchronous operations.
+
+## Actions
+- **Reject**: Using Client Components without clear justification (e.g., just for simple static rendering).
+- **Suggest**: Converting Client Components to Server Components if no client-side interactivity or hooks are needed.
+- **Suggest**: Using React 19 hooks (`useOptimistic`, `useFormStatus`, `useActionState`) where applicable, especially with forms and mutations.
+- **Reject**: Missing `key` props in lists or using array indices inappropriately.
+- **Suggest**: Using `React.memo`, `useCallback`, `useMemo` for specific performance optimizations, but caution against premature optimization.
+- **Suggest**: Using Server Actions for form handling.
+
+## Examples
+✅ Correct (Server Component):
+```typescript
+// src/app/components/UserProfile.tsx
+import { getUserData } from '@/app/lib/db';
+
+async function UserProfile({ userId }: { userId: string }) {
+  const user = await getUserData(userId); // Data fetching in RSC
+
+  if (!user) {
+    return <div>User not found</div>;
+  }
+
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      {/* ... other user details */}
+    </div>
+  );
+}
+export default UserProfile;
+```
+
+✅ Correct (Client Component with Justification):
+```typescript
+// src/app/components/InteractiveButton.tsx
+'use client'; // Justification: Uses useState and onClick
+
+import { useState } from 'react';
+
+export function InteractiveButton() {
+  const [count, setCount] = useState(0);
+  return (
+    <button onClick={() => setCount(count + 1)}>
+      Clicked {count} times
+    </button>
+  );
+}
+```
+
+❌ Incorrect:
+```typescript
+'use client'; // Unnecessary client component
+
+function StaticHeader({ title }: { title: string }) {
+  // No client hooks or interactivity used here
+  return <h1>{title}</h1>;
+}
+
+function UserList({ users }: { users: User[] }) {
+  return (
+    <ul>
+      {/* Missing key prop */}
+      {users.map(user => <li>{user.name}</li>)}
+    </ul>
+  );
+}
+```

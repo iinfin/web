@@ -1,0 +1,88 @@
+---
+description: Robust Error Handling Rule
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+## Description
+Ensures implementation of robust error handling strategies throughout the application.
+
+## Rule
+1.  **Use `Result` Type**: For functions that can fail recoverably (e.g., data fetching, parsing), return `Result<T, E>` where `E` is a specific, typed error. Avoid returning `null` or `undefined` to indicate errors.
+2.  **Custom Error Types**: Define custom error enums or structs (potentially using libraries like `neverthrow` or simple unions/structs) to represent specific failure modes. This aids in exhaustive error handling. Avoid throwing generic `Error` objects or strings.
+3.  **Error Propagation**: Use the `?` operator or explicit `match` statements for propagating errors up the call stack in functions returning `Result`.
+4.  **Error Boundaries**: In React (Client Components), use Error Boundaries (`componentDidCatch` or libraries like `react-error-boundary`) to catch rendering errors in component subtrees and display fallback UI.
+5.  **`.tsx` Error Handling**:
+    *   Handle promise rejections from data fetching or Server Actions using `try...catch` in async components/functions or `.catch()` on promises.
+    *   Provide user-friendly error messages or fallback UI states when operations fail (e.g., form submission errors, data loading errors). Don't expose raw error details directly to the user unless intended.
+    *   Use `error.tsx` files in the App Router for handling errors bubbling up from child segments.
+6.  **Logging**: Log errors with sufficient context (e.g., operation name, parameters, stack trace if available) using the project's logger (`src/app/utils/logger.ts`). Avoid simple `console.error` without context.
+7.  **Server Action Errors**: Server Actions should return structured error information (e.g., `{ success: false, error: 'message' }`) that can be handled by Client Components using `useActionState` or `useFormState`.
+
+## Actions
+- **Reject**: Functions returning `null`/`undefined` or `any` to signify errors; suggest using `Result<T, E>`.
+- **Suggest**: Defining custom error types/enums instead of throwing generic `Error` or strings.
+- **Reject**: Unhandled promise rejections.
+- **Suggest**: Wrapping component sections prone to errors in Error Boundaries (Client Components).
+- **Suggest**: Implementing `error.tsx` files for App Router segments.
+- **Suggest**: Logging errors with context using the project logger.
+
+## Examples
+✅ Correct (Custom Error Type and Result):
+```typescript
+// src/app/lib/db/types.ts
+export type DbError =
+  | { type: 'NotFound'; resource: string }
+  | { type: 'ConnectionError'; message: string }
+  | { type: 'QueryError'; query: string; message: string };
+
+// src/app/lib/db/index.ts
+import { type DbError } from './types';
+
+export async function getUser(id: string): Promise<Result<User, DbError>> {
+  try {
+    const user = await dbClient.query('...'); // Assume this can throw
+    if (!user) {
+      return { success: false, error: { type: 'NotFound', resource: `User ${id}` } };
+    }
+    return { success: true, data: user };
+  } catch (error) {
+    return { success: false, error: { type: 'QueryError', query: '...', message: error.message } };
+  }
+}
+
+// src/app/components/UserDisplay.tsx
+'use client';
+import { getUser, type DbError } from '@/app/lib/db';
+import { ErrorBoundary } from 'react-error-boundary';
+
+function UserComponent({ userId }: { userId: string }) {
+  // ... fetch user data using getUser ...
+  // ... handle Result<User, DbError> ...
+  if (result.success === false) {
+     // Display user-friendly error based on result.error.type
+     return <div>Error loading user: Could not find user.</div>;
+  }
+  // ... display user ...
+}
+
+function UserPage({ userId }: { userId: string }) {
+  return (
+    <ErrorBoundary FallbackComponent={ErrorFallback}>
+      <UserComponent userId={userId} />
+    </ErrorBoundary>
+  );
+}
+```
+
+❌ Incorrect:
+```typescript
+async function getUser(id: string) { // Missing Result return type
+  try {
+    const user = await dbClient.query('...');
+    return user; // Returns null/undefined on error implicitly?
+  } catch (error) {
+    console.error('DB Error:', error); // Raw console log, throws or returns undefined?
+    throw new Error("Database failed"); // Generic error
+  }
+}
+```

@@ -1,0 +1,119 @@
+---
+description: Web Application Security Best Practices (OWASP Inspired)
+globs: ["**/*.ts", "**/*.tsx", "src/app/**/route.ts", "src/middleware.ts"]
+alwaysApply: true
+---
+## Description
+Enforces security best practices inspired by OWASP guidelines within the Next.js/React/TypeScript context.
+
+## Rule
+1.  **Input Validation**:
+    *   Validate ALL inputs from users, APIs, or external sources on the server-side (Route Handlers, Server Actions, Server Components accessing data).
+    *   Use robust validation libraries (e.g., Zod, Yup) with strict schemas.
+    *   Validate data types, formats, lengths, ranges, and allowed characters.
+    *   Do not rely solely on client-side validation.
+2.  **Output Encoding**:
+    *   React automatically encodes content rendered in JSX, preventing most XSS. Be cautious when using `dangerouslySetInnerHTML`. Sanitize any HTML content passed to it using libraries like `dompurify`.
+    *   Encode data properly when inserting into different contexts (e.g., HTML attributes, JavaScript contexts, CSS).
+3.  **Cross-Site Scripting (XSS) Prevention**:
+    *   Avoid `dangerouslySetInnerHTML` unless absolutely necessary and with proper sanitization.
+    *   Set appropriate `Content-Security-Policy` (CSP) headers (via `next.config.ts` or middleware) to restrict script sources, styles, etc.
+    *   Validate and sanitize user-generated content before display.
+4.  **Authentication & Session Management**:
+    *   Use established, secure authentication libraries/providers (e.g., NextAuth.js, Clerk, Lucia Auth). Avoid rolling your own authentication.
+    *   Use secure session management techniques (e.g., HttpOnly, Secure cookies for tokens/session IDs).
+    *   Implement rate limiting on login and sensitive endpoints.
+    *   Enforce strong password policies if handling passwords directly (though OAuth/external providers are often better).
+5.  **Authorization (Access Control)**:
+    *   Implement authorization checks on the server-side (Server Components, Route Handlers, Server Actions) for every sensitive operation or data access.
+    *   Do not rely on hiding UI elements on the client-side for security.
+    *   Use role-based or attribute-based access control models.
+6.  **Security Headers**: Configure important security headers in `next.config.ts` or middleware: `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
+7.  **Dependency Management**:
+    *   Keep dependencies up-to-date. Regularly run `npm audit` or `yarn audit` to check for known vulnerabilities.
+    *   Use a `package-lock.json` or `yarn.lock` file to lock dependency versions.
+8.  **Server-Side Request Forgery (SSRF) Prevention**: If making server-side requests based on user input (e.g., fetching a URL provided by a user), validate the URL strictly, use allowlists for domains/IPs if possible, and configure network policies.
+9.  **Sensitive Data Exposure**:
+    *   Avoid logging sensitive information (passwords, API keys, PII).
+    *   Do not expose sensitive data to the client-side unless necessary. Filter data in Server Components or API routes.
+    *   Store secrets securely (environment variables, secrets management services), not in code or client-side bundles.
+
+## Actions
+- **Reject**: Use of `dangerouslySetInnerHTML` without clear evidence of input sanitization.
+- **Suggest**: Adding server-side input validation for data received from clients or external sources (Route Handlers, Server Actions).
+- **Suggest**: Implementing authorization checks before accessing protected resources or performing sensitive actions on the server.
+- **Info**: Remind to configure important security headers (`Content-Security-Policy`, etc.) in `next.config.ts` or middleware.
+- **Suggest**: Using established authentication libraries instead of custom implementations.
+- **Warn**: Potential exposure of sensitive data to the client-side; suggest filtering on the server.
+
+## Examples
+✅ Correct (Server Action with Validation/AuthZ):
+```typescript
+'use server';
+import { z } from 'zod';
+import { auth } from '@/lib/auth'; // Assume this checks session
+import { updateUserProfile } from '@/lib/db';
+
+const profileSchema = z.object({
+  userId: z.string().uuid(),
+  bio: z.string().max(200).optional(),
+});
+
+export async function updateProfileAction(formData: FormData) {
+  const session = await auth();
+  if (!session?.user) {
+    return { success: false, error: 'Unauthorized' };
+  }
+
+  const rawData = Object.fromEntries(formData.entries());
+  const parseResult = profileSchema.safeParse(rawData);
+
+  if (!parseResult.success) {
+    return { success: false, error: 'Invalid input', issues: parseResult.error.issues };
+  }
+
+  const { userId, bio } = parseResult.data;
+
+  // Authorization check
+  if (session.user.id !== userId) {
+    return { success: false, error: 'Forbidden' };
+  }
+
+  try {
+    await updateUserProfile(userId, { bio });
+    return { success: true };
+  } catch (error) {
+    // Log error securely
+    return { success: false, error: 'Failed to update profile' };
+  }
+}
+```
+
+❌ Incorrect (Client-side AuthZ, No Server Validation):
+```typescript
+'use client';
+import { useSession } from 'next-auth/react';
+
+function EditProfileForm({ userId, initialBio }: { userId: string; initialBio: string }) {
+  const { data: session } = useSession();
+
+  // Bad: Client-side check is insufficient for security
+  if (session?.user?.id !== userId) {
+    return <div>Unauthorized</div>; // Easily bypassed
+  }
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const bio = formData.get('bio') as string;
+
+    // Bad: Sending data to API without server-side validation/authZ
+    await fetch('/api/update-profile', {
+      method: 'POST',
+      body: JSON.stringify({ userId, bio }), // userId could be manipulated
+    });
+  };
+
+  return <form onSubmit={handleSubmit}>{/* ... */}</form>;
+}
+```

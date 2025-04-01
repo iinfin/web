@@ -1,0 +1,88 @@
+---
+description: Next.js 15 App Router Conventions Rule
+globs: ["src/app/**/page.tsx", "src/app/**/layout.tsx", "src/app/**/loading.tsx", "src/app/**/error.tsx", "src/app/**/not-found.tsx", "src/app/**/route.ts", "next.config.ts", "src/middleware.ts"]
+alwaysApply: true
+---
+## Description
+Enforces conventions and best practices specific to the Next.js 15 App Router.
+
+## Rule
+1.  **File Conventions**:
+    *   Use `page.tsx` for UI route segments.
+    *   Use `layout.tsx` for shared UI between segments. Root layout (`src/app/layout.tsx`) is mandatory.
+    *   Use `loading.tsx` for loading UI using React Suspense.
+    *   Use `error.tsx` for error UI using React Error Boundaries (must be a Client Component).
+    *   Use `not-found.tsx` for handling 404 errors within segments.
+    *   Use `route.ts` for API endpoints within the App Router.
+2.  **Server Components**: Default components within `src/app` are Server Components. Leverage this for direct data fetching, accessing server-only resources, and reducing client-side JavaScript.
+3.  **Client Components**: Mark components needing client-side interactivity or browser APIs with `'use client'`. Keep Client Components as small ("leaf") components as possible.
+4.  **Data Fetching**:
+    *   Prefer `fetch` with `cache` options (`force-cache`, `no-store`) or React `cache` function for data fetching in Server Components.
+    *   Use Route Handlers (`route.ts`) for API endpoints accessed by Client Components or external services.
+    *   Leverage Server Actions for mutations and form submissions.
+5.  **Metadata**: Use the Metadata API (`generateMetadata` function or static `metadata` object) in `layout.tsx` or `page.tsx` for managing `<head>` elements (title, description, meta tags). Avoid manual `<head>` management.
+6.  **Routing**: Use the `next/link` component for client-side navigation between routes. Use `useRouter` hook from `next/navigation` for programmatic navigation in Client Components.
+7.  **Middleware**: Use `src/middleware.ts` for running code before a request is completed (e.g., authentication, redirects, header modification). Keep middleware logic minimal and fast.
+8.  **Configuration**: Configure Next.js options in `next.config.ts` (use `.ts` for type safety).
+
+## Actions
+- **Reject**: Manual `<head>` tags in components; suggest using Metadata API.
+- **Suggest**: Using `fetch` with caching or Server Actions for data fetching in RSCs instead of client-side fetching where possible.
+- **Reject**: Defining API logic directly in `page.tsx`; suggest using `route.ts` or Server Actions.
+- **Suggest**: Creating `loading.tsx` and `error.tsx` files for better user experience.
+- **Reject**: Using `next/router` (Pages Router hook); suggest `next/navigation` (App Router hook).
+
+## Examples
+✅ Correct (`page.tsx` with RSC data fetching):
+```typescript
+// src/app/posts/[slug]/page.tsx
+import { getPostData } from '@/app/lib/posts';
+
+export async function generateMetadata({ params }: { params: { slug: string }}) {
+  const post = await getPostData(params.slug);
+  return { title: post?.title ?? 'Post Not Found' };
+}
+
+async function PostPage({ params }: { params: { slug: string }}) {
+  const post = await getPostData(params.slug);
+  if (!post) return <div>Not Found</div>;
+  return <article>{/* ... post content */}</article>;
+}
+export default PostPage;
+```
+
+✅ Correct (`route.ts` API endpoint):
+```typescript
+// src/app/api/users/route.ts
+import { NextResponse } from 'next/server';
+import { getUsers } from '@/app/lib/db';
+
+export async function GET() {
+  const users = await getUsers();
+  return NextResponse.json(users);
+}
+```
+
+❌ Incorrect:
+```typescript
+// src/app/some-page/page.tsx
+'use client'; // Unnecessary if only fetching data
+import { useEffect, useState } from 'react';
+
+function SomePage() {
+  const [data, setData] = useState(null);
+  // Bad: Client-side fetching when RSC could be used
+  useEffect(() => {
+    fetch('/api/data').then(res => res.json()).then(setData);
+  }, []);
+
+  return (
+    <>
+      {/* Bad: Manual head management */}
+      <head><title>Some Page</title></head>
+      {/* ... */}
+    </>
+  );
+}
+export default SomePage;
+```

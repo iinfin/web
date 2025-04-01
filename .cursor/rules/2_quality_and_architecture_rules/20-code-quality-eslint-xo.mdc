@@ -1,0 +1,57 @@
+---
+description: Code Quality and Linting (ESLint with xo/xo-typescript) Rule
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+## Description
+Enforces code quality standards using ESLint, specifically configured with the `xo` and `xo-typescript` presets.
+
+## Rule
+1.  **Linter Configuration**: The project MUST be configured to use ESLint with the `xo` and `xo-typescript` configurations (`eslint.config.js`).
+2.  **No Lint Errors**: Code submitted or generated MUST NOT contain any ESLint errors according to the configured rules.
+3.  **No Lint Warnings (Ideal)**: Code SHOULD NOT contain ESLint warnings. Address warnings unless there's a strong, documented reason not to.
+4.  **Auto-Fixing**: Leverage ESLint's auto-fixing capabilities (`eslint --fix` or IDE integration) whenever possible to resolve style and minor issues automatically.
+5.  **Disabling Rules**: Disabling ESLint rules (`// eslint-disable-next-line ...`) MUST be used sparingly and always include a clear justification comment explaining *why* the rule is being disabled for that specific line or block. Avoid disabling rules globally unless absolutely necessary and documented in `eslint.config.js`.
+6.  **Readability**: Code must adhere to general readability principles enforced by `xo` (e.g., consistent indentation, spacing, naming conventions).
+
+## Actions
+- **Reject**: Code containing ESLint errors reported by the configured `xo`/`xo-typescript` ruleset.
+- **Suggest**: Running `eslint --fix` to automatically resolve fixable issues.
+- **Warn**: Presence of ESLint warnings.
+- **Reject**: Use of `eslint-disable` comments without a clear justification.
+- **Execute (Optional/Advanced)**: Configure Cursor to automatically run `eslint --fix` on generated/edited code blocks. (Requires careful setup).
+
+## Examples
+✅ Correct (Adheres to xo standards):
+```typescript
+import { type FC } from 'react'; // Type import first
+
+type GreetingProps = {
+  name: string;
+};
+
+const Greeting: FC<GreetingProps> = ({ name }) => {
+  if (!name) {
+    throw new Error('Name is required'); // Proper error handling
+  }
+
+  const message = `Hello, ${name}!`; // Correct template literal usage
+
+  return <div>{message}</div>; // Consistent JSX formatting
+};
+
+export default Greeting;
+```
+
+❌ Incorrect (Violates xo standards):
+```typescript
+import React from 'react';
+
+const Greeting = (props: {name: string}) => { // Inconsistent type definition style
+    var msg = "Hello, " + props.name + "!"; // Use let/const, template literal
+    if (props.name == null) console.log("Name missing") // Use ===, avoid console.log in production, inconsistent spacing
+    return <div>{ msg }</div>; // Inconsistent spacing in JSX
+}
+
+export default Greeting
+```

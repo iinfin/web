@@ -1,0 +1,58 @@
+---
+description: TypeScript Strictness and Best Practices Rule
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+## Description
+Enforces strict TypeScript usage and best practices for type safety and clarity across the project.
+
+## Rule
+1. **Strict Mode**: All TypeScript files MUST operate under strict mode (`"strict": true` in `tsconfig.json`).
+2. **Explicit Types**: Use explicit types for function parameters, return values, and variable declarations where type inference is not obvious or could lead to ambiguity. Avoid relying solely on inference for public APIs.
+3. **Avoid `any`**: The `any` type MUST NOT be used. Use `unknown` for unknown types and perform type checks/assertions, or define specific types/interfaces. Use `eslint-disable-next-line @typescript-eslint/no-explicit-any` with justification ONLY as a last resort for unavoidable cases (e.g., integrating with untyped JS libraries).
+4. **Interfaces vs Types**: Prefer `type` aliases for simple types, unions, intersections, and function signatures. Prefer `interface` for defining object shapes, especially those intended for implementation or extension (classes, complex component props).
+5. **Utility Types**: Leverage TypeScript's utility types (`Partial`, `Required`, `Readonly`, `Pick`, `Omit`, etc.) to create precise types without redundancy.
+6. **Generics**: Use generics effectively for creating reusable components and functions that work with various types while maintaining type safety. Document generic constraints clearly.
+7. **Null/Undefined Handling**: Explicitly handle `null` and `undefined` checks. Avoid non-null assertion operator (`!`) unless absolutely necessary and justified with a comment. Prefer optional chaining (`?.`) and nullish coalescing (`??`).
+8. **Enums**: Prefer string literal unions (`type Status = 'pending' | 'completed'`) over numeric or string enums unless there's a specific reason (like needing iteration over keys/values).
+9. **Type Safety**: Ensure type safety across module and component boundaries. Props and function arguments must be accurately typed.
+
+## Actions
+- **Reject**: Use of `any` without explicit eslint disable comment.
+- **Reject**: Use of non-null assertion (`!`) without justification comment.
+- **Suggest**: Using `unknown` instead of `any`.
+- **Suggest**: Using specific types over broad types like `object` or `{}`.
+- **Suggest**: Adding explicit return types to functions, especially exported ones.
+- **Suggest**: Using utility types where applicable.
+
+## Examples
+✅ Correct:
+```typescript
+type UserProfileProps = {
+  readonly userId: string;
+  name: string;
+  avatarUrl?: string;
+};
+
+function getUserData(id: string): Promise<UserProfileProps | null> {
+  // ... implementation
+}
+
+async function displayUser(id: string) {
+  const user = await getUserData(id);
+  console.log(user?.name ?? 'Anonymous');
+}
+```
+
+❌ Incorrect:
+```typescript
+function getUserData(id: any): any { // Avoid 'any'
+  // ...
+  return data!; // Avoid '!'
+}
+
+function displayUser(id: string) {
+  const user: object = getUserData(id); // Avoid 'object'
+  console.log(user.name); // Potential runtime error
+}
+```

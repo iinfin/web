@@ -1,0 +1,85 @@
+---
+description: React Component Design and Architecture Rule
+globs: ["src/app/components/**/*.tsx"]
+alwaysApply: true
+---
+## Description
+Enforces best practices for designing reusable, maintainable, and composable React components.
+
+## Rule
+1.  **Single Responsibility Principle (SRP)**: Components SHOULD ideally have a single, well-defined responsibility. Avoid creating monolithic components that handle too many unrelated tasks (e.g., complex data fetching, multiple UI interactions, business logic all in one).
+2.  **Composition over Inheritance**: Build complex UI by composing smaller, focused components. Avoid using class component inheritance patterns.
+3.  **Props Interface**: Define clear, specific, and well-typed prop interfaces (using TypeScript). Avoid overly generic props like `data: any` or passing down excessive, unused props. Use `Readonly` for props where appropriate.
+4.  **Reusability**: Design components with reusability in mind. Abstract common UI patterns and logic into shared components (`src/app/components/shared/`).
+5.  **Separation of Concerns**:
+    *   Separate data fetching logic (ideally in Server Components or custom hooks/Route Handlers) from presentational UI logic.
+    *   Separate complex business logic from UI components (move to hooks, utility functions, or service layers).
+    *   Separate state management logic (use hooks like `useState`, `useReducer`, or context/external stores) from rendering logic.
+6.  **Naming Conventions**: Use clear, descriptive names for components (PascalCase) and props (camelCase). Component filenames should match the component name (e.g., `UserProfile.tsx`).
+7.  **Directory Structure**: Follow the established project structure (`src/app/components/section*/`, `src/app/components/shared/`). Group related components together.
+8.  **Minimal State**: Keep component state minimal. Derive state whenever possible from props or other state variables. Lift state up when multiple components need access to the same state.
+
+## Actions
+- **Suggest**: Breaking down large components into smaller, more focused ones.
+- **Suggest**: Extracting data fetching or complex logic into custom hooks or Server Components.
+- **Reject**: Components with overly generic or poorly typed prop interfaces.
+- **Suggest**: Moving reusable UI elements to the `shared` directory.
+- **Suggest**: Lifting state up or using Context/state management libraries instead of prop drilling through many levels.
+
+## Examples
+✅ Correct (Composable Components):
+```typescript
+// src/app/components/shared/Button.tsx
+type ButtonProps = { /* ... */ };
+function Button(props: ButtonProps) { /* ... */ }
+
+// src/app/components/shared/Card.tsx
+type CardProps = { children: React.ReactNode; title?: string };
+function Card({ children, title }: CardProps) { /* ... */ }
+
+// src/app/components/sectionAbout/AboutCard.tsx
+import Button from '../shared/Button';
+import Card from '../shared/Card';
+
+function AboutCard({ content }: { content: string }) {
+  return (
+    <Card title="About Me">
+      <p>{content}</p>
+      <Button>Learn More</Button>
+    </Card>
+  );
+}
+```
+
+❌ Incorrect (Monolithic Component):
+```typescript
+// Bad: Mixing data fetching, state, and complex UI in one component
+function UserProfilePage({ userId }: { userId: string }) {
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [posts, setPosts] = useState([]);
+
+  useEffect(() => {
+    // Data fetching logic mixed in
+    Promise.all([fetchUser(userId), fetchPosts(userId)])
+      .then(([userData, postData]) => {
+        setUser(userData);
+        setPosts(postData);
+      })
+      .finally(() => setIsLoading(false));
+  }, [userId]);
+
+  const handleFollow = () => { /* Complex interaction logic */ };
+
+  if (isLoading) return <div>Loading...</div>;
+
+  return (
+    <div> {/* Complex rendering logic */}
+      <h1>{user.name}</h1>
+      <button onClick={handleFollow}>Follow</button>
+      <ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul>
+      {/* ... more UI and logic */}
+    </div>
+  );
+}
+```

@@ -1,0 +1,43 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Description
+This rule automates the process of committing changes made by Cursor using the Conventional Commits specification. It triggers after a successful AI edit or generation.
+
+## Rule
+After Cursor successfully applies changes (e.g., code generation, edits):
+1. Stage all modified files (`git add .`).
+2. Generate a commit message following the Conventional Commits format: `<type>(<scope>): <description>`.
+   - **Type**: Infer based on the nature of the change (e.g., `feat`, `fix`, `refactor`, `style`, `docs`, `chore`, `perf`, `ci`, `build`, `test`). Default to `chore` if unsure.
+   - **Scope**: Infer from the primary file path modified (e.g., `app-components-shared`, `hooks-useWindowSize`, `lib-db-notion`). Keep it concise.
+   - **Description**: Generate a concise summary of the change based on the prompt or edit description. Start with a lowercase verb.
+3. Execute `git commit` with the generated message.
+4. If the commit fails (e.g., pre-commit hooks), report the failure and do not proceed.
+
+## Implementation
+- Use an `execute` action triggered by successful AI code modification events.
+- The command script should intelligently parse change descriptions and file paths to generate the commit message.
+
+## Benefits
+- Consistent and meaningful commit history.
+- Automation of a repetitive developer task.
+- Improved traceability of AI-driven changes.
+
+## Examples
+Input Prompt: "Refactor the `Overlay.tsx` component for better readability and add comments."
+File Modified: `src/app/components/shared/Overlay.tsx`
+
+Expected Commit Message:
+```
+refactor(app-components-shared): improve readability and add comments to Overlay component
+```
+
+Input Prompt: "Implement the `useWindowSize` hook."
+File Created: `src/app/hooks/useWindowSize.ts`
+
+Expected Commit Message:
+```
+feat(hooks-useWindowSize): implement useWindowSize hook
+```

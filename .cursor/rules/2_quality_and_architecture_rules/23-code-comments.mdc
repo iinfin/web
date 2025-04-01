@@ -1,0 +1,73 @@
+---
+description: Code Commenting Standards Rule
+globs: ["**/*.ts", "**/*.tsx"]
+alwaysApply: true
+---
+## Description
+Enforces consistent and meaningful code commenting practices.
+
+## Rule
+1.  **Purpose**: Comments MUST primarily explain the "why" behind the code, not just restate the "what". Explain complex logic, non-obvious decisions, workarounds, or the intent behind a piece of code.
+2.  **Conciseness**: Comments MUST be concise and to the point. Avoid long, rambling explanations.
+3.  **Minimalism**: Avoid excessive commenting. Code should be as self-documenting as possible through clear naming and structure. Do not comment obvious code.
+4.  **Format**:
+    *   Use `//` for single-line comments.
+    *   Use `/* ... */` for multi-line comments or for temporarily commenting out blocks of code during development (remove before committing).
+    *   Use JSDoc format (`/** ... */`) for documenting exported functions, classes, types, and complex component props, especially for public APIs or shared library code. Include `@param`, `@returns`, `@throws`, `@deprecated`, `@see`, `@example` tags where appropriate.
+5.  **Placement**: Place comments on the line *before* the code they refer to, or at the end of a line for very short annotations.
+6.  **TODOs/FIXMEs**: Use `// TODO:` or `// FIXME:` markers for temporary notes about pending work or known issues. Include a brief explanation and ideally a tracking reference (like a ticket number or GitHub issue). These should be addressed and removed in a timely manner.
+7.  **Up-to-date**: Comments MUST be kept up-to-date with the code they describe. Remove or update comments when the corresponding code changes. Stale comments are misleading and harmful.
+8.  **Clarity over Comments**: If code requires extensive comments to be understood, consider refactoring the code itself for better clarity first.
+
+## Actions
+- **Suggest**: Adding JSDoc comments for exported functions/types/classes.
+- **Suggest**: Explaining the "why" for complex or non-obvious code sections.
+- **Warn**: Presence of potentially stale `// TODO:` or `// FIXME:` comments without clear action items or context.
+- **Suggest**: Removing comments that merely restate obvious code.
+- **Suggest**: Refactoring code that requires excessive comments for clarity.
+
+## Examples
+✅ Correct:
+```typescript
+/**
+ * Calculates the factorial of a non-negative integer using recursion.
+ * @param n - The non-negative integer.
+ * @returns The factorial of n.
+ * @throws {Error} If n is negative.
+ * @example
+ * factorial(5); // Returns 120
+ */
+export function factorial(n: number): number {
+  if (n < 0) {
+    throw new Error('Factorial is not defined for negative numbers');
+  }
+  // Base case: factorial of 0 is 1
+  if (n === 0) {
+    return 1;
+  }
+  // Recursive step: n * factorial(n-1)
+  // This is safe due to the non-negative check above.
+  return n * factorial(n - 1);
+}
+
+// TODO: Refactor this to use an iterative approach for performance (GH-123)
+function complexCalculation() {
+  // ... complex logic ...
+}
+```
+
+❌ Incorrect:
+```typescript
+// This function adds two numbers
+// It takes two numbers, a and b
+// It returns the sum
+function add(a: number, b: number): number {
+  // Add a and b
+  return a + b; // Return the result // Obvious comments
+}
+
+// fix this later
+function somethingBroken() { // Vague FIXME comment
+  // ... broken code ...
+}
+```

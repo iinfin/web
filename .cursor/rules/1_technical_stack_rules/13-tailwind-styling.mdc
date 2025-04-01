@@ -1,0 +1,97 @@
+---
+description: Tailwind CSS Styling Conventions Rule
+globs: ["**/*.tsx", "src/app/styles/global.css", "tailwind.config.ts"]
+alwaysApply: true
+---
+# Description
+Enforces consistent and best-practice usage of Tailwind CSS 4.x for styling.
+
+## Rule
+1.  **Utility-First**: Prioritize using Tailwind utility classes directly in JSX over custom CSS classes whenever possible.
+2.  **Class Ordering**: Ensure Tailwind classes are automatically sorted using `prettier-plugin-tailwindcss`. Configure Prettier accordingly.
+3.  **Responsiveness**: Use Tailwind's responsive modifiers (`sm:`, `md:`, `lg:`, `xl:`, `2xl:`) for building responsive layouts. Design mobile-first.
+4.  **State Variants**: Utilize state variants (`hover:`, `focus:`, `active:`, `disabled:`, etc.) for styling interactive states.
+5.  **Dark Mode**: Implement dark mode using Tailwind's `dark:` variant, configured via the `class` strategy in your CSS.
+6.  **Customization**:
+    *   Extend the default theme using the `@theme` directive in `src/app/styles/global.css` for project-specific colors, fonts, spacing, etc. Avoid arbitrary values in utilities (`bg-[#123456]`) where a theme value would be more appropriate.
+    *   Define custom reusable utility classes using `@layer utilities` *sparingly* in `src/app/styles/global.css`, primarily for complex or highly repeated patterns not easily achieved with standard utilities. Prefer component abstraction over excessive custom utilities.
+7.  **Component Abstraction**: Encapsulate complex or reusable styled elements into dedicated React components rather than relying solely on long strings of utility classes in parent components. Pass styling variations via props if necessary.
+8.  **CSS Grid/Flexbox**: Prefer CSS Grid (`grid`, `grid-cols-*`, `gap-*`) for layout where applicable due to its power and clarity. Use Flexbox (`flex`, `justify-*`, `items-*`) for simpler one-dimensional layouts or when Grid is unsuitable.
+9.  **Accessibility**: Ensure sufficient color contrast and use appropriate utilities for focus states (`focus-visible:`) to maintain accessibility.
+10. **`global.css`**: Use `src/app/styles/global.css` for importing Tailwind with `@import "tailwindcss"`, defining theme variables with `@theme`, and adding minimal global utility classes via `@layer utilities`.
+
+## Actions
+- **Suggest**: Consolidating repeated utility patterns into reusable React components.
+- **Reject**: Use of arbitrary values (e.g., `mt-[13px]`) when a theme value (e.g., `mt-3`, `mt-4`) or a small theme extension would suffice.
+- **Suggest**: Using `dark:` variants for dark mode styling.
+- **Suggest**: Using responsive modifiers (`sm:`, `md:`, etc.) for layout adjustments.
+- **Info**: Remind to ensure `prettier-plugin-tailwindcss` is configured for automatic class sorting.
+
+## Examples
+✅ Correct:
+```typescript
+// Tailwind CSS v4 setup in global.css
+@import "tailwindcss";
+
+@theme {
+  --color-brand: oklch(0.6 0.24 250);
+  --color-brand-light: oklch(0.8 0.2 250);
+  --color-brand-dark: oklch(0.4 0.24 250);
+  --font-display: "Inter", sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+// Component using Tailwind utilities and responsive modifiers
+function ResponsiveCard({ title }: { title: string }) {
+  return (
+    <div className="p-4 bg-white rounded-lg shadow-md dark:bg-gray-800 md:p-6 lg:p-8">
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-white md:text-xl">
+        {title}
+      </h3>
+      {/* Mobile first, then larger screens */}
+      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 md:text-base">
+        Content goes here...
+      </p>
+    </div>
+  );
+}
+```
+
+❌ Incorrect:
+```typescript
+// Bad: Using a separate tailwind.config.js file (no longer needed in v4)
+// tailwind.config.js - DEPRECATED in v4
+module.exports = {
+  theme: {
+    extend: {
+      colors: {
+        brand: '#0071e3',
+      },
+    },
+  },
+};
+
+// Bad: Excessive use of arbitrary values and inline styles
+function BadCard() {
+  return (
+    <div style={{ padding: '13px', backgroundColor: '#f1f1f1' }} className="mt-[7px] shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">
+      {/* ... */}
+    </div>
+  );
+}
+
+// Bad: Old v3 directives in global.css
+/* global.css - OUTDATED */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.my-button {
+  @apply px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700;
+}
+```

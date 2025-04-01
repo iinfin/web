@@ -1,0 +1,98 @@
+---
+description: Web Performance Optimization and Core Web Vitals Rule
+globs: ["**/*.ts", "**/*.tsx", "next.config.ts"]
+alwaysApply: true
+---
+## Description
+Ensures code and configuration adhere to best practices for web performance, focusing on Core Web Vitals (LCP, FID/INP, CLS) and bundle size.
+
+## Rule
+1.  **Largest Contentful Paint (LCP)**:
+    *   Prioritize loading critical above-the-fold content quickly.
+    *   Optimize images (use modern formats like AVIF/WebP, correct sizing, lazy loading for below-the-fold images using `next/image`).
+    *   Ensure server response times (Time to First Byte - TTFB) are fast. Leverage Next.js caching mechanisms.
+    *   Minimize render-blocking resources (CSS, JavaScript). Use critical CSS and defer non-essential scripts.
+2.  **First Input Delay (FID) / Interaction to Next Paint (INP)**:
+    *   Minimize main thread blocking time. Break down long JavaScript tasks.
+    *   Optimize event handlers; keep them lightweight. Defer non-critical work.
+    *   Reduce the amount of client-side JavaScript. Prefer Server Components.
+    *   Optimize third-party scripts; load them asynchronously or deferred.
+3.  **Cumulative Layout Shift (CLS)**:
+    *   Specify dimensions (width/height) for images, videos, and ads to reserve space. Use `next/image` correctly.
+    *   Avoid inserting content dynamically above existing content unless triggered by user interaction.
+    *   Preload necessary fonts (`next/font`) to prevent layout shifts during font loading.
+    *   Ensure animations primarily use `transform` and `opacity`, which don't typically cause layout shifts.
+4.  **Bundle Size**:
+    *   Keep the client-side JavaScript bundle size small. Analyze bundles using `@next/bundle-analyzer`.
+    *   Use dynamic imports (`next/dynamic`) for components or libraries not needed on initial load, especially for Client Components.
+    *   Prefer Server Components to reduce client-side JavaScript.
+    *   Choose third-party libraries carefully, considering their bundle size impact. Use tools like `bundlephobia.com`.
+    *   Implement code splitting effectively (Next.js handles much of this automatically with the App Router).
+5.  **Caching**: Utilize Next.js data caching (`cache`, `revalidate`), fetch caching (`force-cache`, `no-store`), and Full Route Cache effectively to minimize server load and improve response times.
+6.  **React Performance**: Follow React performance best practices (memoization, minimizing re-renders - see `11-react-patterns.mdc`).
+
+## Actions
+- **Suggest**: Using `next/image` for image optimization.
+- **Reject**: Images/iframes without explicit width/height attributes that could cause CLS.
+- **Suggest**: Using `next/font` for font optimization.
+- **Suggest**: Analyzing bundle size with `@next/bundle-analyzer` if bundle size seems large.
+- **Suggest**: Using dynamic imports (`next/dynamic`) for heavy Client Components or libraries.
+- **Suggest**: Reviewing data fetching strategies for optimal caching (`cache`, `no-store`, `revalidate`).
+- **Suggest**: Converting Client Components to Server Components where appropriate to reduce bundle size and improve LCP/FID/INP.
+
+## Examples
+✅ Correct (Image Optimization):
+```typescript
+import Image from 'next/image';
+
+function MyImageComponent() {
+  return (
+    <Image
+      src="/images/hero.webp" // Use modern format
+      alt="Hero Image"
+      width={1200} // Specify dimensions
+      height={600}
+      priority // Prioritize LCP image
+    />
+  );
+}
+```
+
+✅ Correct (Dynamic Import):
+```typescript
+import dynamic from 'next/dynamic';
+
+// Dynamically import a heavy client component
+const HeavyChartComponent = dynamic(() => import('@/app/components/HeavyChart'), {
+  ssr: false, // Disable SSR if it's purely client-side
+  loading: () => <p>Loading chart...</p>,
+});
+
+function DashboardPage() {
+  return (
+    <div>
+      <h1>Dashboard</h1>
+      <HeavyChartComponent />
+    </div>
+  );
+}
+```
+
+❌ Incorrect:
+```typescript
+function BadImageComponent() {
+  return (
+    // Bad: Standard img tag without dimensions, potential CLS
+    // Bad: Not using next/image for optimization
+    <img src="/images/large-image.jpg" alt="Large Image" />
+  );
+}
+
+// Bad: Importing large library directly in a frequently loaded component
+import _ from 'lodash'; // Large library
+
+function NeedsOptimization() {
+  // ... uses lodash ...
+  return <div>...</div>;
+}
+```
