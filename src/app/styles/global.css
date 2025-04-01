@@ -31,7 +31,13 @@
 	--aspect-square: 1 / 1;
 
 	--breakpoint-3xl: 2160px;
-	--breakpoint-xxs: 480px;
+	--breakpoint-xl: 1280px; /* Standard XL */
+	--breakpoint-lx: 1152px; /* Custom Large Extra */
+	--breakpoint-lg: 1024px; /* Standard LG */
+	--breakpoint-md: 768px; /* Standard MD */
+	--breakpoint-sm: 640px; /* Standard SM */
+	--breakpoint-xs: 480px; /* Custom XS */
+	--breakpoint-xxs: 480px; /* Keeping original xxs, though xs covers it now */
 }
 
 @layer base {

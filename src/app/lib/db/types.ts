@@ -7,7 +7,7 @@
  * Media type enum for gallery items
  * Defines the supported media formats that can be displayed in the gallery
  */
-export type MediaType = 'image' | 'video' | 'gif';
+export type MediaType = 'image' | 'video';
 
 /**
  * Gallery Item (for works/portfolio section)

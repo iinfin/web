@@ -28,7 +28,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 			<head>
 				<Preload />
 			</head>
-			<body className="bg-white-x1 text-black-x1 dark:bg-black-x2 dark:text-white-x1">
+			<body className="bg-white-x1 text-black-x1 dark:bg-black-x2 dark:text-white-x1 min-h-screen uppercase">
 				<main id="main-content" className="relative h-full w-full">
 					{children}
 				</main>

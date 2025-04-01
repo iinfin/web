@@ -109,8 +109,6 @@ function determineMediaType(url: string | undefined): MediaType | undefined {
 		return 'image';
 	} else if (['mp4', 'webm'].includes(extension ?? '')) {
 		return 'video';
-	} else if (extension === 'gif') {
-		return 'gif';
 	} else {
 		// Log only if there was something that looked like an extension but wasn't recognized
 		if (extension) {
