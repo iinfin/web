@@ -20,6 +20,7 @@ Enforces best practices for implementing animations using Framer Motion and stan
     *   Use `variants` for defining complex animation states and orchestrating animations between parent and children.
     *   Use `whileHover`, `whileTap`, `whileFocus` for interactive state animations.
     *   Use `AnimatePresence` for animating components when they mount and unmount (e.g., modals, list items). Ensure components have a unique `key` prop.
+    *   For advanced tuning of easing, physics, and achieving a unique animation style, refer to Rule `40-animation-advanced.mdc`.
 5.  **Accessibility**:
     *   Respect the `prefers-reduced-motion` media query. Provide alternative, reduced animations or disable animations entirely for users who prefer less motion. Framer Motion often handles this automatically, but be mindful. Check `useReducedMotion` hook if needed.
     *   Ensure animations do not hinder usability or readability. Avoid excessively long or distracting animations.

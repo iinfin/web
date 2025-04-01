@@ -1,130 +1,163 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import clsx from 'clsx';
+import { motion, type SpringOptions, useSpring } from 'framer-motion';
 
-/**
- * Linear interpolation function for smooth transitions
- * @param start - Starting value
- * @param end - Target value
- * @param amount - Amount to interpolate (0-1)
- * @returns Interpolated value
- */
-const lerp = (start: number, end: number, amount: number): number => {
-	return (1 - amount) * start + amount * end;
+// Use centralized input hook
+import { useCursor } from '@/app/context/CursorContext';
+import { useInputState } from '@/app/hooks/useInputState';
+
+// Use cursor context
+
+// Spring options for the central dot (slightly tighter/faster)
+const dotSpringOptions: SpringOptions = {
+	stiffness: 1200,
+	damping: 60,
+	mass: 0.1,
 };
 
-// Easing factor for cursor movement (lower = smoother but more lag)
-const EASING_FACTOR = 0.15;
-
-/**
- * Vector2 type for cursor positions
- */
-interface Vector2 {
-	x: number;
-	y: number;
-}
+// Spring options for the lines (slightly different damping for subtle variation)
+const lineSpringOptionsX: SpringOptions = {
+	stiffness: 1000,
+	damping: 55, // Slightly different damping for X
+	mass: 0.1,
+};
+const lineSpringOptionsY: SpringOptions = {
+	stiffness: 1000,
+	damping: 50, // Original damping for Y
+	mass: 0.1,
+};
 
 /**
  * Custom cursor component that provides a cross-hair style cursor
- * with smooth animations and visibility transitions
+ * with smooth animations and visibility/style transitions based on context.
+ * Lines have slightly desynchronized easing for a more natural feel.
  */
-export default function Cursor(): JSX.Element {
-	// State for the animated position used for rendering
-	const [animatedPosition, setAnimatedPosition] = useState<Vector2>({ x: 0, y: 0 });
+export default function Cursor(): JSX.Element | null {
+	const { pixel } = useInputState(); // Get raw pixel data
+	const { cursorType, cursorText } = useCursor(); // Get context data
 
-	// Ref to store the actual instantaneous mouse position
-	const mousePositionRef = useRef<Vector2>({ x: 0, y: 0 });
+	// Springs for the central dot
+	const smoothX = useSpring(pixel.x, dotSpringOptions);
+	const smoothY = useSpring(pixel.y, dotSpringOptions);
 
-	// Ref to store the requestAnimationFrame ID for cleanup
-	const animationFrameRef = useRef<number | null>(null);
+	// Separate springs for the lines with slightly different options
+	const lineSmoothX = useSpring(pixel.x, lineSpringOptionsX);
+	const lineSmoothY = useSpring(pixel.y, lineSpringOptionsY);
 
-	// State to track mouse visibility
-	const [isVisible, setIsVisible] = useState<boolean>(true);
+	const [isClient, setIsClient] = useState(false);
+	const [isTouchDevice, setIsTouchDevice] = useState(false);
 
-	// Memoized animation function to prevent recreating it on each render
-	const animate = useCallback(() => {
-		setAnimatedPosition((currentPosition) => {
-			// Calculate the next position using lerp
-			const nextX = lerp(currentPosition.x, mousePositionRef.current.x, EASING_FACTOR);
-			const nextY = lerp(currentPosition.y, mousePositionRef.current.y, EASING_FACTOR);
+	// Detect client-side and touch capabilities
+	useEffect(() => {
+		setIsClient(true);
+		const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+		setIsTouchDevice(touchDetected);
 
-			// If position is very close, snap to avoid infinite lerping
-			const dx = Math.abs(nextX - mousePositionRef.current.x);
-			const dy = Math.abs(nextY - mousePositionRef.current.y);
-			if (dx < 0.1 && dy < 0.1) {
-				return { ...mousePositionRef.current };
-			}
+		// Only hide system cursor if not on a touch device
+		if (!touchDetected) {
+			document.body.style.cursor = 'none';
+		}
 
-			return { x: nextX, y: nextY };
-		});
-
-		// Request the next frame
-		animationFrameRef.current = requestAnimationFrame(animate);
+		// Cleanup function to restore cursor on component unmount
+		return () => {
+			document.body.style.cursor = 'auto';
+		};
 	}, []);
 
+	// Update ALL spring targets when raw input changes
 	useEffect(() => {
-		// Initial position setting in the center of the screen
-		setAnimatedPosition({
-			x: typeof window !== 'undefined' ? window.innerWidth / 2 : 0,
-			y: typeof window !== 'undefined' ? window.innerHeight / 2 : 0,
-		});
+		smoothX.set(pixel.x);
+		smoothY.set(pixel.y);
+		lineSmoothX.set(pixel.x);
+		lineSmoothY.set(pixel.y);
+	}, [pixel.x, pixel.y, smoothX, smoothY, lineSmoothX, lineSmoothY]); // Include all springs in dependency array
 
-		// Mouse move handler
-		const updateMousePosition = (e: MouseEvent): void => {
-			mousePositionRef.current = { x: e.clientX, y: e.clientY };
-		};
+	// Don't render server-side or on touch devices
+	if (!isClient || isTouchDevice) {
+		return null;
+	}
 
-		// Mouse enter/leave handlers
-		const handleMouseEnter = (): void => {
-			setIsVisible(true);
-		};
+	// Determine cursor states from context
+	const isHidden = cursorType === 'hidden';
+	const isPointer = cursorType === 'pointer';
+	// const isText = cursorType === 'text'; // Can be used for text-specific styling
+	const isDefault = cursorType === 'default';
 
-		const handleMouseLeave = (): void => {
-			setIsVisible(false);
-		};
+	// Base styles for the container
+	const containerClasses = clsx(
+		'pointer-events-none fixed inset-0 z-[9999]', // Use high z-index like CustomCursor
+		'transition-opacity duration-300 ease-in-out',
+		isHidden ? 'opacity-0' : 'opacity-100',
+	);
 
-		// Add event listeners
-		document.documentElement.addEventListener('mouseenter', handleMouseEnter);
-		document.documentElement.addEventListener('mouseleave', handleMouseLeave);
-		window.addEventListener('mousemove', updateMousePosition);
+	// Base styles for cross-hair lines
+	const lineBaseClasses = 'absolute bg-black/80 dark:bg-white/80 mix-blend-difference';
 
-		// Start the animation loop
-		animationFrameRef.current = requestAnimationFrame(animate);
-
-		// Cleanup function
-		return () => {
-			window.removeEventListener('mousemove', updateMousePosition);
-			document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
-			document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
-
-			// Cancel the animation frame on unmount
-			if (animationFrameRef.current !== null) {
-				cancelAnimationFrame(animationFrameRef.current);
-			}
-		};
-	}, [animate]); // Add animate to dependencies
+	// Base styles for the central dot
+	const dotBaseClasses = 'absolute rounded-full transition-[transform,width,height,background-color] duration-200 ease-out';
 
 	return (
-		<div
-			className={clsx('pointer-events-none fixed inset-0 z-50 transition-opacity duration-300 ease-in-out', isVisible ? 'opacity-100' : 'opacity-0')}
-			aria-hidden="true" // Hide from screen readers as this is purely decorative
+		<motion.div // Use motion.div for potential future container animations
+			className={containerClasses}
+			aria-hidden="true" // Hide from screen readers
 		>
-			{/* Vertical cursor line */}
-			<div className="absolute top-0 h-full w-[1px] bg-black/10 mix-blend-exclusion" style={{ left: `${animatedPosition.x}px` }} />
+			{/* Vertical cursor line - Use lineSmoothX */}
+			<motion.div
+				className={clsx(lineBaseClasses, 'top-0 h-full w-[1px]')}
+				style={{ x: lineSmoothX }} // Use X spring for the vertical line
+				animate={{ opacity: isDefault ? 0.2 : 0 }} // Fade out lines when not default (adjust opacity as desired)
+				transition={{ duration: 0.2, ease: 'easeOut' }}
+			/>
 
-			{/* Horizontal cursor line */}
-			<div className="absolute left-0 h-[1px] w-full bg-black/10 mix-blend-exclusion" style={{ top: `${animatedPosition.y}px` }} />
+			{/* Horizontal cursor line - Use lineSmoothY */}
+			<motion.div
+				className={clsx(lineBaseClasses, 'left-0 h-[1px] w-full')}
+				style={{ y: lineSmoothY }} // Use Y spring for the horizontal line
+				animate={{ opacity: isDefault ? 0.2 : 0 }} // Fade out lines when not default (adjust opacity as desired)
+				transition={{ duration: 0.2, ease: 'easeOut' }}
+			/>
 
-			{/* Cursor dot */}
-			<div
-				className="absolute h-1 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black"
+			{/* Cursor dot - Uses original smoothX/smoothY */}
+			<motion.div
+				className={clsx(
+					dotBaseClasses,
+					// Conditional styling for the dot
+					isPointer ? 'bg-black/20 dark:bg-white/20' : 'bg-black dark:bg-white', // Example: lighter/larger for pointer
+				)}
 				style={{
-					left: `${animatedPosition.x}px`,
-					top: `${animatedPosition.y}px`,
+					x: smoothX, // Dot uses original springs
+					y: smoothY,
+					translateX: '-50%', // Center the dot
+					translateY: '-50%',
+				}}
+				// Animate size and potentially other properties
+				animate={{
+					width: isPointer ? 24 : 6,
+					height: isPointer ? 24 : 6,
+					// scale: isPointer ? 1.2 : 1, // Optional scaling
 				}}
 			/>
-		</div>
+
+			{/* Optional: Element to display text */}
+			{cursorText && (
+				<motion.div
+					className="absolute text-sm whitespace-nowrap text-black mix-blend-difference dark:text-white"
+					style={{
+						x: smoothX, // Position text based on the dot's position
+						y: smoothY,
+						translateX: '-50%', // Adjust as needed for text positioning
+						translateY: '15px', // Position below the dot (adjust offset)
+					}}
+					initial={{ opacity: 0 }}
+					animate={{ opacity: 1 }}
+					exit={{ opacity: 0 }}
+				>
+					{cursorText}
+				</motion.div>
+			)}
+		</motion.div>
 	);
 }

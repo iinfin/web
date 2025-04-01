@@ -1,0 +1,95 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Rule: Advanced Animation Philosophy and Implementation
+
+## Description
+This rule guides the implementation of animations, emphasizing high-fidelity, unique, and robust motion design inspired by creative coding principles. It encourages going beyond default framework presets by leveraging custom easing, fine-tuned physics, and mathematical precision within the Next.js/React/Framer Motion stack. The goal is animations that are meticulously detailed, performant, and contribute significantly to a standout user experience.
+
+## Rule
+1.  **Foundation**: Use Framer Motion (`motion` components, hooks like `useSpring`, `useTransform`, `useAnimate`) as the primary tool for UI animations, layout transitions (`layout` prop), and enter/exit effects (`AnimatePresence`), following Rule `14-framer-motion-animations.mdc`.
+2.  **Beyond Presets**: Avoid relying solely on default animation presets (e.g., Framer Motion's default `ease` or `spring`). Strive for unique motion characteristics.
+3.  **Custom Easing**: For precise control over timing and feel, utilize:
+    *   Custom cubic Bézier curves (`cubicBezier(t, x1, y1, x2, y2)`) within Framer Motion's `transition` prop (`ease` array).
+    *   Custom easing functions defined in `src/app/lib/utils/ease.ts` when implementing animations with `useAnimate` or custom hooks where direct function application is feasible.
+4.  **Physics Fine-Tuning**: When using spring physics (`type: 'spring'`), meticulously tune parameters (`stiffness`, `damping`, `mass`, `restDelta`, `restSpeed`) to achieve the desired character – don't just accept defaults. Consider slightly varying parameters for related elements (like the cursor lines vs. dot) for more organic movement.
+5.  **Mathematical Precision**: Leverage utility functions from `src/app/lib/utils/math.ts` (e.g., `lerp`, `mix`, `clamp`, `fit`, `normalizeAngle`) within custom animation logic (hooks, `useAnimate`, `useTransform`) when precise control over values based on scroll, input, or state is required.
+6.  **Curve Selection Guidance**:
+    *   **Default**: Use "ease-out" style curves (`easeOut`, custom cubic Bézier mimicking ease-out) for most interactions triggered by the user (e.g., opening modals, hover effects) to feel responsive.
+    *   **Visible Elements**: Use "ease-in-out" style curves (`easeInOut`, custom cubic Bézier mimicking ease-in-out) for animations of elements already on screen (e.g., subtle shifts, state changes) for a smoother start and end.
+    *   **Avoid Linear**: Do *not* use linear easing (`linear`) unless for constant velocity animations like infinite marquees or spinners.
+7.  **Performance**: Adhere strictly to performance best practices (Rule `30-performance-web-vitals.mdc`), primarily animating `transform` and `opacity`. Profile complex animations if necessary.
+8.  **Accessibility**: Always respect `prefers-reduced-motion`. Provide alternative, reduced, or disabled animations. Use the `useReducedMotion` hook from Framer Motion if needed for conditional logic.
+9.  **Collaboration Model**: The AI (Assistant) provides technical expertise in implementing animations using these principles, based on the User's overall art direction and specific requirements.
+
+## Actions
+- **Suggest**: Replacing default Framer Motion `ease` values with specific `cubicBezier` arrays or named eases (`easeIn`, `easeOut`, `easeInOut` from `ease.ts` via `cubicBezier`).
+- **Suggest**: Fine-tuning `stiffness`, `damping`, and `mass` for `spring` animations instead of using defaults.
+- **Suggest**: Using `useTransform` to map input values (scroll, cursor position) to animated properties using custom curves or math functions.
+- **Suggest**: Creating custom animation hooks for complex, reusable animation sequences leveraging `useAnimate` or `useSpring`.
+- **Reject**: Use of `ease: 'linear'` without justification for constant velocity needs.
+- **Warn**: If animations seem too generic or rely only on default library presets.
+- **Info**: Remind to check `prefers-reduced-motion` for complex or potentially jarring animations.
+
+## Examples
+✅ Correct (Custom Bezier in Transition):
+```typescript
+<motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{
+    duration: 0.6,
+    // Custom ease-out style bezier
+    ease: [0.22, 1, 0.36, 1] // Corresponds to cubicBezier(t, 0.22, 1, 0.36, 1)
+  }}
+/>
+```
+
+✅ Correct (Fine-tuned Spring):
+```typescript
+const x = useSpring(0, {
+  stiffness: 300, // Specific stiffness
+  damping: 25,    // Specific damping
+  mass: 0.5,       // Specific mass
+});
+```
+
+✅ Correct (Using useTransform with Math):
+```typescript
+import { useTransform, useScroll } from 'framer-motion';
+import { fit } from '@/app/lib/utils/math'; // Import math util
+
+function ParallaxImage() {
+  const { scrollYProgress } = useScroll();
+  // Map scroll progress (0-1) to a y-offset (-50px to 50px)
+  const y = useTransform(scrollYProgress, (latest) => fit(latest, 0, 1, -50, 50));
+  // Could also use custom easing here:
+  // const y = useTransform(scrollYProgress, [0, 1], [-50, 50], { ease: Easing.easeInOut });
+
+  return <motion.img style={{ y }} src="..." />;
+}
+```
+
+❌ Incorrect (Generic Defaults):
+```typescript
+<motion.div
+  animate={{ scale: 1.1 }}
+  // Bad: Relies on default spring/tween without considering context or desired feel.
+  transition={{ type: 'spring' }}
+/>
+
+<motion.div
+  animate={{ x: 100 }}
+  // Bad: Using linear for typical UI transition without justification.
+  transition={{ ease: 'linear', duration: 0.5 }}
+/>
+```
+
+## Benefits
+- Creates a unique, signature animation style.
+- Provides precise control over motion characteristics.
+- Enhances perceived quality and craftsmanship.
+- Ensures animations are robust and performant within the React ecosystem.
+- Facilitates effective collaboration between user's vision and AI's technical execution.

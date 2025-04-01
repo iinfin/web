@@ -5,6 +5,8 @@ import Cursor from '@/components/shared/Cursor';
 import MetadataTemplate from '@/components/shared/Metadata';
 import Preload from '@/components/shared/Preload';
 
+import { CursorProvider } from '@/app/context/CursorContext';
+
 import './styles/global.css';
 
 export const metadata = MetadataTemplate;
@@ -27,12 +29,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				<Preload />
 			</head>
 			<body className="bg-white-x1 text-black-x1 dark:bg-black-x2 dark:text-white-x1">
-				<main id="main-content" className="relative h-full w-full">
-					{children}
-				</main>
+				<CursorProvider>
+					<main id="main-content" className="relative h-full w-full">
+						{children}
+					</main>
 
-				{/* Custom cursor component */}
-				<Cursor />
+					{/* Custom cursor component - must be inside Provider */}
+					<Cursor />
+				</CursorProvider>
 
 				{/* Analytics script with nonce for CSP compliance */}
 				{nonce && <Script src="https://www.googletagmanager.com/gtag/js" strategy="afterInteractive" nonce={nonce} />}
