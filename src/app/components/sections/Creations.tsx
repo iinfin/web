@@ -15,7 +15,7 @@ const Creations: FC = async (): Promise<JSX.Element> => {
 	const galleryItems: GalleryItem[] = await getGalleryItems({ shuffle: true });
 
 	return (
-		<section id="creations" className="relative h-full w-full overflow-hidden p-4 uppercase">
+		<section id="creations" className="relative h-full w-full overflow-hidden">
 			{/* Pass the fetched items to the client component */}
 			<CreationsGallery galleryItems={galleryItems} />
 		</section>

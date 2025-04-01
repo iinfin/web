@@ -19,7 +19,10 @@ export function generateCsp(): { cspHeader: string; nonce: string } {
 
 	const cspDirectives: CspDirective[] = [
 		{ name: 'base-uri', values: ["'self'"] },
-		{ name: 'connect-src', values: ["'self'", 'https://*.vercel.app', ...(process.env.NODE_ENV === 'development' ? ['ws://*', 'wss://*'] : []), 'https://*'].flat().filter(Boolean) },
+		{
+			name: 'connect-src',
+			values: ["'self'", 'https://*.vercel.app', 'https://storage.u29dc.com', ...(process.env.NODE_ENV === 'development' ? ['ws://*', 'wss://*'] : []), 'https://*'].flat().filter(Boolean),
+		},
 		{ name: 'default-src', values: ["'self'"] },
 		{ name: 'font-src', values: ["'self'", 'https:', 'data:'] },
 		{ name: 'form-action', values: ["'self'"] },
@@ -31,8 +34,14 @@ export function generateCsp(): { cspHeader: string; nonce: string } {
 		{ name: 'object-src', values: ["'none'"] },
 		{ name: 'report-to', values: ['csp-endpoint'] },
 		{ name: 'report-uri', values: ['https://csp-reporting.cloudflare.com/cdn-cgi/script_monitor/report'] },
-		{ name: 'script-src', values: ["'self'", `'nonce-${nonce}'`, ...(process.env.NODE_ENV === 'development' ? ["'unsafe-eval'", "'unsafe-inline'"] : []), 'https:'] },
-		{ name: 'style-src', values: ["'self'", process.env.NODE_ENV === 'development' ? "'unsafe-inline'" : `'nonce-${nonce}'`] },
+		{
+			name: 'script-src',
+			values: ["'self'", `'nonce-${nonce}'`, ...(process.env.NODE_ENV === 'development' ? ["'unsafe-eval'", "'unsafe-inline'"] : []), 'https:'],
+		},
+		{
+			name: 'style-src',
+			values: ["'self'", process.env.NODE_ENV === 'development' ? "'unsafe-inline'" : `'nonce-${nonce}'`],
+		},
 		{ name: 'worker-src', values: ["'self'", 'blob:'] },
 	];
 
