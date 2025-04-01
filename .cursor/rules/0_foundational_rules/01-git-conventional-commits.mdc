@@ -1,92 +1,127 @@
 ---
-description: Automates Conventional Commits with file change summary and optional context.
+description: Enforces and automates Conventional Commits tailored for this project.
 globs: []
 alwaysApply: true
 ---
 ## Description
-This rule automates the process of committing changes made by Cursor using the Conventional Commits specification. It includes a concise summary of file statuses (Add, Modify, Delete, Rename) in the commit body and optionally adds a brief overall change summary based on the user's prompt. It triggers after a successful AI edit or generation.
+This rule defines and automates the process of committing changes using the Conventional Commits specification, tailored with project-specific types and scopes defined in `commitlint.config.js`. It ensures consistent, semantic commit messages suitable for automated changelog generation and versioning.
 
-## Rule
+It guides both manual commit authoring and the automated commit generation by Cursor, leveraging the `commitlint` setup and the Husky `commit-msg` hook.
+
+## Rule for Automated Commits (Cursor AI)
 After Cursor successfully applies changes (e.g., code generation, edits):
 1.  Stage all modified files (`git add .`).
-2.  Generate the commit message:
-    *   **Subject Line**: Follow the Conventional Commits format: `<type>(<scope>): <description>`.
-        *   **Type**: Infer based on the nature of the change (e.g., `feat`, `fix`, `refactor`, `style`, `docs`, `chore`, `perf`, `ci`, `build`, `test`). Default to `chore` if unsure.
-        *   **Scope**: Infer from the primary file path modified (e.g., `components-shared`, `hooks-useInputState`, `lib-utils`). Keep it concise.
-        *   **Description**: Generate a concise summary of the *overall goal* of the change based on the prompt or edit description. Start with a lowercase verb.
+2.  **(Recommended)** Review the staged changes to understand the full context before committing:
+    ```bash
+    git diff --staged
+    ```
+3.  Generate the commit message following the format below, using the project's specific types and scopes.
+    *   **Subject Line**: `<type>(<scope>): <description>`
+        *   **Type**: Choose the most appropriate type from the **Project-Specific Types** list below.
+        *   **Scope**: If applicable, choose the most relevant scope from the **Project-Specific Scopes** list below.
+        *   **Description**: Generate a concise summary of the *overall goal* starting with a lowercase verb.
     *   **Body**:
         *   Add a blank line after the subject.
-        *   Retrieve the list of changed files and their statuses (Added, Modified, Deleted, Renamed) using `git status --porcelain` or similar.
-        *   Generate a concise bulleted list summarizing the key file operations. Examples:
-            *   `- Add: src/app/hooks/useInputState.ts`
-            *   `- Modify: src/app/components/shared/Cursor.tsx`
-            *   `- Delete: src/app/components/shared/OldComponent.tsx`
-            *   `- Rename: src/app/lib/utils/oldName.ts -> src/app/lib/utils/newName.ts`
-        *   Keep the list focused on significant changes; minor formatting changes across many files might be omitted or grouped for brevity (e.g., `- Style: Format multiple components`). Limit the number of lines if necessary (e.g., max 5-7 bullets).
-        *   **(Optional Context)**: If the user prompt provides clear context for the *overall change*, add another blank line and a short sentence summarizing the *why* or linking it to the prompt's goal (e.g., "Integrate cursor component with new input state hook and context."). Avoid detailed per-file descriptions.
-3.  Execute `git commit` with the generated subject line and body. Use the `-m` flag multiple times or pass the message via stdin to include the body.
-4.  If the commit fails (e.g., pre-commit hooks), report the failure and do not proceed.
+        *   Retrieve file statuses using `git status --porcelain` and generate a concise bulleted list:
+            *   `- Add: src/app/hooks/useNewHook.ts`
+            *   `- Modify: src/app/components/Button.tsx`
+            *   `- Delete: src/app/lib/oldUtil.ts`
+            *   `- Rename: src/app/styles/old.css -> src/app/styles/new.css`
+        *   Keep the list focused on significant changes.
+        *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
+4.  Execute `git commit` with the generated message.
 
-## Implementation
-- Use an `execute` action triggered by successful AI code modification events.
-- The command script should:
-    - Intelligently parse change descriptions/prompts and file paths to generate the subject line.
-    - Run `git status --porcelain` or equivalent to get file statuses.
-    - Format the file statuses into a concise bulleted list for the commit body.
-    - Optionally, extract a brief summary from the user prompt/context to add after the file list if helpful.
-    - Construct the full commit message (subject + blank line + file list + [optional blank line + context summary]).
-    - Execute `git commit` with the full message.
+## Guidelines for Manual Commits & AI Prompts
+When committing manually or prompting the AI:
+
+1.  **Commit Message Format**:
+    ```
+    type(scope): subject
+
+    body
+
+    footer
+    ```
+
+2.  **Project-Specific Types** (Use one):
+    *   `feat`: A new feature
+    *   `fix`: A bug fix
+    *   `docs`: Documentation only changes
+    *   `style`: Changes that do not affect the meaning of the code (formatting, etc)
+    *   `refactor`: A code change that neither fixes a bug nor adds a feature
+    *   `perf`: A code change that improves performance
+    *   `test`: Adding missing tests or correcting existing tests
+    *   `build`: Changes that affect the build system or external dependencies
+    *   `ci`: Changes to CI configuration files and scripts
+    *   `chore`: Other changes that don't modify src or test files
+    *   `revert`: Reverts a previous commit
+    *   **`animation`**: Changes related to animations and motion (Framer Motion)
+    *   **`content`**: Content updates like text or images
+    *   **`layout`**: Layout and design changes
+    *   **`a11y`**: Accessibility improvements
+    *   **`r3f`**: Changes specific to React Three Fiber / 3D scenes
+
+3.  **Project-Specific Scopes** (Optional, use one or more relevant scopes):
+    *   `components`, `pages`, `api`, `hooks`, `lib`, `utils`, `styles`, `config`, `assets`, `types`, `content`, `deps`, `tests`, `3d`
+
+4.  **Subject**:
+    *   Use imperative, present tense (e.g., "add", "fix", "change").
+    *   Don't capitalize the first letter.
+    *   No period (.) at the end.
+    *   Keep the entire header line (`type(scope): subject`) under 100 characters.
+
+5.  **Body** (Optional):
+    *   Explain the "why" behind the change.
+    *   Use imperative, present tense.
+    *   Wrap lines at 72 characters.
+
+6.  **Footer** (Optional):
+    *   Reference related issues (e.g., `Closes #123`, `Refs #456`).
+    *   Indicate breaking changes with `BREAKING CHANGE: <description>`.
+
+7.  **Breaking Changes**:
+    *   Must have a description starting with `BREAKING CHANGE:` in the footer.
+    *   Can optionally use `!` after the type/scope (e.g., `refactor(api)!: ...`) to draw attention.
+
+## Implementation Details
+*   **Configuration**: Rules are defined in `commitlint.config.js`.
+*   **Enforcement**: The Husky hook defined in `.husky/commit-msg` runs `npx commitlint --edit $1` to validate messages before committing.
+*   **Packages**: Uses `@commitlint/cli` and `@commitlint/config-conventional`.
 
 ## Benefits
-- Consistent and meaningful commit history.
-- Automation of a repetitive developer task.
-- Improved traceability of AI-driven changes with clear file context and overall goal linkage.
+- Consistent, semantic commit history.
+- Enables automated changelog generation and versioning.
+- Improves collaboration and code review efficiency.
+- Provides clear traceability for AI-generated changes.
 
 ## Examples
-Input Prompt: "Refactor the `Cursor.tsx` component to use new input hook `useInputState` and `CursorContext`."
-Files Modified:
-- M src/app/components/shared/Cursor.tsx
-- D src/app/components/shared/CustomCursor.tsx
-- A src/app/hooks/useInputState.ts
-- A src/app/context/CursorContext.tsx
-
-Expected Commit Message:
+✅ **Good Examples:**
 ```
-refactor(components-shared): integrate cursor with input hook and context
+feat(components): add responsive hero section with 3D background
 
-- Modify: src/app/components/shared/Cursor.tsx
-- Delete: src/app/components/shared/CustomCursor.tsx
-- Add: src/app/hooks/useInputState.ts
-- Add: src/app/context/CursorContext.tsx
+- Implement new Hero component structure
+- Integrate R3F canvas for background animation
+- Use Tailwind CSS for responsive layout
 
-Refactor Cursor component to use centralized state management via useInputState hook and CursorContext.
+Resolves #42
+```
+```
+fix(hooks): prevent infinite loop in useDataFetching hook
+```
+```
+style(layout): adjust main content padding for better alignment
+```
+```
+refactor(r3f): optimize shader code for performance
+```
+```
+chore(deps): update framer-motion to latest version
 ```
 
-Input Prompt: "Implement the `useWindowSize` hook."
-File Created:
-- A src/app/hooks/useWindowSize.ts
-
-Expected Commit Message:
+❌ **Bad Examples:**
 ```
-feat(hooks-useWindowSize): implement useWindowSize hook
-
-- Add: src/app/hooks/useWindowSize.ts
+fixed stuff
+update readme
+WIP
+Component changes
 ```
-(Optional context less necessary here as subject line is descriptive).
-
-Input Prompt: "Format codebase with Prettier"
-Files Modified:
-- M src/app/components/shared/Cursor.tsx
-- M src/app/hooks/useInputState.ts
-- M src/app/context/CursorContext.tsx
-- M src/app/lib/utils/math.ts
-- M src/app/lib/utils/ease.ts
-- ... (potentially many more)
-
-Expected Commit Message (Concise Grouping):
-```
-style: format codebase with prettier
-
-- Style: Format multiple components and utilities.
-```
-(Optional context likely not needed for simple formatting).
