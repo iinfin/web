@@ -31,6 +31,7 @@ After Cursor successfully applies changes (e.g., code generation, edits):
             *   `- Rename: src/app/styles/old.css -> src/app/styles/new.css`
         *   Keep the list focused on significant changes.
         *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
+    *   **IMPORTANT**: When using `git commit -m` directly, do not include literal newlines in the command as this will cause errors. Instead, use `-m` multiple times for multi-line messages, e.g.: `git commit -m "type(scope): subject" -m "body content without newlines"`.
 5.  Execute `git commit` with the generated message.
 
 ## Guidelines for Manual Commits & AI Prompts
@@ -44,6 +45,10 @@ When committing manually or prompting the AI:
 
     footer
     ```
+
+    **IMPORTANT**: When using `git commit -m` directly, do not include literal newlines in the terminal command as this will cause errors. Instead:
+    - For single-line messages: `git commit -m "type(scope): subject"`
+    - For multi-line messages: `git commit -m "type(scope): subject" -m "body content"`
 
 2.  **Project-Specific Types** (Use one):
     *   `feat`: A new feature
