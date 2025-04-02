@@ -85,7 +85,6 @@ const VideoMaterial: FC<{ src: string }> = ({ src }) => {
 	useEffect(() => {
 		const videoElement = texture.source.data as HTMLVideoElement;
 		if (videoElement?.videoWidth && videoElement?.videoHeight) {
-			const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
 			texture.repeat.set(1, 1);
 			texture.offset.set(0, 0);
 			texture.needsUpdate = true;
@@ -105,13 +104,12 @@ interface PlaneWrapperProps {
 const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight }) => {
 	const groupRef = useRef<THREE.Group>(null!);
 	const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
-	const [aspectRatio, setAspectRatio] = useState<AspectRatio>(COMMON_ASPECT_RATIOS.SQUARE);
 
 	// Detect aspect ratio and set dimensions
 	useEffect(() => {
-		if (!item.url) return;
-
 		const detectAspectRatio = async () => {
+			if (!item.url) return;
+
 			try {
 				if (item.mediaType === 'video') {
 					const video = document.createElement('video');
@@ -123,7 +121,6 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeH
 					const ratio = video.videoWidth / video.videoHeight;
 					const closest = findClosestAspectRatio(ratio);
 					if (closest) {
-						setAspectRatio(closest);
 						setDimensions(calculateDimensions(closest));
 					}
 				} else if (item.mediaType === 'image') {
@@ -136,12 +133,11 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeH
 					const ratio = img.width / img.height;
 					const closest = findClosestAspectRatio(ratio);
 					if (closest) {
-						setAspectRatio(closest);
 						setDimensions(calculateDimensions(closest));
 					}
 				}
 			} catch (error) {
-				console.error('Error detecting aspect ratio:', error);
+				logger.error('Error detecting aspect ratio:', { url: item.url, error });
 			}
 		};
 
