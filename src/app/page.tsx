@@ -1,15 +1,15 @@
 import clsx from 'clsx';
 
-import Creations from '@/app/components/sections/Creations';
+import Creation from '@/app/components/sections/Creation';
 import Foundation from '@/app/components/sections/Foundation';
 
 /**
  * Home page component that displays the main sections of the site
  * Uses a responsive grid layout that adapts for different screen sizes and orientations.
- * - Mobile Portrait (Smallest): Foundation (Top 2/3), Creations (Bottom 1/3)
- * - Tablet Portrait (Medium): Foundation (Top 1/3), Creations (Bottom 2/3)
- * - Desktop/Landscape (lg): Creations (Left 2/3), Foundation (Right 1/3)
- * - Wider Desktop (xl+): Creations (Left 3/5), Foundation (Right 2/5)
+ * - Mobile Portrait (Smallest): Foundation (Top 2/3), Creation (Bottom 1/3)
+ * - Tablet Portrait (Medium): Foundation (Top 1/3), Creation (Bottom 2/3)
+ * - Desktop/Landscape (lg): Creation (Left 2/3), Foundation (Right 1/3)
+ * - Wider Desktop (xl+): Creation (Left 3/5), Foundation (Right 2/5)
  * @returns {JSX.Element} The rendered home page
  */
 export default function Home(): JSX.Element {
@@ -40,7 +40,7 @@ export default function Home(): JSX.Element {
 					</div>
 				</div>
 
-				{/* Creations Section Wrapper */}
+				{/* Creation Section Wrapper */}
 				<div
 					className={clsx(
 						// Static classes applied always
@@ -58,7 +58,7 @@ export default function Home(): JSX.Element {
 					)}
 				>
 					<div className="absolute inset-0 h-full w-full">
-						<Creations />
+						<Creation />
 					</div>
 				</div>
 			</div>

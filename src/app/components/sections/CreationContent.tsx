@@ -15,7 +15,7 @@ import type { GalleryItem, MediaType } from '@/app/lib/db/types';
 import { logger } from '@/utils/logger';
 
 // Define props interface for the component
-interface CreationsGalleryProps {
+interface CreationContentProps {
 	galleryItems: GalleryItem[];
 }
 
@@ -414,7 +414,7 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 // };
 
 // Main component
-const CreationsGallery: FC<CreationsGalleryProps> = ({ galleryItems }) => {
+const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
 
 	useEffect(() => {
@@ -498,4 +498,4 @@ const FrameInvalidator = () => {
 };
 */
 
-export default CreationsGallery;
+export default CreationContent;

@@ -90,7 +90,6 @@ export async function queryDatabase(databaseId: string): Promise<PageObjectRespo
 		// Implementation would go here
 		return [];
 	} catch (error) {
-		// Replace console.error with logger.error
 		logger.error(`Error querying database ${databaseId}:`, { error });
 		return [];
 	}
@@ -102,7 +101,6 @@ export async function retrievePage(pageId: string): Promise<PageObjectResponse |
 		// Implementation would go here
 		return null;
 	} catch (error) {
-		// Replace console.error with logger.error
 		logger.error(`Error retrieving page ${pageId}:`, { error });
 		return null;
 	}
@@ -114,7 +112,6 @@ export async function retrieveBlockChildren(blockId: string): Promise<BlockObjec
 		// Implementation would go here
 		return [];
 	} catch (error) {
-		// Replace console.error with logger.error
 		logger.error(`Error retrieving block children for block ${blockId}:`, { error });
 		return [];
 	}
