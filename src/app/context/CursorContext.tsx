@@ -96,6 +96,9 @@ type CursorHoverAreaProps = {
 	onMouseEnter?: (event: React.MouseEvent) => void;
 	/** Function to call on mouse leave */
 	onMouseLeave?: (event: React.MouseEvent) => void;
+	/** Allow any other props to be passed through */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	[key: string]: any;
 };
 
 /**
@@ -110,9 +113,10 @@ export function CursorHoverArea({
 	hoverType = 'pointer',
 	hoverText = '',
 	className,
-	as: Tag = 'div', // Default remains 'div'
+	as: Tag = 'div',
 	onMouseEnter: externalMouseEnter,
 	onMouseLeave: externalMouseLeave,
+	...rest
 }: CursorHoverAreaProps) {
 	const { setCursorType, setCursorText } = useCursor();
 
@@ -122,7 +126,7 @@ export function CursorHoverArea({
 			if (hoverText) {
 				setCursorText(hoverText);
 			}
-			externalMouseEnter?.(event); // Call external handler if provided
+			externalMouseEnter?.(event);
 		},
 		[setCursorType, setCursorText, hoverType, hoverText, externalMouseEnter],
 	);
@@ -130,19 +134,19 @@ export function CursorHoverArea({
 	const handleMouseLeave = useCallback(
 		(event: React.MouseEvent) => {
 			setCursorType('default');
-			setCursorText(''); // Clear text on leave
-			externalMouseLeave?.(event); // Call external handler if provided
+			setCursorText('');
+			externalMouseLeave?.(event);
 		},
 		[setCursorType, setCursorText, externalMouseLeave],
 	);
 
+	// Assert Tag as 'any' to bypass strict type checking for this specific pattern
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- Necessary for generic component tag prop inference
+	const AnyTag = Tag as any;
+
 	return (
-		<Tag
-			onMouseEnter={handleMouseEnter}
-			onMouseLeave={handleMouseLeave}
-			className={className} // Apply passed class names
-		>
+		<AnyTag onMouseEnter={handleMouseEnter} onMouseLeave={handleMouseLeave} className={className} {...rest}>
 			{children}
-		</Tag>
+		</AnyTag>
 	);
 }

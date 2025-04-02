@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 
-import CreationsGallery from '@/app/components/sections/CreationsGAllery';
+import CreationsGallery from '@/app/components/sections/CreationsGallery';
 import { getGalleryItems } from '@/app/lib/db';
 import type { GalleryItem } from '@/app/lib/db/types';
 

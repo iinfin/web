@@ -4,14 +4,14 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { FC } from 'react';
 
 import * as THREE from 'three';
-import { Image, useVideoTexture, VideoTexture } from '@react-three/drei';
+import { Image, useVideoTexture } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 
 // Import Image and VideoTexture
 
 // import { Stats } from '@react-three/drei'; // Uncomment if you add the Stats component
 
-import type { GalleryItem } from '@/app/lib/db/types';
+import type { GalleryItem, MediaType } from '@/app/lib/db/types';
 import { logger } from '@/utils/logger';
 
 // Define props interface for the component
@@ -20,124 +20,174 @@ interface CreationsGalleryProps {
 }
 
 // --- Configuration ---
-const NUM_COLUMNS = 3; // Number of conceptual columns for positioning
-const PLANE_SIZE = 1.5; // Size of each plane
-const HORIZONTAL_SPREAD = 5; // Max width planes can be spread across
-const VERTICAL_GAP = 2.5; // Vertical distance between planes in a column
+const NUM_COLUMNS = 3;
+const PLANE_HEIGHT = 1.5;
+const HORIZONTAL_SPREAD = 5;
+const COLUMN_WIDTH = HORIZONTAL_SPREAD / NUM_COLUMNS;
+const HORIZONTAL_JITTER = 0.4;
+const Z_OFFSET_STEP = 0.15; // Base Z separation between columns
+const Z_JITTER = 0.05; // Smaller random Z offset within the column layer
+const VERTICAL_JITTER = 0.5;
+const VERTICAL_GAP = 2.8;
 const SCROLL_SPEED = 0.007;
-const RECYCLE_BUFFER = PLANE_SIZE * 2; // Extra buffer distance before recycling
-const POOL_MULTIPLIER = 2; // How many screens worth of planes to keep in the pool
+const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // How far above/below viewport items go before recycling
 
 // --- Video Material Sub-component ---
+// Handles loading and aspect ratio correction for video textures
 const VideoMaterial: FC<{ src: string }> = ({ src }) => {
-	// Use the hook to manage video texture loading
 	const texture = useVideoTexture(src, {
 		muted: true,
 		loop: true,
-		playsInline: true, // Important for mobile iOS
-		crossOrigin: 'anonymous', // Ensure CORS compatibility
-		// Start playing automatically - may require user interaction in some browsers
-		// but `muted` often allows autoplay.
+		playsInline: true,
+		crossOrigin: 'anonymous',
 		start: true,
 	});
+
+	// Adjust texture UVs to fit video aspect ratio onto square plane geometry
+	useEffect(() => {
+		const videoElement = texture.source.data as HTMLVideoElement;
+		if (videoElement?.videoWidth && videoElement?.videoHeight) {
+			const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
+			const planeAspect = 1; // Video plane geometry is square
+			const aspectFactor = videoAspect / planeAspect;
+			texture.repeat.x = aspectFactor > 1 ? 1 / aspectFactor : 1;
+			texture.repeat.y = aspectFactor < 1 ? aspectFactor : 1;
+			texture.offset.x = (1 - texture.repeat.x) / 2;
+			texture.offset.y = (1 - texture.repeat.y) / 2;
+			texture.needsUpdate = true;
+		}
+	}, [texture]);
 
 	return <meshStandardMaterial side={THREE.DoubleSide} map={texture} toneMapped={false} />;
 };
 
-// --- Component: Single Plane with Texture/Video ---
-interface PlaneProps {
+// --- Single Item Wrapper Component ---
+// Handles positioning and rendering the correct content (Image or Video)
+interface PlaneWrapperProps {
 	item: GalleryItem;
-	position: THREE.Vector3; // Current position from state
-	planeSize: number;
+	position: THREE.Vector3;
+	planeHeight: number;
 }
 
-const Plane: FC<PlaneProps> = React.memo(({ item, position, planeSize }) => {
-	const meshRef = useRef<THREE.Mesh>(null!);
+const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight }) => {
+	const groupRef = useRef<THREE.Group>(null!); // Typed ref
 
-	// Update position directly - more efficient than state for rapid updates
+	// Update group position directly each frame
 	useFrame(() => {
-		if (meshRef.current) {
-			meshRef.current.position.copy(position);
+		if (groupRef.current) {
+			groupRef.current.position.copy(position);
 		}
 	});
 
-	// Simple fallback material
+	// Memoized fallback material for Suspense
 	const fallbackMaterial = useMemo(() => <meshStandardMaterial color="#ccc" side={THREE.DoubleSide} />, []);
+	// Base scale for Drei's Image component (maintains aspect ratio internally)
+	const imageScale = planeHeight;
 
 	return (
-		<mesh ref={meshRef} userData={{ itemId: item.id }}>
-			{/* Provide geometry here since VideoTexture needs a mesh to apply to */}
-			<planeGeometry args={[planeSize, planeSize]} />
+		<group ref={groupRef} userData={{ itemId: item.id }}>
 			<Suspense fallback={fallbackMaterial}>
 				{item.mediaType === 'image' && item.url ? (
-					// Use Drei's Image for images
-					<Image url={item.url} scale={planeSize} transparent opacity={1} side={THREE.DoubleSide} toneMapped={false} />
+					<Image url={item.url} scale={imageScale} transparent opacity={1} side={THREE.DoubleSide} toneMapped={false} />
 				) : item.mediaType === 'video' && item.url ? (
-					// Use the dedicated VideoMaterial component
-					<VideoMaterial src={item.url} />
+					// Video uses explicit geometry + VideoMaterial for texture
+					<mesh>
+						<planeGeometry args={[planeHeight, planeHeight]} />
+						<VideoMaterial src={item.url} />
+					</mesh>
 				) : (
-					// Fallback material if no URL or unknown type
-					<meshStandardMaterial color="#555" side={THREE.DoubleSide} />
+					// Fallback for items without URL or unknown type
+					<mesh>
+						<planeGeometry args={[planeHeight, planeHeight]} />
+						<meshStandardMaterial color="#555" side={THREE.DoubleSide} />
+					</mesh>
 				)}
 			</Suspense>
-		</mesh>
+		</group>
 	);
 });
-Plane.displayName = 'Plane'; // Add display name for React DevTools
+PlaneWrapper.displayName = 'PlaneWrapper';
 
-// --- Component: Scrolling Grid Manager ---
+// --- Scrolling Content Manager ---
+// Manages the state and recycling logic for all gallery items
 interface PlaneState {
-	id: string; // Unique identifier for the plane instance (based on item index)
-	itemIndex: number; // Index of the galleryItem it represents
-	initialY: number; // The absolute Y position it would have at scrollY = 0
-	x: number; // Current random X position
-	z: number; // Current random Z position
-	currentY: number; // Current calculated Y position (for rendering)
+	id: string; // Stable unique key for React
+	itemIndex: number; // Index into the galleryItems array
+	initialY: number; // Base Y position (includes vertical jitter) at scrollY = 0
+	col: number; // Column assignment (0 to NUM_COLUMNS - 1)
+	x: number; // Current calculated X position
+	z: number; // Current calculated Z position
+	currentY: number; // Final calculated Y position for rendering this frame
 }
 
+// Calculates the X and Z position for a plane based on its column
+// Adds horizontal jitter within the column and Z jitter around a base Z offset
+const calculatePosition = (col: number): { x: number; z: number } => {
+	// Determine the horizontal center of the assigned column
+	const columnCenterX = (col - (NUM_COLUMNS - 1) / 2) * COLUMN_WIDTH;
+	// Add random horizontal jitter within the column's bounds
+	const x = columnCenterX + (Math.random() - 0.5) * HORIZONTAL_JITTER * 2;
+	// Determine a base Z depth based on the column to create layers
+	const baseZ = (col - (NUM_COLUMNS - 1) / 2) * Z_OFFSET_STEP;
+	// Add a smaller random jitter to the base Z depth
+	const z = baseZ + (Math.random() - 0.5) * Z_JITTER * 2;
+	return { x, z };
+};
+
 const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) => {
-	const { camera, viewport } = useThree();
+	// R3F hooks
+	const { camera } = useThree();
+	// State and Refs
 	const scrollY = useRef(0);
-	// Use state to manage the array of plane data, triggering re-renders
 	const [planeStates, setPlaneStates] = useState<PlaneState[]>([]);
 	const initialPositionsSet = useRef(false);
 
-	// Calculate viewport dimensions at Z=0
+	// Calculate visible height in world units at Z=0
 	const cameraZ = camera.position.z;
 	const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
 	const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
 
-	// Total vertical height occupied by all items if laid out end-to-end
+	// Calculate the total height the content would occupy if laid out end-to-end
+	// Used for calculating recycling jumps
 	const totalContentHeight = useMemo(() => {
-		if (galleryItems.length === 0 || NUM_COLUMNS === 0) return 0;
+		if (galleryItems.length === 0) return 0;
 		return Math.ceil(galleryItems.length / NUM_COLUMNS) * VERTICAL_GAP;
 	}, [galleryItems.length]);
 
-	// Initialize plane states
+	// Initialize the state for each plane once
 	useEffect(() => {
 		if (galleryItems.length === 0 || initialPositionsSet.current) return;
 
 		logger.info('Initializing plane states', { count: galleryItems.length, totalContentHeight });
 		const initialStates: PlaneState[] = [];
-		const startYOffset = totalContentHeight / 2 - VERTICAL_GAP / 2; // Center the content
+		// Calculate offset to center the initial block of items vertically in the view
+		const startYOffset = totalContentHeight / 2 - VERTICAL_GAP / 2;
 
 		for (let i = 0; i < galleryItems.length; i++) {
 			const row = Math.floor(i / NUM_COLUMNS);
-			const initialY = startYOffset - row * VERTICAL_GAP;
+			const col = i % NUM_COLUMNS;
+			// Calculate the base Y position for this item's row
+			const baseY = startYOffset - row * VERTICAL_GAP;
+			// Add random vertical jitter to the base Y
+			const initialY = baseY + (Math.random() - 0.5) * VERTICAL_JITTER * 2;
+			// Get the initial X and Z position based on the column
+			const { x, z } = calculatePosition(col);
+
 			initialStates.push({
-				id: `plane-${i}`,
+				id: `plane-${i}`, // Stable key based on item index
 				itemIndex: i,
-				initialY: initialY,
-				x: (Math.random() - 0.5) * HORIZONTAL_SPREAD,
-				z: (Math.random() - 0.5) * 1,
-				currentY: initialY, // Start at initialY
+				initialY: initialY, // Store the initial Y (including jitter)
+				col: col,
+				x: x,
+				z: z,
+				currentY: initialY, // Start rendering at the initial calculated Y
 			});
 		}
 		setPlaneStates(initialStates);
 		initialPositionsSet.current = true;
 	}, [galleryItems, totalContentHeight]);
 
-	// Handle scroll
+	// Setup scroll listener
 	useEffect(() => {
 		const handleWheel = (event: WheelEvent) => {
 			scrollY.current += event.deltaY * SCROLL_SPEED;
@@ -146,61 +196,83 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 		return () => window.removeEventListener('wheel', handleWheel);
 	}, []);
 
-	// Frame loop for updating positions and recycling states
+	// Main frame loop for updating positions and handling recycling
 	useFrame(() => {
 		if (planeStates.length === 0 || totalContentHeight === 0) return;
 
 		const currentScroll = scrollY.current;
+		// Define boundaries for recycling check (viewport height + buffer)
 		const topBound = visibleHeight / 2 + RECYCLE_BUFFER;
 		const bottomBound = -visibleHeight / 2 - RECYCLE_BUFFER;
 
+		// Update plane states based on scroll position
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialY = state.initialY;
+				// Calculate current Y relative to the center of the viewport (0)
 				const currentRelativeY = state.initialY - currentScroll;
+				// Keep track of potential changes
+				let positionChanged = false;
 				let newX = state.x;
 				let newZ = state.z;
 
-				// Recycle check: ABOVE top boundary -> move initialY down
+				// --- Recycling Logic --- //
+				// If plane is too far above the top bound, recycle it to the bottom
 				if (currentRelativeY > topBound) {
-					newInitialY -= totalContentHeight;
-					newX = (Math.random() - 0.5) * HORIZONTAL_SPREAD;
-					newZ = (Math.random() - 0.5) * 1;
+					// Calculate the base Y position after jumping down by the total content height
+					const baseY = state.initialY - totalContentHeight;
+					// Add new random vertical jitter
+					newInitialY = baseY + (Math.random() - 0.5) * VERTICAL_JITTER * 2;
+					// Get new X and Z positions based on the plane's column
+					const pos = calculatePosition(state.col);
+					newX = pos.x;
+					newZ = pos.z;
+					positionChanged = true;
 				}
-				// Recycle check: BELOW bottom boundary -> move initialY up
+				// If plane is too far below the bottom bound, recycle it to the top
 				else if (currentRelativeY < bottomBound) {
-					newInitialY += totalContentHeight;
-					newX = (Math.random() - 0.5) * HORIZONTAL_SPREAD;
-					newZ = (Math.random() - 0.5) * 1;
+					// Calculate the base Y position after jumping up by the total content height
+					const baseY = state.initialY + totalContentHeight;
+					// Add new random vertical jitter
+					newInitialY = baseY + (Math.random() - 0.5) * VERTICAL_JITTER * 2;
+					// Get new X and Z positions based on the plane's column
+					const pos = calculatePosition(state.col);
+					newX = pos.x;
+					newZ = pos.z;
+					positionChanged = true;
 				}
 
-				// Calculate the final currentY for rendering this frame
+				// Calculate the final Y position for rendering in this frame
 				const finalCurrentY = newInitialY - currentScroll;
 
-				// Only return a new object if something changed to avoid unnecessary re-renders
-				if (newInitialY !== state.initialY || finalCurrentY !== state.currentY || newX !== state.x || newZ !== state.z) {
+				// Determine if the state needs updating
+				const needsUpdate = positionChanged || finalCurrentY !== state.currentY;
+
+				if (needsUpdate) {
+					// Return a new state object only if necessary
 					return { ...state, initialY: newInitialY, currentY: finalCurrentY, x: newX, z: newZ };
 				} else {
+					// Otherwise, return the existing state object to prevent unnecessary re-renders
 					return state;
 				}
 			}),
 		);
 	});
 
-	// Render the planes based on their current state
+	// Render the PlaneWrappers based on the current state
 	return (
 		<group>
 			{planeStates.map((state) => {
 				const item = galleryItems[state.itemIndex];
-				if (!item) return null; // Should not happen if indices are correct
-				// Construct position vector for the Plane component
+				if (!item) return null;
+				// Current position vector for the wrapper component
 				const position = new THREE.Vector3(state.x, state.currentY, state.z);
 				return (
-					<Plane
-						key={state.id} // Use stable key
+					<PlaneWrapper
+						key={state.id} // Use stable ID as key
 						item={item}
 						position={position}
-						planeSize={PLANE_SIZE}
+						planeHeight={PLANE_HEIGHT}
 					/>
 				);
 			})}
@@ -219,31 +291,41 @@ const DebugHelper = () => {
 
 // Main component
 const CreationsGallery: FC<CreationsGalleryProps> = ({ galleryItems }) => {
-	// State for DPR, initialized client-side
-	const [dprValue, setDprValue] = useState(1); // Default DPR
+	const [dprValue, setDprValue] = useState(1);
 
 	useEffect(() => {
-		// Set the DPR value only on the client after mount
 		setDprValue(window.devicePixelRatio);
 	}, []);
 
 	// Use real items or generate test ones
-	const items = useMemo(() => {
+	const items: GalleryItem[] = useMemo(() => {
 		if (galleryItems.length > 0) {
-			// Ensure real items have a URL for testing, replace with actual logic if needed
-			const itemsWithUrls = galleryItems.map((item) => ({ ...item, url: item.url || 'https://picsum.photos/300' }));
-			logger.info(`Using ${itemsWithUrls.length} real gallery items`);
-			return itemsWithUrls;
+			// Ensure required fields have defaults if missing in fetched data
+			const processedItems = galleryItems.map((item) => ({
+				description: '', // Default empty string if undefined
+				tags: [], // Default empty array if undefined
+				...item, // Spread item afterwards to keep original values if they exist
+				url: item.url || 'https://picsum.photos/300', // Default URL
+				// Provide a default mediaType if it's missing/undefined
+				mediaType: item.mediaType || 'image',
+			}));
+			logger.info(`Using ${processedItems.length} real gallery items`);
+			// Cast to GalleryItem[] should be safe now if defaults cover required fields
+			return processedItems as GalleryItem[];
 		}
 
-		// Create test items if no real data, ensuring they have URLs
-		const testItems = Array.from({ length: 100 }, (_, i) => ({
-			id: `test-${i}`,
-			title: `Test Item ${i}`,
-			// Alternate image/video for testing
-			mediaType: i % 5 === 0 ? 'video' : ('image' as const),
-			url: i % 5 === 0 ? '/videos/test-video.mp4' : `https://picsum.photos/seed/${i}/300/300`,
-		}));
+		// Create test items, ensuring all potentially optional fields are present
+		const testItems: GalleryItem[] = Array.from({ length: 100 }, (_, i): GalleryItem => {
+			const type = (i % 5 === 0 ? 'video' : 'image') as MediaType;
+			return {
+				id: `test-${i}`,
+				title: `Test Item ${i}`,
+				mediaType: type, // Correctly typed now
+				url: type === 'video' ? '/videos/test-video.mp4' : `https://picsum.photos/seed/${i}/300/300`,
+				description: `Description for test item ${i}`, // Provide a default string
+				tags: [`test`, `item-${i}`], // Provide a default array
+			};
+		});
 
 		logger.info(`Using ${testItems.length} test gallery items (no real data provided)`);
 		return testItems;
@@ -254,12 +336,12 @@ const CreationsGallery: FC<CreationsGalleryProps> = ({ galleryItems }) => {
 			<Canvas
 				shadows
 				camera={{
-					position: [0, 0, 8], // Camera closer for larger planes
-					fov: 50, // Slightly wider FOV
+					position: [0, 0, 8],
+					fov: 50,
 					near: 0.1,
 					far: 1000,
 				}}
-				dpr={dprValue} // Use state variable for DPR
+				dpr={dprValue}
 				frameloop="always"
 				onCreated={({ gl }) => {
 					gl.setClearColor('#ffffff');
@@ -270,10 +352,8 @@ const CreationsGallery: FC<CreationsGalleryProps> = ({ galleryItems }) => {
 					<ambientLight intensity={0.8} />
 					<directionalLight position={[5, 15, 10]} intensity={1.2} />
 
-					{/* Debug helper */}
 					<DebugHelper />
 
-					{/* Scrolling planes manager */}
 					<ScrollingPlanes galleryItems={items} />
 				</Suspense>
 			</Canvas>
