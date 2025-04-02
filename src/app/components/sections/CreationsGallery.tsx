@@ -29,11 +29,49 @@ const Z_OFFSET_STEP = 0.15; // Base Z separation between columns
 const Z_JITTER = 0.05; // Smaller random Z offset within the column layer
 const VERTICAL_JITTER = 0.5;
 const VERTICAL_GAP = 2.8;
-const SCROLL_SPEED = 0.007;
+const SCROLL_SENSITIVITY = 0.002; // How sensitive the scroll is to mouse wheel events
+const SCROLL_LERP = 0.01; // Lower = smoother but slower scrolling (0-1)
+const SCROLL_MOMENTUM = 0.7; // Scroll momentum/deceleration factor (0-1)
 const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // How far above/below viewport items go before recycling
 
+// Define common aspect ratios and their dimensions
+type AspectRatioType = 'square' | '16:9' | '9:16' | '4:5' | '5:4';
+
+interface AspectRatio {
+	readonly width: number;
+	readonly height: number;
+	readonly name: AspectRatioType;
+}
+
+const COMMON_ASPECT_RATIOS = {
+	SQUARE: { width: 1, height: 1, name: 'square' } as AspectRatio,
+	LANDSCAPE_16_9: { width: 16, height: 9, name: '16:9' } as AspectRatio,
+	PORTRAIT_9_16: { width: 9, height: 16, name: '9:16' } as AspectRatio,
+	PORTRAIT_4_5: { width: 4, height: 5, name: '4:5' } as AspectRatio,
+	LANDSCAPE_5_4: { width: 5, height: 4, name: '5:4' } as AspectRatio,
+} as const;
+
+// Base height for scaling calculations
+const BASE_HEIGHT = PLANE_HEIGHT;
+
+// Calculate dimensions while maintaining aspect ratio and consistent visual presence
+function calculateDimensions(aspectRatio: AspectRatio): [number, number] {
+	const ratio = aspectRatio.width / aspectRatio.height;
+
+	// For portrait (taller than wide), scale based on height
+	if (ratio < 1) {
+		const height = BASE_HEIGHT;
+		const width = height * ratio;
+		return [width, height];
+	}
+
+	// For landscape (wider than tall), scale based on height but maintain area
+	const height = BASE_HEIGHT / Math.sqrt(ratio);
+	const width = height * ratio;
+	return [width, height];
+}
+
 // --- Video Material Sub-component ---
-// Handles loading and aspect ratio correction for video textures
 const VideoMaterial: FC<{ src: string }> = ({ src }) => {
 	const texture = useVideoTexture(src, {
 		muted: true,
@@ -43,17 +81,13 @@ const VideoMaterial: FC<{ src: string }> = ({ src }) => {
 		start: true,
 	});
 
-	// Adjust texture UVs to fit video aspect ratio onto square plane geometry
+	// Adjust texture UVs to fit video aspect ratio
 	useEffect(() => {
 		const videoElement = texture.source.data as HTMLVideoElement;
 		if (videoElement?.videoWidth && videoElement?.videoHeight) {
 			const videoAspect = videoElement.videoWidth / videoElement.videoHeight;
-			const planeAspect = 1; // Video plane geometry is square
-			const aspectFactor = videoAspect / planeAspect;
-			texture.repeat.x = aspectFactor > 1 ? 1 / aspectFactor : 1;
-			texture.repeat.y = aspectFactor < 1 ? aspectFactor : 1;
-			texture.offset.x = (1 - texture.repeat.x) / 2;
-			texture.offset.y = (1 - texture.repeat.y) / 2;
+			texture.repeat.set(1, 1);
+			texture.offset.set(0, 0);
 			texture.needsUpdate = true;
 		}
 	}, [texture]);
@@ -62,7 +96,6 @@ const VideoMaterial: FC<{ src: string }> = ({ src }) => {
 };
 
 // --- Single Item Wrapper Component ---
-// Handles positioning and rendering the correct content (Image or Video)
 interface PlaneWrapperProps {
 	item: GalleryItem;
 	position: THREE.Vector3;
@@ -70,35 +103,92 @@ interface PlaneWrapperProps {
 }
 
 const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight }) => {
-	const groupRef = useRef<THREE.Group>(null!); // Typed ref
+	const groupRef = useRef<THREE.Group>(null!);
+	const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
+	const [aspectRatio, setAspectRatio] = useState<AspectRatio>(COMMON_ASPECT_RATIOS.SQUARE);
 
-	// Update group position directly each frame
+	// Detect aspect ratio and set dimensions
+	useEffect(() => {
+		if (!item.url) return;
+
+		const detectAspectRatio = async () => {
+			try {
+				if (item.mediaType === 'video') {
+					const video = document.createElement('video');
+					video.src = item.url;
+					await new Promise<void>((resolve, reject) => {
+						video.onloadedmetadata = () => resolve();
+						video.onerror = reject;
+					});
+					const ratio = video.videoWidth / video.videoHeight;
+					const closest = findClosestAspectRatio(ratio);
+					if (closest) {
+						setAspectRatio(closest);
+						setDimensions(calculateDimensions(closest));
+					}
+				} else if (item.mediaType === 'image') {
+					const img = document.createElement('img');
+					img.src = item.url;
+					await new Promise<void>((resolve, reject) => {
+						img.onload = () => resolve();
+						img.onerror = reject;
+					});
+					const ratio = img.width / img.height;
+					const closest = findClosestAspectRatio(ratio);
+					if (closest) {
+						setAspectRatio(closest);
+						setDimensions(calculateDimensions(closest));
+					}
+				}
+			} catch (error) {
+				console.error('Error detecting aspect ratio:', error);
+			}
+		};
+
+		detectAspectRatio();
+	}, [item.url, item.mediaType]);
+
+	// Update group position each frame
 	useFrame(() => {
 		if (groupRef.current) {
 			groupRef.current.position.copy(position);
 		}
 	});
 
-	// Memoized fallback material for Suspense
 	const fallbackMaterial = useMemo(() => <meshStandardMaterial color="#ccc" side={THREE.DoubleSide} />, []);
-	// Base scale for Drei's Image component (maintains aspect ratio internally)
-	const imageScale = planeHeight;
+
+	// Only render content if we have a URL
+	if (!item.url) {
+		return (
+			<group ref={groupRef} userData={{ itemId: item.id }}>
+				<mesh scale={[dimensions[0], dimensions[1], 1]}>
+					<planeGeometry />
+					{fallbackMaterial}
+				</mesh>
+			</group>
+		);
+	}
 
 	return (
 		<group ref={groupRef} userData={{ itemId: item.id }}>
-			<Suspense fallback={fallbackMaterial}>
-				{item.mediaType === 'image' && item.url ? (
-					<Image url={item.url} scale={imageScale} transparent opacity={1} side={THREE.DoubleSide} toneMapped={false} />
-				) : item.mediaType === 'video' && item.url ? (
-					// Video uses explicit geometry + VideoMaterial for texture
-					<mesh>
-						<planeGeometry args={[planeHeight, planeHeight]} />
+			<Suspense
+				fallback={
+					<mesh scale={[dimensions[0], dimensions[1], 1]}>
+						<planeGeometry />
+						{fallbackMaterial}
+					</mesh>
+				}
+			>
+				{item.mediaType === 'image' ? (
+					<Image url={item.url} scale={dimensions} transparent opacity={1} side={THREE.DoubleSide} toneMapped={false} />
+				) : item.mediaType === 'video' ? (
+					<mesh scale={[dimensions[0], dimensions[1], 1]}>
+						<planeGeometry />
 						<VideoMaterial src={item.url} />
 					</mesh>
 				) : (
-					// Fallback for items without URL or unknown type
-					<mesh>
-						<planeGeometry args={[planeHeight, planeHeight]} />
+					<mesh scale={[dimensions[0], dimensions[1], 1]}>
+						<planeGeometry />
 						<meshStandardMaterial color="#555" side={THREE.DoubleSide} />
 					</mesh>
 				)}
@@ -106,7 +196,26 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeH
 		</group>
 	);
 });
+
 PlaneWrapper.displayName = 'PlaneWrapper';
+
+// Helper function to find the closest predefined aspect ratio
+function findClosestAspectRatio(ratio: number): AspectRatio {
+	const defaultRatio = COMMON_ASPECT_RATIOS.SQUARE;
+	let closestRatio = defaultRatio;
+	let smallestDiff = Infinity;
+
+	Object.values(COMMON_ASPECT_RATIOS).forEach((ar: AspectRatio) => {
+		const arRatio = ar.width / ar.height;
+		const diff = Math.abs(arRatio - ratio);
+		if (diff < smallestDiff) {
+			smallestDiff = diff;
+			closestRatio = ar;
+		}
+	});
+
+	return closestRatio;
+}
 
 // --- Scrolling Content Manager ---
 // Manages the state and recycling logic for all gallery items
@@ -138,7 +247,9 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 	// R3F hooks
 	const { camera } = useThree();
 	// State and Refs
-	const scrollY = useRef(0);
+	const scrollY = useRef(0); // Target scroll position
+	const currentScrollY = useRef(0); // Actual interpolated scroll position
+	const scrollVelocity = useRef(0); // Store velocity for momentum
 	const [planeStates, setPlaneStates] = useState<PlaneState[]>([]);
 	const initialPositionsSet = useRef(false);
 
@@ -190,9 +301,15 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 	// Setup scroll listener
 	useEffect(() => {
 		const handleWheel = (event: WheelEvent) => {
-			scrollY.current += event.deltaY * SCROLL_SPEED;
+			// Add to scrollVelocity instead of directly updating scrollY
+			scrollVelocity.current += event.deltaY * SCROLL_SENSITIVITY;
+
+			// Prevent default behavior to avoid browser scrolling
+			event.preventDefault();
 		};
-		window.addEventListener('wheel', handleWheel, { passive: true });
+
+		// Use passive: false to allow preventDefault()
+		window.addEventListener('wheel', handleWheel, { passive: false });
 		return () => window.removeEventListener('wheel', handleWheel);
 	}, []);
 
@@ -200,7 +317,18 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 	useFrame(() => {
 		if (planeStates.length === 0 || totalContentHeight === 0) return;
 
-		const currentScroll = scrollY.current;
+		// Apply momentum to scrollVelocity (gradually reduce it)
+		scrollVelocity.current *= SCROLL_MOMENTUM;
+
+		// Update target scroll position based on velocity
+		scrollY.current += scrollVelocity.current;
+
+		// Smooth lerp the actual scroll position towards the target
+		currentScrollY.current += (scrollY.current - currentScrollY.current) * SCROLL_LERP;
+
+		// Get the interpolated scroll position for this frame
+		const currentScroll = currentScrollY.current;
+
 		// Define boundaries for recycling check (viewport height + buffer)
 		const topBound = visibleHeight / 2 + RECYCLE_BUFFER;
 		const bottomBound = -visibleHeight / 2 - RECYCLE_BUFFER;
@@ -281,13 +409,13 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 };
 
 // --- Debug Helper (Optional) ---
-const DebugHelper = () => {
-	return (
-		<>
-			<axesHelper args={[5]} />
-		</>
-	);
-};
+// const DebugHelper = () => {
+// 	return (
+// 		<>
+// 			<axesHelper args={[5]} />
+// 		</>
+// 	);
+// };
 
 // Main component
 const CreationsGallery: FC<CreationsGalleryProps> = ({ galleryItems }) => {
@@ -352,7 +480,7 @@ const CreationsGallery: FC<CreationsGalleryProps> = ({ galleryItems }) => {
 					<ambientLight intensity={0.8} />
 					<directionalLight position={[5, 15, 10]} intensity={1.2} />
 
-					<DebugHelper />
+					{/* <DebugHelper /> */}
 
 					<ScrollingPlanes galleryItems={items} />
 				</Suspense>
