@@ -10,7 +10,7 @@ export { GalleryItem };
 // CDN host replacement configuration
 const CDN_CONFIG = {
 	// Set to true to enable URL replacement, false to use original URLs
-	REPLACE_HOST: true,
+	REPLACE_HOST: false,
 	// Original host to replace
 	ORIGINAL_HOST: 'storage.u29dc.com',
 	// New CDN host
