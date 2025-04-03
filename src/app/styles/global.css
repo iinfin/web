@@ -104,6 +104,32 @@
 		transition-property: opacity;
 		text-decoration: underline;
 	}
+
+	/* Override dark mode - always use light theme */
+	:root {
+		color-scheme: light;
+	}
+
+	/* Force light mode styles even when dark mode is preferred */
+	html {
+		forced-color-adjust: none;
+	}
+
+	/* Override any dark: variant classes to use light theme values regardless of system preference */
+	.dark\:bg-black-x2 {
+		background-color: var(--color-white-x1) !important;
+	}
+
+	.dark\:text-white-x1 {
+		color: var(--color-black-x1) !important;
+	}
+
+	/* Override all other dark mode classes */
+	[class*='dark\:'] {
+		--tw-dark-text-opacity: 0;
+		--tw-dark-bg-opacity: 0;
+		--tw-dark-border-opacity: 0;
+	}
 }
 
 @layer components {

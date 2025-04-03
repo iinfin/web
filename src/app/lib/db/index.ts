@@ -10,11 +10,11 @@ export { GalleryItem };
 // CDN host replacement configuration
 const CDN_CONFIG = {
 	// Set to true to enable URL replacement, false to use original URLs
-	REPLACE_HOST: false,
+	REPLACE_HOST: true,
 	// Original host to replace
 	ORIGINAL_HOST: 'storage.u29dc.com',
 	// New CDN host
-	NEW_HOST: 'u29dc.b-cdn.net',
+	NEW_HOST: 'storage.u29dc.com',
 	// Optional path prefix to add after the host (e.g., '/placeholder/')
 	PATH_PREFIX: '/placeholder/',
 };
@@ -42,6 +42,26 @@ export function replaceMediaHost(originalUrl?: string): string | undefined {
 
 	// Return the original URL if it doesn't match the pattern
 	return originalUrl;
+}
+
+/**
+ * Helper function to process an item and replace its URL with CDN URL if needed
+ * @param item The gallery item to process
+ * @returns A new item with potentially updated URL
+ */
+function processItemUrl<T extends GalleryItem>(item: T): T {
+	// Return early if replacement is disabled or item not found
+	if (!CDN_CONFIG.REPLACE_HOST) return item;
+
+	// Process item to replace URL with CDN URL if item exists
+	const updatedItem = { ...item };
+	if (updatedItem.url) {
+		const newUrl = replaceMediaHost(updatedItem.url);
+		if (newUrl) {
+			updatedItem.url = newUrl;
+		}
+	}
+	return updatedItem;
 }
 
 /**
@@ -79,16 +99,7 @@ class DatabaseService {
 		// Process items to replace URLs with CDN URLs if enabled
 		if (!CDN_CONFIG.REPLACE_HOST) return items;
 
-		return items.map((item) => {
-			const updatedItem = { ...item };
-			if (updatedItem.url) {
-				const newUrl = replaceMediaHost(updatedItem.url);
-				if (newUrl) {
-					updatedItem.url = newUrl;
-				}
-			}
-			return updatedItem;
-		});
+		return items.map(processItemUrl);
 	}
 
 	/**
@@ -97,18 +108,11 @@ class DatabaseService {
 	async getGalleryItem(id: string): Promise<GalleryItem | null> {
 		const item = await this.provider.getGalleryItem(id);
 
-		// Return original item if replacement is disabled or item not found
-		if (!CDN_CONFIG.REPLACE_HOST || !item) return item;
+		// Return null if item not found
+		if (!item) return null;
 
-		// Process item to replace URL with CDN URL if item exists
-		const updatedItem = { ...item };
-		if (updatedItem.url) {
-			const newUrl = replaceMediaHost(updatedItem.url);
-			if (newUrl) {
-				updatedItem.url = newUrl;
-			}
-		}
-		return updatedItem;
+		// Process and return the item
+		return processItemUrl(item);
 	}
 
 	/**
@@ -131,16 +135,7 @@ class DatabaseService {
 		if (!CDN_CONFIG.REPLACE_HOST) return items;
 
 		// Process items to replace URLs with CDN URLs
-		return items.map((item) => {
-			const updatedItem = { ...item };
-			if (updatedItem.url) {
-				const newUrl = replaceMediaHost(updatedItem.url);
-				if (newUrl) {
-					updatedItem.url = newUrl;
-				}
-			}
-			return updatedItem;
-		});
+		return items.map(processItemUrl);
 	}
 }
 

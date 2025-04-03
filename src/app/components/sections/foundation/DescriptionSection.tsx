@@ -72,7 +72,7 @@ const DescriptionSection: FC<DescriptionSectionProps> = ({ durationPrimary, stag
 				<AnimatedTextFadeIn text={descriptionText} el="div" className="space-y-0" duration={durationPrimary} staggerChildren={staggerMedium} />
 
 				{/* Add Logo */}
-				<motion.div className="mt-12 flex w-full justify-start" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: durationPrimary }}>
+				<motion.div className="mt-12 flex w-full justify-start mix-blend-multiply" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: durationPrimary }}>
 					<Image src="/assets/meta/u29dc.webp" alt="Incomplete Infinity Logo" width={50} height={25} />
 				</motion.div>
 			</div>
