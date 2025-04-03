@@ -6,9 +6,9 @@ import { clsx } from 'clsx';
 import { motion, type Variants } from 'framer-motion';
 
 /**
- * Props for the AnimatedText component.
+ * Props for the AnimatedTextSlideUp component.
  */
-type AnimatedTextProps = {
+type AnimatedTextSlideUpProps = {
 	/** The text content to animate. Can be a single string or an array of strings for multiple lines. */
 	text: string | string[];
 	/** The HTML element type to use for the container (e.g., 'h1', 'p', 'div'). Defaults to 'div'. */
@@ -26,14 +26,14 @@ type AnimatedTextProps = {
 };
 
 /**
- * A reusable component to animate text lines into view with a masked effect.
+ * A reusable component to animate text lines into view with a masked slide-up effect.
  * Each line slides up from the bottom within an overflow-hidden container.
  *
  * @example
- * <AnimatedText text="Hello World" el="h1" className="text-4xl font-bold" />
- * <AnimatedText text={["Multiple", "Lines", "Example"]} el="p" />
+ * <AnimatedTextSlideUp text="Hello World" el="h1" className="text-4xl font-bold" />
+ * <AnimatedTextSlideUp text={["Multiple", "Lines", "Example"]} el="p" />
  */
-export const AnimatedText: React.FC<AnimatedTextProps> = ({
+export const AnimatedTextSlideUp: React.FC<AnimatedTextSlideUpProps> = ({
 	text,
 	el: Wrapper = 'div', // Default to 'div' if el is not provided
 	className,
@@ -101,4 +101,4 @@ export const AnimatedText: React.FC<AnimatedTextProps> = ({
 	);
 };
 
-export default AnimatedText;
+export default AnimatedTextSlideUp;

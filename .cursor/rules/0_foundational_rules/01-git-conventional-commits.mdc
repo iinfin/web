@@ -4,20 +4,23 @@ globs: []
 alwaysApply: true
 ---
 ## Description
-This rule defines and automates the process of committing changes using the Conventional Commits specification, tailored with project-specific types and scopes defined in `commitlint.config.js`. It ensures consistent, semantic commit messages suitable for automated changelog generation and versioning.
-
-It guides both manual commit authoring and the automated commit generation by Cursor, leveraging the `commitlint` setup and the Husky `commit-msg` hook.
+This rule defines and automates the process of committing changes using the Conventional Commits specification, tailored with project-specific types and scopes defined in `commitlint.config.js`. It ensures consistent, semantic commit messages suitable for automated changelog generation and versioning. It guides both manual commit authoring and the automated commit generation by Cursor, leveraging the `commitlint` setup and the Husky `commit-msg` hook.
 
 ## Rule for Automated Commits (Cursor AI)
 When asked to commit and push changes:
-1.  Stage all modified files (`git add .`).
-2.   Review the staged changes to understand the full context before committing:
+1. Format and Lint check all files first, fix linter errors and warnings if there are any
+    ```bash
+    npm run format
+    npm run lint
+    ```
+2.  Run `npm run build` to verify the project builds without error and without any linter warnings before pushing. If there are, fix the errors and then commit and push.
+3.  Stage all modified files (`git add .`).
+4.   Review the staged changes to understand the full context before committing:
     ```bash
     git --no-pager status
     git --no-pager diff --staged
     ```
-3.  Run `npm run build` to verify the project builds without error and without any linter warnings before pushing. If there are, fix the errors and then commit and push.
-4.  **Check SSH authentication status** if using 1Password for SSH keys:
+5.  **Check SSH authentication status** if using 1Password for SSH keys:
     ```bash
     # Test SSH connection to GitHub to verify authentication is working
     ssh -T git@github.com
@@ -25,7 +28,7 @@ When asked to commit and push changes:
     The expected successful response is: `Hi username! You've successfully authenticated, but GitHub does not provide shell access.`
 
     If authentication fails or 1Password prompts for authorization, complete that process before proceeding with the commit.
-5.  Generate the commit message following the format below, using the project's specific types and scopes.
+6.  Generate the commit message following the format below, using the project's specific types and scopes.
     *   **Subject Line**: `<type>(<scope>): <description>`
         *   **Type**: Choose the most appropriate type from the **Project-Specific Types** list below.
         *   **Scope**: If applicable, choose the most relevant scope from the **Project-Specific Scopes** list below.
@@ -40,8 +43,8 @@ When asked to commit and push changes:
         *   Keep the list focused on significant changes.
         *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
     *   **IMPORTANT**: When using `git commit -m` directly, do not include literal newlines in the command as this will cause errors. Instead, use `-m` multiple times for multi-line messages, e.g.: `git commit -m "type(scope): subject" -m "body content without newlines"`.
-6.  Execute `git commit` with the generated message.
-7.  After the commit (and push, if performed) is completed, run `npm run clean` to clean up build directories.
+7.  Execute `git commit` with the generated message.
+8.  After the commit (and push, if performed) is completed, run `npm run clean` to clean up build directories.
 
 ## Guidelines for Manual Commits & AI Prompts
 When committing manually or prompting the AI:

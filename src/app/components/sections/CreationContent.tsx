@@ -33,6 +33,8 @@ const VERTICAL_GAP = 2.8;
 const SCROLL_MULTIPLIER = 0.02; // Reduced sensitivity
 const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // How far above/below viewport items go before recycling
 
+const DISABLE_MEDIA = process.env.NODE_ENV === 'development';
+
 // Define common aspect ratios and their dimensions
 type AspectRatioType = 'square' | '16:9' | '9:16' | '4:5' | '5:4';
 
@@ -410,12 +412,12 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
 
 	// Read environment variable to disable media loading in dev
-	const disableMedia = useMemo(() => process.env['NEXT_PUBLIC_DEV_DISABLE_GALLERY_MEDIA'] === 'true', []);
+	const disableMedia = useMemo(() => DISABLE_MEDIA, []);
 
 	useEffect(() => {
 		setDprValue(window.devicePixelRatio);
 		if (disableMedia) {
-			logger.warn('Gallery media loading is DISABLED via NEXT_PUBLIC_DEV_DISABLE_GALLERY_MEDIA=true');
+			logger.warn('Gallery media loading is DISABLED');
 		}
 	}, [disableMedia]);
 
