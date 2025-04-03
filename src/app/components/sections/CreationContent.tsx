@@ -6,6 +6,7 @@ import type { FC } from 'react';
 import * as THREE from 'three';
 import { Image, useVideoTexture } from '@react-three/drei';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { useSpring } from 'framer-motion';
 
 // Import Image and VideoTexture
 
@@ -29,9 +30,7 @@ const Z_OFFSET_STEP = 0.15; // Base Z separation between columns
 const Z_JITTER = 0.05; // Smaller random Z offset within the column layer
 const VERTICAL_JITTER = 0.5;
 const VERTICAL_GAP = 2.8;
-const SCROLL_SENSITIVITY = 0.002; // How sensitive the scroll is to mouse wheel events
-const SCROLL_LERP = 0.01; // Lower = smoother but slower scrolling (0-1)
-const SCROLL_MOMENTUM = 0.7; // Scroll momentum/deceleration factor (0-1)
+const SCROLL_MULTIPLIER = 0.02; // Reduced sensitivity
 const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // How far above/below viewport items go before recycling
 
 // Define common aspect ratios and their dimensions
@@ -99,14 +98,17 @@ interface PlaneWrapperProps {
 	item: GalleryItem;
 	position: THREE.Vector3;
 	planeHeight: number;
+	disableMedia: boolean;
 }
 
-const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight }) => {
+const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight, disableMedia }) => {
 	const groupRef = useRef<THREE.Group>(null!);
 	const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
 
-	// Detect aspect ratio and set dimensions
+	// Detect aspect ratio and set dimensions - ONLY IF MEDIA IS ENABLED
 	useEffect(() => {
+		if (disableMedia || !item.url) return; // Skip if media disabled or no URL
+
 		const detectAspectRatio = async () => {
 			if (!item.url) return;
 
@@ -142,7 +144,7 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeH
 		};
 
 		detectAspectRatio();
-	}, [item.url, item.mediaType]);
+	}, [item.url, item.mediaType, disableMedia]); // Added disableMedia dependency
 
 	// Update group position each frame
 	useFrame(() => {
@@ -153,8 +155,8 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeH
 
 	const fallbackMaterial = useMemo(() => <meshStandardMaterial color="#ccc" side={THREE.DoubleSide} />, []);
 
-	// Only render content if we have a URL
-	if (!item.url) {
+	// Always render fallback if media is disabled or no URL
+	if (disableMedia || !item.url) {
 		return (
 			<group ref={groupRef} userData={{ itemId: item.id }}>
 				<mesh scale={[dimensions[0], dimensions[1], 1]}>
@@ -239,13 +241,15 @@ const calculatePosition = (col: number): { x: number; z: number } => {
 	return { x, z };
 };
 
-const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) => {
+const ScrollingPlanes: FC<{ galleryItems: GalleryItem[]; disableMedia: boolean }> = ({ galleryItems, disableMedia }) => {
 	// R3F hooks
 	const { camera } = useThree();
 	// State and Refs
-	const scrollY = useRef(0); // Target scroll position
-	const currentScrollY = useRef(0); // Actual interpolated scroll position
-	const scrollVelocity = useRef(0); // Store velocity for momentum
+	const scrollSpring = useSpring(0, {
+		stiffness: 150,
+		damping: 25, // Slightly adjusted damping
+		mass: 1,
+	});
 	const [planeStates, setPlaneStates] = useState<PlaneState[]>([]);
 	const initialPositionsSet = useRef(false);
 
@@ -297,43 +301,30 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 	// Setup scroll listener
 	useEffect(() => {
 		const handleWheel = (event: WheelEvent) => {
-			// Add to scrollVelocity instead of directly updating scrollY
-			scrollVelocity.current += event.deltaY * SCROLL_SENSITIVITY;
+			// Update the spring target directly based on scroll delta
+			scrollSpring.set(scrollSpring.get() - event.deltaY * SCROLL_MULTIPLIER);
 
 			// Prevent default behavior to avoid browser scrolling
-			event.preventDefault();
+			// event.preventDefault(); // Keep this commented unless needed
 		};
 
-		// Use passive: false to allow preventDefault()
-		window.addEventListener('wheel', handleWheel, { passive: false });
+		// Use passive: false to allow preventDefault() if uncommented
+		window.addEventListener('wheel', handleWheel, { passive: true });
 		return () => window.removeEventListener('wheel', handleWheel);
-	}, []);
+	}, [scrollSpring]); // Added scrollSpring dependency
 
 	// Main frame loop for updating positions and handling recycling
 	useFrame(() => {
 		if (planeStates.length === 0 || totalContentHeight === 0) return;
 
-		// Apply momentum to scrollVelocity (gradually reduce it)
-		scrollVelocity.current *= SCROLL_MOMENTUM;
-
-		// Update target scroll position based on velocity
-		scrollY.current += scrollVelocity.current;
-
-		// Smooth lerp the actual scroll position towards the target
-		currentScrollY.current += (scrollY.current - currentScrollY.current) * SCROLL_LERP;
-
-		// Get the interpolated scroll position for this frame
-		const currentScroll = currentScrollY.current;
-
-		// Define boundaries for recycling check (viewport height + buffer)
-		const topBound = visibleHeight / 2 + RECYCLE_BUFFER;
-		const bottomBound = -visibleHeight / 2 - RECYCLE_BUFFER;
+		// Get the current scroll position from the spring
+		const currentScroll = scrollSpring.get();
 
 		// Update plane states based on scroll position
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialY = state.initialY;
-				// Calculate current Y relative to the center of the viewport (0)
+				// Calculate current Y relative to the center of the viewport (0) using spring value
 				const currentRelativeY = state.initialY - currentScroll;
 				// Keep track of potential changes
 				let positionChanged = false;
@@ -342,7 +333,7 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 
 				// --- Recycling Logic --- //
 				// If plane is too far above the top bound, recycle it to the bottom
-				if (currentRelativeY > topBound) {
+				if (currentRelativeY > visibleHeight / 2 + RECYCLE_BUFFER) {
 					// Calculate the base Y position after jumping down by the total content height
 					const baseY = state.initialY - totalContentHeight;
 					// Add new random vertical jitter
@@ -354,7 +345,7 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 					positionChanged = true;
 				}
 				// If plane is too far below the bottom bound, recycle it to the top
-				else if (currentRelativeY < bottomBound) {
+				else if (currentRelativeY < -visibleHeight / 2 - RECYCLE_BUFFER) {
 					// Calculate the base Y position after jumping up by the total content height
 					const baseY = state.initialY + totalContentHeight;
 					// Add new random vertical jitter
@@ -366,7 +357,7 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 					positionChanged = true;
 				}
 
-				// Calculate the final Y position for rendering in this frame
+				// Calculate the final Y position for rendering in this frame using spring value
 				const finalCurrentY = newInitialY - currentScroll;
 
 				// Determine if the state needs updating
@@ -397,6 +388,7 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 						item={item}
 						position={position}
 						planeHeight={PLANE_HEIGHT}
+						disableMedia={disableMedia}
 					/>
 				);
 			})}
@@ -417,9 +409,15 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[] }> = ({ galleryItems }) 
 const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
 
+	// Read environment variable to disable media loading in dev
+	const disableMedia = useMemo(() => process.env['NEXT_PUBLIC_DEV_DISABLE_GALLERY_MEDIA'] === 'true', []);
+
 	useEffect(() => {
 		setDprValue(window.devicePixelRatio);
-	}, []);
+		if (disableMedia) {
+			logger.warn('Gallery media loading is DISABLED via NEXT_PUBLIC_DEV_DISABLE_GALLERY_MEDIA=true');
+		}
+	}, [disableMedia]);
 
 	// Use real items or generate test ones
 	const items: GalleryItem[] = useMemo(() => {
@@ -429,31 +427,22 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 				description: '', // Default empty string if undefined
 				tags: [], // Default empty array if undefined
 				...item, // Spread item afterwards to keep original values if they exist
-				url: item.url || 'https://picsum.photos/300', // Default URL
+				url: item.url || '', // Use empty string if URL is missing
 				// Provide a default mediaType if it's missing/undefined
 				mediaType: item.mediaType || 'image',
 			}));
 			logger.info(`Using ${processedItems.length} real gallery items`);
 			// Cast to GalleryItem[] should be safe now if defaults cover required fields
 			return processedItems as GalleryItem[];
+		} else {
+			logger.info('No gallery items provided.');
+			return []; // Return empty array if no items are passed
 		}
-
-		// Create test items, ensuring all potentially optional fields are present
-		const testItems: GalleryItem[] = Array.from({ length: 100 }, (_, i): GalleryItem => {
-			const type = (i % 5 === 0 ? 'video' : 'image') as MediaType;
-			return {
-				id: `test-${i}`,
-				title: `Test Item ${i}`,
-				mediaType: type, // Correctly typed now
-				url: type === 'video' ? '/videos/test-video.mp4' : `https://picsum.photos/seed/${i}/300/300`,
-				description: `Description for test item ${i}`, // Provide a default string
-				tags: [`test`, `item-${i}`], // Provide a default array
-			};
-		});
-
-		logger.info(`Using ${testItems.length} test gallery items (no real data provided)`);
-		return testItems;
 	}, [galleryItems]);
+
+	if (disableMedia) {
+		logger.info('Rendering CreationContent with media disabled');
+	}
 
 	return (
 		<div className="relative h-screen w-full">
@@ -478,7 +467,7 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 
 					{/* <DebugHelper /> */}
 
-					<ScrollingPlanes galleryItems={items} />
+					<ScrollingPlanes galleryItems={items} disableMedia={disableMedia} />
 				</Suspense>
 			</Canvas>
 		</div>
