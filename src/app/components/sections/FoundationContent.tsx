@@ -5,6 +5,7 @@ import type { FC } from 'react';
 
 import Link from 'next/link';
 
+import clsx from 'clsx';
 import { motion, type Variants } from 'framer-motion';
 
 import AnimatedTextFadeIn from '@/app/components/shared/AnimatedTextFadeIn';
@@ -112,48 +113,55 @@ const FoundationContent: FC = (): JSX.Element => {
 
 	return (
 		// Outer container with padding, matching the structure in Foundation.tsx
-		<div className="h-full w-full p-4">
+		<div
+			className={clsx(
+				// Base styles
+				'h-full w-full p-4',
+			)}
+		>
 			{/* Inner grid structure for content */}
-			<div className="grid h-full w-full grid-rows-[auto_1fr_auto] gap-8 md:gap-12 lg:gap-16">
-				{/* Description Section */}
-				<div className="row-start-2 grid grid-cols-1 gap-4 md:grid-cols-3">
-					<div className="font-caption-01 col-span-1 h-fit space-y-0 text-sm md:col-span-2 md:col-start-2 md:text-base">
-						{/* Use AnimatedTextFadeIn for the description block */}
-						<AnimatedTextFadeIn text={descriptionText} el="div" className="space-y-0" duration={durationPrimary} staggerChildren={staggerMedium} />
-					</div>
-				</div>
-
+			<div
+				className={clsx(
+					// Base grid setup
+					'grid h-full w-full grid-rows-[auto_1fr_auto]',
+					// Gap adjustments for responsiveness
+					'gap-20 md:gap-12 lg:gap-16',
+				)}
+			>
 				{/* Details Section - Responsive Grid with motion */}
-				<motion.div className="row-start-3 grid grid-cols-1 gap-8 self-end text-xs md:grid-cols-3 md:gap-4 md:text-sm" variants={detailsContainerVariants} initial="hidden" animate="visible">
-					{/* Column 1: Brands, Studios & Exhibitions */}
-					<motion.div id="about-details-content-brands" className="col-span-1 flex flex-col justify-between space-y-4" variants={columnVariants}>
-						{/* Group 1: Titles */}
-						<motion.div className="flex flex-col" variants={itemVariants}>
-							{/* Use AnimatedTextSlideUp for the title */}
-							<AnimatedTextSlideUp text={['Brands, Studios', '& Exhibitions']} el="div" staggerChildren={staggerFast} duration={durationPrimary} />
-						</motion.div>
-						{/* Group 2: Client List - Responsive Columns */}
-						<motion.div
-							className="grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-1 md:grid-cols-1"
-							variants={listItemStaggerVariants} // Use specific stagger variant
-						>
-							{clientList.map((item, index) => (
-								<motion.span key={index} variants={itemVariants} className={item.bold ? 'font-bold' : ''}>
-									{/* Use AnimatedTextSlideUp for list items */}
-									<AnimatedTextSlideUp text={item.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
-								</motion.span>
-							))}
-						</motion.div>
-					</motion.div>
-
-					{/* Column 2: Services */}
-					<motion.div className="col-span-1 flex flex-col justify-between space-y-4" variants={columnVariants}>
+				<motion.div
+					className={clsx(
+						// Positioning within the parent grid
+						'row-start-1 self-end',
+						// Typography
+						'text-xs md:text-sm',
+						// Grid setup and gap for responsiveness
+						// Mobile: 2 columns | Desktop: 3 columns
+						'grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-4',
+					)}
+					variants={detailsContainerVariants}
+					initial="hidden"
+					animate="visible"
+				>
+					{/* Column: Services  */}
+					<motion.div
+						className={clsx(
+							// Column positioning and flex layout
+							'col-span-1 flex flex-col justify-between space-y-4',
+							// Mobile Order: 3rd position | Desktop Order: 1st position
+							'order-3 md:order-1',
+						)}
+						variants={columnVariants}
+					>
 						<motion.div className="flex flex-col" variants={itemVariants}>
 							{/* Use AnimatedTextSlideUp for the title */}
 							<AnimatedTextSlideUp text="Services" el="span" duration={durationPrimary} />
 						</motion.div>
 						<motion.div
-							className="flex flex-col"
+							className={clsx(
+								// Base flex layout
+								'flex flex-col',
+							)}
 							variants={listStaggerVariants} // Use specific stagger variant
 						>
 							{servicesList1.map((service, index) => (
@@ -164,7 +172,10 @@ const FoundationContent: FC = (): JSX.Element => {
 							))}
 						</motion.div>
 						<motion.div
-							className="flex flex-col"
+							className={clsx(
+								// Base flex layout
+								'flex flex-col',
+							)}
 							variants={listStaggerVariants} // Use specific stagger variant
 						>
 							{servicesList2.map((service, index) => (
@@ -176,11 +187,22 @@ const FoundationContent: FC = (): JSX.Element => {
 						</motion.div>
 					</motion.div>
 
-					{/* Column 3: Contact */}
-					<motion.div className="col-span-1 flex flex-col justify-between space-y-4" variants={columnVariants}>
+					{/* Column: Contact */}
+					<motion.div
+						className={clsx(
+							// Column positioning and flex layout
+							'col-span-1 flex flex-col justify-between space-y-4',
+							// Mobile Order: 2nd position | Desktop Order: 3rd position
+							'order-2 md:order-3',
+						)}
+						variants={columnVariants}
+					>
 						{/* Links */}
 						<motion.div
-							className="flex flex-col"
+							className={clsx(
+								// Base flex layout
+								'flex flex-col',
+							)}
 							variants={listStaggerVariants} // Use specific stagger variant
 						>
 							{contactLinks.map((link) => (
@@ -202,7 +224,62 @@ const FoundationContent: FC = (): JSX.Element => {
 							<AnimatedTextSlideUp text="Contact" el="span" duration={durationPrimary} />
 						</motion.div>
 					</motion.div>
+
+					{/* Column: Brands, Studios & Exhibitions */}
+					<motion.div
+						id="about-details-content-brands"
+						className={clsx(
+							// Column positioning and flex layout
+							'col-span-1 flex flex-col justify-between space-y-4',
+							// Mobile: Hidden | Desktop Order: 2nd position, Display: flex
+							'hidden md:order-2 md:flex',
+						)}
+						variants={columnVariants}
+					>
+						{/* Group 1: Titles */}
+						<motion.div className="flex flex-col" variants={itemVariants}>
+							{/* Use AnimatedTextSlideUp for the title */}
+							<AnimatedTextSlideUp text={['Brands, Studios', '& Exhibitions']} el="div" staggerChildren={staggerFast} duration={durationPrimary} />
+						</motion.div>
+						{/* Group 2: Client List - Responsive Columns */}
+						<motion.div
+							className={clsx(
+								// Responsive grid layout for client list
+								'grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-1 md:grid-cols-1',
+							)}
+							variants={listItemStaggerVariants} // Use specific stagger variant
+						>
+							{clientList.map((item, index) => (
+								<motion.span key={index} variants={itemVariants} className={item.bold ? 'font-bold' : ''}>
+									{/* Use AnimatedTextSlideUp for list items */}
+									<AnimatedTextSlideUp text={item.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
+								</motion.span>
+							))}
+						</motion.div>
+					</motion.div>
 				</motion.div>
+
+				{/* Description Section */}
+				<div
+					className={clsx(
+						// Positioning within the parent grid
+						'row-start-2',
+						// Grid setup for description alignment
+						'grid grid-cols-1 gap-4 md:grid-cols-3',
+					)}
+				>
+					<div
+						className={clsx(
+							// Typography and spacing
+							'font-caption-01 h-fit space-y-0 text-sm md:text-base',
+							// Column spanning and positioning for responsiveness
+							'col-span-1 md:col-span-2 md:col-start-2',
+						)}
+					>
+						{/* Use AnimatedTextFadeIn for the description block */}
+						<AnimatedTextFadeIn text={descriptionText} el="div" className="space-y-0" duration={durationPrimary} staggerChildren={staggerMedium} />
+					</div>
+				</div>
 			</div>
 		</div>
 	);

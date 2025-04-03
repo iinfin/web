@@ -69,8 +69,10 @@ export const AnimatedTextSlideUp: React.FC<AnimatedTextSlideUpProps> = ({
 		},
 	};
 
-	// Ensure Wrapper is a motion component
-	const MotionWrapper = motion(Wrapper);
+	// Ensure Wrapper is a motion component - handle string tags vs components
+	// Cast motion to any to bypass complex type inference issues with dynamic tag names
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const MotionWrapper = typeof Wrapper === 'string' ? (motion as any)[Wrapper] : motion(Wrapper);
 
 	return (
 		<MotionWrapper

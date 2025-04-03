@@ -49,6 +49,7 @@ export default function Cursor(): JSX.Element | null {
 
 	const [isClient, setIsClient] = useState(false);
 	const [isTouchDevice, setIsTouchDevice] = useState(false);
+	const [isMouseInWindow, setIsMouseInWindow] = useState(true); // State to track mouse presence
 
 	// Detect client-side and touch capabilities
 	useEffect(() => {
@@ -57,13 +58,23 @@ export default function Cursor(): JSX.Element | null {
 		setIsTouchDevice(touchDetected);
 
 		// Only hide system cursor if not on a touch device
-		if (!touchDetected) {
-			document.body.style.cursor = 'none';
-		}
+		// if (!touchDetected) {
+		// 	document.body.style.cursor = 'none';
+		// }
+
+		// --- Event Listeners for Mouse Window Presence ---
+		const handleMouseEnter = () => setIsMouseInWindow(true);
+		const handleMouseLeave = () => setIsMouseInWindow(false);
+
+		document.documentElement.addEventListener('mouseenter', handleMouseEnter);
+		document.documentElement.addEventListener('mouseleave', handleMouseLeave);
+		// -------------------------------------------------
 
 		// Cleanup function to restore cursor on component unmount
 		return () => {
 			document.body.style.cursor = 'auto';
+			document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
+			document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
 		};
 	}, []);
 
@@ -90,7 +101,8 @@ export default function Cursor(): JSX.Element | null {
 	const containerClasses = clsx(
 		'pointer-events-none fixed inset-0 z-[9999]', // Use high z-index like CustomCursor
 		'transition-opacity duration-300 ease-in-out',
-		isHidden ? 'opacity-0' : 'opacity-100',
+		// Combine visibility conditions: visible only if NOT hidden AND mouse is in window
+		!isHidden && isMouseInWindow ? 'opacity-100' : 'opacity-0',
 	);
 
 	// Base styles for cross-hair lines
