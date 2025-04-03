@@ -34,4 +34,4 @@ export const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // Viewport buffer for recycling
 
 // --- Debugging/Development --- //
 // Disable media loading in development for faster iteration
-export const DISABLE_MEDIA = process.env.NODE_ENV === 'development';
+export const DISABLE_MEDIA = false; // process.env.NODE_ENV === 'development';

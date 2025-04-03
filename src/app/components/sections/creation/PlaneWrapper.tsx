@@ -3,7 +3,7 @@ import type { FC } from 'react';
 
 import * as THREE from 'three';
 import { Image } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { type ThreeEvent, useFrame } from '@react-three/fiber';
 
 import type { GalleryItem } from '@/app/lib/db/types';
 import { logger } from '@/utils/logger';
@@ -31,6 +31,21 @@ interface PlaneWrapperProps {
 export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight, disableMedia }) => {
 	const groupRef = useRef<THREE.Group>(null!); // Use non-null assertion if confident it will be populated
 	const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
+
+	// --- Event Handlers ---
+	const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
+		event.stopPropagation(); // Prevent event from bubbling up if needed
+		logger.info('Hovering over item:', { id: item.id, title: item.title, url: item.url });
+		// Optional: Add visual feedback, e.g., slightly scale up
+		// groupRef.current.scale.setScalar(1.05);
+	};
+
+	const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
+		event.stopPropagation();
+		// logger.info('Hover stopped for item:', { id: item.id });
+		// Optional: Reset visual feedback
+		// groupRef.current.scale.setScalar(1);
+	};
 
 	// Detect aspect ratio and set dimensions - ONLY IF MEDIA IS ENABLED
 	useEffect(() => {
@@ -95,7 +110,7 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position,
 	}
 
 	return (
-		<group ref={groupRef} userData={{ itemId: item.id }}>
+		<group ref={groupRef} userData={{ itemId: item.id }} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
 			<Suspense
 				fallback={
 					<mesh scale={[dimensions[0], dimensions[1], 1]}>

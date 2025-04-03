@@ -44,16 +44,16 @@ export const selectRandomParagraphs = (sourceArray: string[]): [string | undefin
 
 // Array for client list items to easily map over
 export const clientList = [
-	{ text: '1', bold: true },
+	{ text: '1', bold: false },
 	{ text: 'Porsche' },
 	{ text: 'Lotus Cars' },
-	{ text: '2', bold: true },
+	{ text: '2', bold: false },
 	{ text: 'Coca-Cola' },
 	{ text: 'Calvin-Klein' },
 	{ text: 'Meta' },
 	{ text: 'Nohlab' },
 	{ text: 'Salon Architects' },
-	{ text: '3', bold: true },
+	{ text: '3', bold: false },
 	{ text: 'Taiwan Nat. Museum of Fine Arts' },
 	{ text: 'Outernet London' },
 	{ text: 'Saasfee Pavillon' },
