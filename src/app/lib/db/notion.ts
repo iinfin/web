@@ -1,11 +1,12 @@
 import { Client } from '@notionhq/client';
 import type {
+	FormulaPropertyItemObjectResponse,
 	MultiSelectPropertyItemObjectResponse,
 	PageObjectResponse,
 	QueryDatabaseParameters,
 	RichTextItemResponse,
+	SelectPropertyItemObjectResponse,
 	TitlePropertyItemObjectResponse,
-	UrlPropertyItemObjectResponse,
 } from '@notionhq/client/build/src/api-endpoints';
 
 import { logger } from '@/utils/logger';
@@ -48,7 +49,8 @@ interface NotionGalleryProperties {
 	Name: TitlePropertyItemObjectResponse;
 	Description?: { rich_text: RichTextItemResponse[] }; // Optional Description property
 	Tags?: MultiSelectPropertyItemObjectResponse; // Optional Tags property (multi-select)
-	URL?: UrlPropertyItemObjectResponse; // Optional URL property
+	URL?: FormulaPropertyItemObjectResponse; // Optional URL property
+	Status?: SelectPropertyItemObjectResponse; // <-- Add Status property
 }
 
 // Safely extract title text content
@@ -75,17 +77,19 @@ function extractTextFromRichText(richText: unknown): string | undefined {
 	}
 }
 
-// Safely extract URL string from a Notion URL property
-function extractUrlFromUrlProperty(urlProperty: unknown): string | undefined {
+// Safely extract string result from a Notion Formula property
+function extractStringFromFormulaProperty(formulaProperty: unknown): string | undefined {
 	try {
-		// Check if it's the expected UrlPropertyItemObjectResponse structure
-		const urlProp = urlProperty as UrlPropertyItemObjectResponse | undefined;
-		if (urlProp?.type === 'url' && urlProp.url) {
-			return urlProp.url;
+		// Check if it's the expected FormulaPropertyItemObjectResponse structure
+		const formulaProp = formulaProperty as FormulaPropertyItemObjectResponse | undefined;
+		// Check if the formula result type is string and the string value exists
+		if (formulaProp?.type === 'formula' && formulaProp.formula.type === 'string') {
+			return formulaProp.formula.string ?? undefined; // Return null/undefined as undefined
 		}
+		logger.warn('Formula property did not contain a string result', { formulaProperty });
 		return undefined;
 	} catch (error) {
-		logger.warn('Error extracting URL from URL property', { error, urlProperty });
+		logger.warn('Error extracting string from Formula property', { error, formulaProperty });
 		return undefined;
 	}
 }
@@ -182,7 +186,7 @@ export class NotionProvider implements DatabaseProvider {
 		const title = extractTextFromTitle(properties.Name?.title) ?? 'Untitled';
 		const description = extractTextFromRichText(properties.Description?.rich_text);
 		const tags = properties.Tags?.multi_select?.map((tag) => tag.name) ?? [];
-		const url = extractUrlFromUrlProperty(properties.URL);
+		const url = extractStringFromFormulaProperty(properties.URL);
 		const mediaType = determineMediaType(url); // Determine type from URL
 
 		// Construct the simplified GalleryItem
@@ -204,7 +208,17 @@ export class NotionProvider implements DatabaseProvider {
 	 * Get all gallery items from the configured Notion database.
 	 */
 	async getGalleryItems(options?: { shuffle?: boolean }): Promise<GalleryItem[]> {
-		const pages = await this.queryDatabase(this.galleryDbId);
+		// Define the filter for published items
+		const filter: QueryDatabaseParameters['filter'] = {
+			property: 'Status', // Case-sensitive name of the Status property in Notion
+			select: {
+				equals: 'Published', // Case-sensitive value
+			},
+		};
+
+		// Pass the filter to the queryDatabase method
+		const pages = await this.queryDatabase(this.galleryDbId, filter);
+
 		// Map Notion page objects using the dedicated mapper function.
 		const items = pages.map(this.mapPageToGalleryItem);
 
