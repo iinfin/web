@@ -1,12 +1,13 @@
 'use client';
 
-import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { FC } from 'react';
 
 import * as THREE from 'three';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useSpring } from 'framer-motion';
 
+import { useInputState } from '@/app/hooks/useInputState';
 // Import Image and VideoTexture
 
 // import { Stats } from '@react-three/drei'; // Uncomment if you add the Stats component
@@ -38,7 +39,15 @@ interface PlaneState {
 
 const AUTO_SCROLL_SPEED = 15; // Adjust speed as needed (pixels per second equivalent)
 
-const ScrollingPlanes: FC<{ galleryItems: GalleryItem[]; disableMedia: boolean; isTouchDevice: boolean }> = ({ galleryItems, disableMedia, isTouchDevice }) => {
+// Update ScrollingPlanes Props
+interface ScrollingPlanesProps {
+	galleryItems: GalleryItem[];
+	disableMedia: boolean;
+	isTouchDevice: boolean;
+	onHoverChange: (name: string | null) => void; // Add hover callback prop
+}
+
+const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia, isTouchDevice, onHoverChange }) => {
 	// R3F hooks
 	const { camera } = useThree();
 	// State and Refs
@@ -195,6 +204,7 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[]; disableMedia: boolean; 
 						position={position}
 						planeHeight={PLANE_HEIGHT}
 						disableMedia={disableMedia}
+						onHoverChange={onHoverChange} // Pass down the callback
 					/>
 				);
 			})}
@@ -206,9 +216,16 @@ const ScrollingPlanes: FC<{ galleryItems: GalleryItem[]; disableMedia: boolean; 
 const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
 	const [isTouchDevice, setIsTouchDevice] = useState(false);
+	const [hoveredName, setHoveredName] = useState<string | null>(null); // State for hovered item name
+	const inputState = useInputState(); // Get input state
 
 	// Read environment variable to disable media loading in dev
 	const disableMedia = useMemo(() => DISABLE_MEDIA, []);
+
+	// Callback to update hovered name
+	const handleHoverChange = useCallback((name: string | null) => {
+		setHoveredName(name);
+	}, []);
 
 	useEffect(() => {
 		// Check for touch support on the client
@@ -247,7 +264,7 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	}
 
 	return (
-		<div className="relative h-screen w-full">
+		<div className="relative h-screen w-full touch-none">
 			<Canvas
 				shadows
 				camera={{
@@ -267,9 +284,21 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 					<ambientLight intensity={0.8} />
 					<directionalLight position={[5, 15, 10]} intensity={1.2} />
 
-					<ScrollingPlanes galleryItems={items} disableMedia={disableMedia} isTouchDevice={isTouchDevice} />
+					<ScrollingPlanes galleryItems={items} disableMedia={disableMedia} isTouchDevice={isTouchDevice} onHoverChange={handleHoverChange} />
 				</Suspense>
 			</Canvas>
+
+			{hoveredName && (
+				<span
+					className="pointer-events-none absolute z-100 whitespace-nowrap text-white opacity-100 mix-blend-difference transition-opacity duration-200 ease-out select-none"
+					style={{
+						left: `${inputState.pixel.x + 3}px`,
+						top: `${inputState.pixel.y - 14}px`,
+					}}
+				>
+					{hoveredName}
+				</span>
+			)}
 		</div>
 	);
 };

@@ -22,13 +22,14 @@ interface PlaneWrapperProps {
 	position: THREE.Vector3;
 	planeHeight: number;
 	disableMedia: boolean;
+	onHoverChange: (name: string | null) => void;
 }
 
 /**
  * R3F component that wraps a single gallery item (image or video).
  * Handles aspect ratio detection, dimension calculation, rendering logic, and fallback/suspense.
  */
-export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight, disableMedia }) => {
+export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight, disableMedia, onHoverChange }) => {
 	const groupRef = useRef<THREE.Group>(null!); // Use non-null assertion if confident it will be populated
 	const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
 
@@ -36,6 +37,8 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position,
 	const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
 		event.stopPropagation(); // Prevent event from bubbling up if needed
 		logger.info('Hovering over item:', { id: item.id, title: item.title, url: item.url });
+		// Call the callback with the item's title
+		onHoverChange(item.title ?? null);
 		// Optional: Add visual feedback, e.g., slightly scale up
 		// groupRef.current.scale.setScalar(1.05);
 	};
@@ -43,6 +46,8 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position,
 	const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
 		event.stopPropagation();
 		// logger.info('Hover stopped for item:', { id: item.id });
+		// Call the callback with null
+		onHoverChange(null);
 		// Optional: Reset visual feedback
 		// groupRef.current.scale.setScalar(1);
 	};
@@ -86,7 +91,7 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position,
 		};
 
 		detectAspectRatio();
-	}, [item.url, item.mediaType, disableMedia]); // Added disableMedia dependency
+	}, [item.url, item.mediaType, disableMedia, planeHeight]); // Added planeHeight dependency
 
 	// Update group position each frame
 	useFrame(() => {

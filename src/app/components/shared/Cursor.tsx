@@ -109,7 +109,7 @@ export default function Cursor(): JSX.Element | null {
 	const lineBaseClasses = 'absolute bg-black/80 dark:bg-white/80 mix-blend-difference';
 
 	// Base styles for the central dot
-	const dotBaseClasses = 'absolute rounded-full transition-[transform,width,height,background-color] duration-200 ease-out';
+	const dotBaseClasses = 'absolute transition-[transform,width,height,background-color] duration-200 ease-out';
 
 	return (
 		<motion.div // Use motion.div for potential future container animations
