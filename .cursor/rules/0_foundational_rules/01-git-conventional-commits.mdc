@@ -41,6 +41,7 @@ After Cursor successfully applies changes (e.g., code generation, edits):
         *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
     *   **IMPORTANT**: When using `git commit -m` directly, do not include literal newlines in the command as this will cause errors. Instead, use `-m` multiple times for multi-line messages, e.g.: `git commit -m "type(scope): subject" -m "body content without newlines"`.
 6.  Execute `git commit` with the generated message.
+7.  After the commit (and push, if performed) is completed, run `npm run clean` to clean up build directories.
 
 ## Guidelines for Manual Commits & AI Prompts
 When committing manually or prompting the AI:
