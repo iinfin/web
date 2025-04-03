@@ -12,7 +12,7 @@ import { useSpring } from 'framer-motion';
 
 // import { Stats } from '@react-three/drei'; // Uncomment if you add the Stats component
 
-import type { GalleryItem, MediaType } from '@/app/lib/db/types';
+import type { GalleryItem } from '@/app/lib/db/types';
 import { logger } from '@/utils/logger';
 
 // Define props interface for the component
