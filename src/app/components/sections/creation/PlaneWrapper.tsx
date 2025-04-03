@@ -95,7 +95,7 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position,
 		}
 	});
 
-	const fallbackMaterial = useMemo(() => <meshStandardMaterial color="#ccc" side={THREE.DoubleSide} />, []);
+	const fallbackMaterial = useMemo(() => <meshStandardMaterial color="#ffffff" side={THREE.DoubleSide} />, []);
 
 	// Always render fallback if media is disabled or no URL
 	if (disableMedia || !item.url) {

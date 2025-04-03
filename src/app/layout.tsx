@@ -1,6 +1,7 @@
 import { headers } from 'next/headers';
 import Script from 'next/script';
 
+import ContextMenuDisabler from '@/components/shared/ContextMenuDisabler';
 import Cursor from '@/components/shared/Cursor';
 import MetadataTemplate from '@/components/shared/Metadata';
 import Preload from '@/components/shared/Preload';
@@ -38,6 +39,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				<CursorProvider>
 					<Cursor />
 				</CursorProvider>
+
+				<ContextMenuDisabler />
 
 				{/* Analytics script with nonce for CSP compliance */}
 				{nonce && <Script src="https://www.googletagmanager.com/gtag/js" strategy="afterInteractive" nonce={nonce} />}
