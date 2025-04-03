@@ -40,7 +40,7 @@ export function generateCsp(): { cspHeader: string; nonce: string } {
 		},
 		{
 			name: 'style-src',
-			values: ["'self'", process.env.NODE_ENV === 'development' ? "'unsafe-inline'" : `'nonce-${nonce}'`],
+			values: ["'self'", "'unsafe-inline'", `'nonce-${nonce}'`],
 		},
 		{ name: 'worker-src', values: ["'self'", 'blob:'] },
 	];
