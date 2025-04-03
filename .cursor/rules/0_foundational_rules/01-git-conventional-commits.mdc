@@ -9,7 +9,7 @@ This rule defines and automates the process of committing changes using the Conv
 It guides both manual commit authoring and the automated commit generation by Cursor, leveraging the `commitlint` setup and the Husky `commit-msg` hook.
 
 ## Rule for Automated Commits (Cursor AI)
-After Cursor successfully applies changes (e.g., code generation, edits):
+When asked to commit and push changes:
 1.  Stage all modified files (`git add .`).
 2.   Review the staged changes to understand the full context before committing:
     ```bash

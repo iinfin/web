@@ -33,6 +33,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 					{children}
 				</main>
 
+				{/* <div id="noise-overlay" className="pointer-events-none fixed inset-0 z-10 h-[200%] w-[200%] overflow-hidden opacity-10" /> */}
+
 				<CursorProvider>
 					<Cursor />
 				</CursorProvider>

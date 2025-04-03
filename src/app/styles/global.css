@@ -239,3 +239,45 @@
 	font-family: 'PPNeueMontreal';
 	font-display: swap;
 }
+
+/* Noise overlay animation */
+@keyframes animateGrain {
+	0% {
+		transform: translate(0, 0);
+	}
+	10% {
+		transform: translate(-5%, -10%);
+	}
+	20% {
+		transform: translate(-15%, 0);
+	}
+	30% {
+		transform: translate(-5%, -10%);
+	}
+	40% {
+		transform: translate(-15%, 0);
+	}
+	50% {
+		transform: translate(-5%, -10%);
+	}
+	60% {
+		transform: translate(-15%, 0);
+	}
+	70% {
+		transform: translate(-5%, -10%);
+	}
+	80% {
+		transform: translate(-15%, 0);
+	}
+	90% {
+		transform: translate(-5%, -10%);
+	}
+	100% {
+		transform: translate(0, 0);
+	}
+}
+
+#noise-overlay {
+	animation: animateGrain 5s steps(10) infinite;
+	background-image: url('https://storage.u29dc.com/_noise.webp');
+}
