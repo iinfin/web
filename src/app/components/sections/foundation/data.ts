@@ -8,8 +8,39 @@ export const descriptionText = [
 	'', // Add a blank line for spacing equivalent to the original <p> margin
 	'At the intersection of imperfection, mystery, and openness, Incomplete Infinity crafts experiences that resist finite closure. We navigate liminal spaces where technology functions as collaborative language rather than mere tool, where sustainability manifests as regenerative dialogue with natural systems, and where creativity transforms abstract potential into tangible yet unresolved encounters. Our work exists not as static artifact but as living ecosystem—adapting, evolving, and completing itself anew with each engagement.',
 	'', // Add a blank line for spacing
-	'We exist in the deliberate pause between completion and becoming. Incomplete Infinity navigates the territories where technology becomes language, where sustainability becomes conversation, and where creativity transmutes the abstract into the experiential. Our work inhabits the fertile tensions between disorder and pattern, between revelation and concealment, between finite expression and infinite interpretation.',
+	'We exist in the deliberate pause between completion and becoming. Incomplete Infinity navigates the territories where technology becomes language, where sustainability becomes conversation, and where creativity transmutes the abstract into the experiential. Our work inhabits the fertile tensions between disorder and pattern, between revelation and concealment, between finite expression and finite interpretation.',
 ];
+
+// Array of alternative paragraphs for random selection
+export const paragraphs = [
+	'In the fertile void between disciplines, Incomplete Infinity cultivates living frameworks rather than final artifacts.',
+	'We exist in the deliberate pause between completion and becoming. Incomplete Infinity navigates the territories where technology becomes language, where sustainability becomes conversation, and where creativity transmutes the abstract into the experiential. Our work inhabits the fertile tensions between disorder and pattern, between revelation and concealment, between finite expression and infinite interpretation.',
+	'We dwell in the territory of incompleteness—where unfinished becomes invitation rather than flaw.',
+	'At the intersection of imperfection, mystery, and openness, Incomplete Infinity crafts experiences that resist finite closure. We navigate liminal spaces where technology functions as collaborative language rather than mere tool, where sustainability manifests as regenerative dialogue with natural systems, and where creativity transforms abstract potential into tangible yet unresolved encounters. Our work exists not as static artifact but as living ecosystem—adapting, evolving, and completing itself anew with each engagement.',
+	'Incomplete Infinity occupies the tension between definition and possibility.',
+	'We architect the unfinished—creating systems and experiences that evolve beyond their origins through engagement.',
+	'Between conception and completion lies a fertile territory of possibility. We transform apparent limitations into portals of potential, crafting experiences that gain strength through vulnerability and resonance through ambiguity. Each project exists as structured emergence: deliberately unresolved systems that invite completion without dictating conclusion.',
+];
+
+// Function to select two unique paragraphs for dynamic content
+export const selectRandomParagraphs = (sourceArray: string[]): [string | undefined, string | undefined] => {
+	let paragraph1: string | undefined;
+	let paragraph2: string | undefined;
+
+	if (sourceArray.length >= 2) {
+		const index1 = Math.floor(Math.random() * sourceArray.length);
+		paragraph1 = sourceArray[index1];
+
+		let index2 = Math.floor(Math.random() * sourceArray.length);
+		while (index2 === index1) {
+			index2 = Math.floor(Math.random() * sourceArray.length);
+		}
+		paragraph2 = sourceArray[index2];
+	} else if (sourceArray.length === 1) {
+		paragraph1 = sourceArray[0];
+	}
+	return [paragraph1, paragraph2];
+};
 
 // Array for client list items to easily map over
 export const clientList = [
