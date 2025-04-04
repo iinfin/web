@@ -46,6 +46,7 @@ export default {
 				'deps', // Dependencies
 				'tests',
 				'3d', // 3D models and assets
+				'release', // Scope for semantic-release commits
 			],
 		],
 		// Subject must not be empty and must be lowercase

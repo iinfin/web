@@ -1,0 +1,51 @@
+name: PR Checks
+
+on:
+  pull_request:
+    branches:
+      - dev # Target PRs going into dev
+
+concurrency:
+  group: pr-checks-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # Read access is sufficient for checks
+
+jobs:
+  checks:
+    name: Build, Lint, Test & Commit Lint
+    runs-on: ubuntu-latest
+    env: # Make Notion secrets available if build/test need them
+      NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
+      NOTION_DB_ID_GALLERY: ${{ secrets.NOTION_DB_ID_GALLERY }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed for commitlint range
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # Use consistent Node version
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate PR commits
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+      - name: Lint code
+        run: npm run lint # Use current script name
+
+      # Optional: Add type checking if not part of test
+      # - name: Check types
+      #   run: npm run typecheck # Assuming you have a script like "typecheck": "tsc --noEmit"
+
+      - name: Build project
+        run: npm run build # Use current script name
+
+      - name: Run tests
+        run: npm test # Use current script name

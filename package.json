@@ -11,29 +11,34 @@
 		"clean": "rimraf .next out dist build",
 		"update": "ncu -u && npm install",
 		"format": "prettier --write \"**/*.{js,jsx,ts,tsx,json,css,scss,md}\"",
-		"prepare": "husky"
+		"prepare": "husky",
+		"test": "echo \"No tests yet\""
 	},
 	"dependencies": {
 		"@notionhq/client": "^2.3.0",
 		"@react-three/drei": "^10.0.5",
 		"@react-three/fiber": "^9.1.1",
-		"@tweakpane/core": "^2.0.5",
 		"clsx": "^2.1.1",
-		"framer-motion": "^12.6.2",
+		"framer-motion": "^12.6.3",
 		"next": "^15.2.4",
 		"react": "^19.1.0",
 		"react-dom": "^19.1.0",
-		"three": "^0.175.0",
-		"tweakpane": "^4.0.5"
+		"three": "^0.175.0"
 	},
 	"devDependencies": {
 		"@commitlint/cli": "^19.8.0",
 		"@commitlint/config-conventional": "^19.8.0",
-		"@tailwindcss/postcss": "^4.0.17",
+		"@semantic-release/changelog": "^6.0.3",
+		"@semantic-release/commit-analyzer": "^13.0.1",
+		"@semantic-release/git": "^10.0.1",
+		"@semantic-release/github": "^11.0.1",
+		"@semantic-release/npm": "^12.0.1",
+		"@semantic-release/release-notes-generator": "^14.0.3",
+		"@tailwindcss/postcss": "^4.1.2",
 		"@trivago/prettier-plugin-sort-imports": "^5.2.2",
-		"@types/node": "^22.13.16",
-		"@types/react": "^19.0.12",
-		"@types/react-dom": "^19.0.4",
+		"@types/node": "^22.14.0",
+		"@types/react": "^19.1.0",
+		"@types/react-dom": "^19.1.1",
 		"@typescript-eslint/eslint-plugin": "^8.29.0",
 		"@typescript-eslint/parser": "^8.29.0",
 		"autoprefixer": "^10.4.21",
@@ -42,7 +47,7 @@
 		"eslint-config-next": "^15.2.4",
 		"eslint-config-xo": "^0.46.0",
 		"eslint-config-xo-typescript": "^7.0.0",
-		"eslint-plugin-react": "^7.37.4",
+		"eslint-plugin-react": "^7.37.5",
 		"eslint-plugin-react-hooks": "^5.2.0",
 		"husky": "^9.1.7",
 		"lint-staged": "^15.5.0",
@@ -51,15 +56,9 @@
 		"prettier-plugin-css-order": "^2.1.2",
 		"prettier-plugin-tailwindcss": "^0.6.11",
 		"rimraf": "^6.0.1",
-		"tailwindcss": "^4.0.17",
+		"semantic-release": "^24.2.3",
+		"tailwindcss": "^4.1.2",
 		"typescript": "^5.8.2"
-	},
-	"lint-staged": {
-		"**/*.{js,jsx,ts,tsx}": [
-			"eslint --fix",
-			"prettier --write"
-		],
-		"**/*.{json,css,scss,md,html,yml,yaml}": "prettier --write"
 	},
 	"type": "module"
 }
