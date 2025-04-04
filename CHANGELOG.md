@@ -1,3 +1,27 @@
+# 1.0.0 (2025-04-04)
+
+### Bug Fixes
+
+- **components:** resolve type errors in creations gallery ([73c5693](https://github.com/iinfin/web/commit/73c5693cf4726d7c2819b1d5ce994e1e218e6d3d))
+- **config,types:** resolve build errors and type issues ([0510d22](https://github.com/iinfin/web/commit/0510d226fe0f68bb4920c02701360f938062cc76))
+- **config:** allow inline styles with nonce ([f951ef4](https://github.com/iinfin/web/commit/f951ef436052048dc7117d911ce9d306c8366bfd))
+
+### Features
+
+- **animation:** implement custom cursor and advanced animation utilities ([c66968b](https://github.com/iinfin/web/commit/c66968b7e5829457509521bec711400c7bbecfd0))
+- **app:** init ([62297ca](https://github.com/iinfin/web/commit/62297ca61cdf7d5e3935a05a5860384efcc03257))
+- **components-shared:** add AnimatedText component ([39ae801](https://github.com/iinfin/web/commit/39ae801961987a85c7bf5a519b1be834611a34a2))
+- **components:** add animatedtextfadein and enhance foundation/creation content ([1c3b900](https://github.com/iinfin/web/commit/1c3b9009e4ce53d8830eddfee3d8ba60a027f5ef))
+- **components:** add dynamic paragraph shuffling to foundation description ([1fc359e](https://github.com/iinfin/web/commit/1fc359e300e4b9f54fd8bb47172e1806401896a6))
+- **config:** add commitlint for conventional commits ([fb1593e](https://github.com/iinfin/web/commit/fb1593e90ddfe7ac275f397c8cfd407fc8812828))
+- **content:** add configurable cdn host replacement for media urls ([850d5b8](https://github.com/iinfin/web/commit/850d5b8d0514f170eb07dc12c311b7167fb022c7))
+- **creation:** add temporary filter for video items ([4b85f8e](https://github.com/iinfin/web/commit/4b85f8e5824df7277095ce58b4fb27fb457e2b10))
+- **creations:** fetch gallery items and pass to client component ([0abdc8c](https://github.com/iinfin/web/commit/0abdc8c46ef5c253ebce59bba35be156b4081a71))
+- **layout:** disable right-click context menu globally ([222f89e](https://github.com/iinfin/web/commit/222f89e8059c4fdfcf1e8828b47586cabf524f9f))
+- **r3f,components:** implement dynamic scrolling gallery with recycling ([4988e0f](https://github.com/iinfin/web/commit/4988e0fbbf550ebc76cb392b6da31f4dff01b226))
+- **r3f:** add hover interaction to display gallery item names ([a88c6d5](https://github.com/iinfin/web/commit/a88c6d5f5bc00670df58cbef00b3477db1b71cb0))
+- **r3f:** add hover interactions and logging to creation plane wrapper ([d6c0df6](https://github.com/iinfin/web/commit/d6c0df6b9e829d3e8a7c49adc9e8e62c5b349eab))
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
