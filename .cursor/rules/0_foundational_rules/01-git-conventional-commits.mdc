@@ -42,7 +42,11 @@ When asked to commit and push changes:
             *   `- Rename: src/app/styles/old.css -> src/app/styles/new.css`
         *   Keep the list focused on significant changes.
         *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
-    *   **IMPORTANT**: When using `git commit -m` directly, do not include literal newlines in the command as this will cause errors. Instead, use `-m` multiple times for multi-line messages, e.g.: `git commit -m "type(scope): subject" -m "body content without newlines"`.
+    *   **IMPORTANT**: When using `git commit -m` directly with multiple `-m` flags:
+        *   DO NOT include any escape sequences (like `\n`) in the message content.
+        *   DO NOT try to format the text with literal newlines within a single `-m` argument.
+        *   Each `-m` flag creates a new paragraph in the commit message.
+        *   See examples below for the correct way to format multi-line messages.
 7.  Execute `git commit` with the generated message.
 8.  After the commit (and push, if performed) is completed, run `npm run clean` to clean up build directories.
 
@@ -58,9 +62,17 @@ When committing manually or prompting the AI:
     footer
     ```
 
-    **IMPORTANT**: When using `git commit -m` directly, do not include literal newlines in the terminal command as this will cause errors. Instead:
+    **IMPORTANT**: When using `git commit -m` directly, NEVER include literal newlines or escape sequences (like `\n`) in the message content. Instead:
     - For single-line messages: `git commit -m "type(scope): subject"`
-    - For multi-line messages: `git commit -m "type(scope): subject" -m "body content"`
+    - For multi-line messages: Use multiple `-m` flags, where each `-m` creates a new paragraph:
+
+    ```bash
+    # CORRECT multi-line commit message format
+    git commit -m "type(scope): subject" -m "First paragraph of body." -m "Second paragraph of body."
+
+    # INCORRECT - don't do this
+    git commit -m "type(scope): subject" -m "Line 1\nLine 2\nLine 3"
+    ```
 
 2.  **Project-Specific Types** (Use one):
     *   `feat`: A new feature
@@ -115,6 +127,12 @@ When committing manually or prompting the AI:
 
 ## Examples
 ✅ **Good Examples:**
+
+**Interactive commit editor (recommended for complex commits):**
+```
+git commit
+```
+Then in the editor:
 ```
 feat(components): add responsive hero section with 3D background
 
@@ -124,17 +142,24 @@ feat(components): add responsive hero section with 3D background
 
 Resolves #42
 ```
+
+**Command line with multiple -m flags:**
+```bash
+git commit -m "ci(config): implement github workflows" -m "- Add: GitHub workflows for PR checks" -m "- Add: Release automation configuration" -m "Closes #123"
 ```
-fix(hooks): prevent infinite loop in useDataFetching hook
+
+**Simple one-line commit:**
+```bash
+git commit -m "fix(hooks): prevent infinite loop in useDataFetching hook"
 ```
+```bash
+git commit -m "style(layout): adjust main content padding for better alignment"
 ```
-style(layout): adjust main content padding for better alignment
+```bash
+git commit -m "refactor(r3f): optimize shader code for performance"
 ```
-```
-refactor(r3f): optimize shader code for performance
-```
-```
-chore(deps): update framer-motion to latest version
+```bash
+git commit -m "chore(deps): update framer-motion to latest version"
 ```
 
 ❌ **Bad Examples:**
@@ -143,4 +168,8 @@ fixed stuff
 update readme
 WIP
 Component changes
+```
+```bash
+# NEVER do this - using escape sequences in the message
+git commit -m "type(scope): subject" -m "Line 1\nLine 2\nLine 3"
 ```
