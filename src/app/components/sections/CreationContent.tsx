@@ -8,8 +8,6 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useSpring } from 'framer-motion';
 
 import { useInputState } from '@/app/hooks/useInputState';
-// Import Image and VideoTexture
-
 // import { Stats } from '@react-three/drei'; // Uncomment if you add the Stats component
 
 import type { GalleryItem } from '@/app/lib/db/types';
@@ -47,7 +45,7 @@ interface ScrollingPlanesProps {
 
 const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia, isTouchDevice, onHoverChange }) => {
 	// R3F hooks
-	const { camera, viewport, size } = useThree();
+	const { camera, size } = useThree();
 	// State and Refs
 	const scrollSpring = useSpring(0, {
 		stiffness: 150,
@@ -58,30 +56,33 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 	const initialPositionsSet = useRef(false);
 	// Store computed left position that adapts to viewport changes
 	const leftPositionRef = useRef<number>(0);
+	// Store viewport height
+	const viewportHeightRef = useRef<number>(0);
 
 	// Calculate visible height in world units at Z=0
-	const cameraZ = camera.position.z;
-	const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
-	const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
-	// Calculate the visible width in world units
-	const aspectRatio = size.width / size.height;
-	const visibleWidth = visibleHeight * aspectRatio;
-
-	// Calculate left edge position in world units (considering LEFT_PADDING)
 	useEffect(() => {
+		const cameraZ = camera.position.z;
+		const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
+		const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
+		viewportHeightRef.current = visibleHeight;
+		// Calculate the visible width in world units
+		const aspectRatio = size.width / size.height;
+		const visibleWidth = visibleHeight * aspectRatio;
+
+		// Calculate left edge position in world units (considering LEFT_PADDING)
+
 		// Calculate the left edge position in world units
 		// -visibleWidth/2 represents the left edge of the visible area
 		const leftEdgePosition = -visibleWidth / 2 + LEFT_PADDING;
 		leftPositionRef.current = leftEdgePosition;
 
-		logger.info('Calculated left edge position', {
+		logger.info('Calculated viewport/edge positions', {
 			leftEdgePosition,
 			visibleWidth,
 			visibleHeight,
 			aspectRatio,
-			viewport,
 		});
-	}, [visibleWidth, visibleHeight, aspectRatio, viewport]);
+	}, [camera, size.width, size.height]); // Re-run if camera or size changes
 
 	// Calculate the total height the content would occupy if laid out end-to-end
 	// Used for calculating recycling jumps
@@ -155,7 +156,7 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 
 		// Update left position if viewport changes
 		const aspectRatio = size.width / size.height;
-		const newVisibleWidth = visibleHeight * aspectRatio;
+		const newVisibleWidth = viewportHeightRef.current * aspectRatio;
 		const newLeftEdgePosition = -newVisibleWidth / 2 + LEFT_PADDING;
 
 		// If left position has changed due to window resize, update it
@@ -176,7 +177,7 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 
 				// --- Recycling Logic --- //
 				// If plane is too far above the top bound, recycle it to the bottom
-				if (currentRelativeY > visibleHeight / 2 + RECYCLE_BUFFER) {
+				if (currentRelativeY > viewportHeightRef.current / 2 + RECYCLE_BUFFER) {
 					// Calculate the base Y position after jumping down by the total content height
 					const baseY = state.initialY - totalContentHeight;
 					// Removed vertical jitter calculation
@@ -184,7 +185,7 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 					positionChanged = true;
 				}
 				// If plane is too far below the bottom bound, recycle it to the top
-				else if (currentRelativeY < -visibleHeight / 2 - RECYCLE_BUFFER) {
+				else if (currentRelativeY < -viewportHeightRef.current / 2 - RECYCLE_BUFFER) {
 					// Calculate the base Y position after jumping up by the total content height
 					const baseY = state.initialY + totalContentHeight;
 					// Removed vertical jitter calculation
@@ -225,6 +226,9 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 						planeHeight={PLANE_HEIGHT}
 						disableMedia={disableMedia}
 						onHoverChange={onHoverChange} // Pass down the callback
+						// Pass down required props for animation
+						viewportHeight={viewportHeightRef.current}
+						initialY={state.initialY}
 					/>
 				);
 			})}
