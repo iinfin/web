@@ -1,3 +1,11 @@
+# [1.1.0](https://github.com/iinfin/web/compare/v1.0.0...v1.1.0) (2025-04-05)
+
+### Features
+
+- **animation:** implement film grain effect and enhance shader transitions ([c22d0c0](https://github.com/iinfin/web/commit/c22d0c0eb3579485eee385c621361aa96e9af38f))
+- **components:** add film grain effect to enhance visual aesthetic ([ec865d4](https://github.com/iinfin/web/commit/ec865d4d46412f535642cceec9129f0cde9c866b))
+- **creation:** implement animated material shader for smooth transitions ([550f5de](https://github.com/iinfin/web/commit/550f5debb30a9a2c897ecb7201b45ac912bafa43))
+
 # 1.0.0 (2025-04-04)
 
 ### Bug Fixes
