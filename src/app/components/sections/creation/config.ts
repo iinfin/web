@@ -20,17 +20,14 @@ export const COMMON_ASPECT_RATIOS = {
 } as const;
 
 // --- Scene Layout Configuration ---
-export const NUM_COLUMNS = 3;
-export const PLANE_HEIGHT = 1.5; // Base height for scaling calculations
-export const HORIZONTAL_SPREAD = 5;
-export const COLUMN_WIDTH = HORIZONTAL_SPREAD / NUM_COLUMNS;
-export const HORIZONTAL_JITTER = 0.4;
-export const Z_OFFSET_STEP = 0.15; // Base Z separation between columns
-export const Z_JITTER = 0.05; // Smaller random Z offset within the column layer
-export const VERTICAL_JITTER = 0.5;
-export const VERTICAL_GAP = 2.8;
-export const SCROLL_MULTIPLIER = 0.02; // Scroll sensitivity
+export const NUM_COLUMNS = 1;
+export const PLANE_HEIGHT = 1; // Base height for scaling calculations
+export const VERTICAL_GAP = 1.05; // Set to PLANE_HEIGHT (1.5) + desired gap (0.2)
+export const SCROLL_MULTIPLIER = 0.075; // Scroll sensitivity
 export const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // Viewport buffer for recycling items
+
+// Edge positioning
+export const LEFT_PADDING = 0.0; // Distance from left edge of canvas to content (smaller values = closer to edge)
 
 // --- Debugging/Development --- //
 // Disable media loading in development for faster iteration
