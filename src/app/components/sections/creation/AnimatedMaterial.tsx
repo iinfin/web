@@ -44,7 +44,7 @@ const AnimatedShaderMaterial = shaderMaterial(
     uniform float u_initialAnimProgress;
     uniform float u_visibilityFade; // Smaller = sharper fade edge
 
-    const float FADE_DISTANCE_FACTOR = 0.1; // Portion of viewport height used for fade edge
+    const float FADE_DISTANCE_FACTOR = 0.2; // Portion of viewport height used for fade edge
 
     void main() {
       vUv = uv;
@@ -54,25 +54,20 @@ const AnimatedShaderMaterial = shaderMaterial(
       float halfViewport = u_viewportHeight / 2.0;
       float topEdge = halfViewport;
       float bottomEdge = -halfViewport;
-      // Distance from edge where fade starts/ends (can be adjusted)
+
+      // Distance from edge where fade starts/ends
       float fadeDistance = u_viewportHeight * FADE_DISTANCE_FACTOR * u_visibilityFade;
 
-      // Smooth fade-in from bottom and fade-out to top
+      // Simple fade-in/out at viewport edges
       float visibilityBottom = smoothstep(bottomEdge - fadeDistance, bottomEdge + fadeDistance, u_planeY);
       float visibilityTop = smoothstep(topEdge + fadeDistance, topEdge - fadeDistance, u_planeY);
       v_visibility = visibilityBottom * visibilityTop;
 
-      // Initial animation: scale and slight vertical offset
-      // Scale from 0.95 to 1.0
+      // Simple initial scale animation - no other transformations
       float initialScale = mix(0.95, 1.0, smoothstep(0.0, 1.0, u_initialAnimProgress));
-      // Move slightly up from below
-      float initialOffsetY = mix(-0.1, 0.0, smoothstep(0.0, 1.0, u_initialAnimProgress));
 
-      // Subtle ongoing visibility scale effect (smaller when near edges)
-      float visibilityScale = mix(0.98, 1.0, v_visibility);
-
-      vec3 scaledPosition = position * initialScale * visibilityScale;
-      scaledPosition.y += initialOffsetY;
+      // Apply the scaling
+      vec3 scaledPosition = position * initialScale;
 
       gl_Position = projectionMatrix * modelViewMatrix * vec4(scaledPosition, 1.0);
     }
@@ -114,7 +109,6 @@ const AnimatedShaderMaterial = shaderMaterial(
       grainLayer = mix(grainLayer, noise3, 0.3);
 
       // Apply power curve for more film-like distribution
-      // (More small/medium grains, fewer large ones)
       grainLayer = pow(grainLayer, 1.5);
 
       return grainLayer;
@@ -124,30 +118,26 @@ const AnimatedShaderMaterial = shaderMaterial(
         vec2 correctedUv = vUv;
         vec4 textureColor = texture2D(map, correctedUv);
 
-        // Combine initial animation alpha and continuous visibility alpha
-        float initialAlpha = smoothstep(0.0, 0.5, v_initialAnimProgress); // Fade in faster initially
-        float visibilityAlpha = smoothstep(0.0, 1.0, v_visibility); // Use full visibility range for continuous fade
+        // Combine initial animation and edge visibility
+        // Simple multiplication ensures both factors are considered
+        // Using v_initialAnimProgress (varying) instead of u_initialAnimProgress (uniform)
+        float alpha = textureColor.a * v_initialAnimProgress * v_visibility;
 
-        float finalAlpha = textureColor.a * initialAlpha * visibilityAlpha;
+        // Discard transparent pixels
+        if (alpha < 0.01) discard;
 
-        // Discard transparent pixels if texture has alpha
-        if (finalAlpha < 0.01) discard;
-
-        // Generate film grain based on UV and time
+        // Generate film grain
         float grain = filmGrain(correctedUv, u_time);
 
-        // Apply grain subtly based on intensity
-        // More intense in midtones, less in highlights and shadows for natural look
+        // Apply grain based on luminance
         float luminance = dot(textureColor.rgb, vec3(0.299, 0.587, 0.114));
-        float grainMask = 4.0 * luminance * (1.0 - luminance); // Parabolic curve peaking at 0.5 luminance
-
-        // Scale grain intensity and mask it based on brightness
+        float grainMask = 4.0 * luminance * (1.0 - luminance);
         float scaledGrain = (grain * 2.0 - 1.0) * u_grainIntensity * grainMask;
 
         // Apply grain to color
         vec3 grainedColor = textureColor.rgb + scaledGrain;
 
-        gl_FragColor = vec4(grainedColor, finalAlpha);
+        gl_FragColor = vec4(grainedColor, alpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
     }

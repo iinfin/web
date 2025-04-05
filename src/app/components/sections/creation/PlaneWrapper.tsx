@@ -95,8 +95,7 @@ interface PlaneWrapperProps {
 }
 
 // Animation constants
-const INITIAL_ANIM_DURATION = 0.5; // seconds
-const INITIAL_ANIM_STAGGER_FACTOR = 0.2; // seconds per unit of distance from center
+const INITIAL_ANIM_DURATION = 1.8; // seconds - slower, smoother fade in
 
 /**
  * R3F component that wraps a single gallery item (image or video).
@@ -111,7 +110,6 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		disableMedia,
 		onHoverChange,
 		viewportHeight,
-		initialY, // Get initial Y for stagger
 		grainIntensity = 0.2, // Default grain intensity
 		grainScale = 100.0, // Default grain scale
 		grainSpeed = 0.4, // Default grain animation speed
@@ -121,19 +119,16 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		const [aspect, setAspect] = useState<number>(1);
 		const [initialAnimProgress, setInitialAnimProgress] = useState(0); // 0 to 1
 		const [isMounted, setIsMounted] = useState(false);
+		const startTimeRef = useRef<number | null>(null);
 
 		// --- Event Handlers ---
 		const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
 			event.stopPropagation(); // Prevent event from bubbling up if needed
-			// logger.info('Hovering over item:', { id: item.id, title: item.title, url: item.url });
-			// Call the callback with the item's title
 			onHoverChange(item.title ?? null);
 		};
 
 		const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
 			event.stopPropagation();
-			// logger.info('Hover stopped for item:', { id: item.id });
-			// Call the callback with null
 			onHoverChange(null);
 		};
 
@@ -179,34 +174,32 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 
 		// Start initial animation on mount
 		useEffect(() => {
+			// Simply set mounted state to true to start animation
 			setIsMounted(true);
 		}, []);
 
-		// Update group position and initial animation progress each frame
+		// Update group position and animation progress each frame
 		useFrame((state, _delta) => {
 			if (groupRef.current) {
+				// Update position
 				groupRef.current.position.copy(position);
-			}
 
-			// Animate initial progress if mounted and not yet complete
-			if (isMounted && initialAnimProgress < 1) {
-				// Calculate delay based on initial distance from viewport center (absolute value)
-				// Scale factor reduces delay for items closer to the center
-				const distanceFromCenter = Math.abs(initialY);
-				const delay = distanceFromCenter * INITIAL_ANIM_STAGGER_FACTOR;
+				// Simple fade-in animation with no stagger
+				if (isMounted && initialAnimProgress < 1) {
+					// Initialize start time if not set
+					if (startTimeRef.current === null) {
+						startTimeRef.current = state.clock.elapsedTime;
+					}
 
-				// Start timer after delay
-				if (state.clock.elapsedTime > delay) {
-					// Calculate progress based on time elapsed since delay ended
-					const elapsedSinceDelay = state.clock.elapsedTime - delay;
-					let progress = elapsedSinceDelay / INITIAL_ANIM_DURATION;
+					// Calculate progress based on elapsed time
+					const elapsed = state.clock.elapsedTime - startTimeRef.current;
+					let progress = Math.min(elapsed / INITIAL_ANIM_DURATION, 1);
 
-					// Apply ease-out cubic function: progress * progress * progress
-					// progress = 1 - Math.pow(1 - progress, 3); // Ease-out cubic
-					// Apply ease-out quint: 1 - pow(1 - x, 5)
-					progress = 1 - Math.pow(1 - progress, 5);
+					// Apply simple ease-out curve
+					progress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
 
-					setInitialAnimProgress(Math.min(progress, 1)); // Clamp progress to 1
+					// Update animation progress
+					setInitialAnimProgress(progress);
 				}
 			}
 		});
