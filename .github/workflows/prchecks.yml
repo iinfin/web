@@ -6,7 +6,7 @@ on:
       - dev # Target PRs going into dev
 
 concurrency:
-  group: pr-checks-${{ github.event.pull_request.number }}
+  group: prchecks-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 permissions:
