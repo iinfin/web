@@ -20,6 +20,16 @@ When asked to commit and push changes:
     git --no-pager status
     git --no-pager diff --staged
     ```
+    
+    4.a **Important:** Always use `--no-pager` for git commands:
+        When executing git commands that might produce paginated output, always include the `--no-pager` flag to ensure all output is displayed at once without requiring user interaction:
+        For example:
+        ```bash
+        git --no-pager log
+        git --no-pager diff
+        git --no-pager show
+        ```
+        This prevents pagination interfaces that would block Cursor AI's automation workflow.
 5.  **Check SSH authentication status** if using 1Password for SSH keys:
     ```bash
     # Test SSH connection to GitHub to verify authentication is working
