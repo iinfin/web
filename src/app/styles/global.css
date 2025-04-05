@@ -31,6 +31,7 @@
 	--aspect-square: 1 / 1;
 
 	--breakpoint-3xl: 2160px;
+	--breakpoint-2xl: 1920px;
 	--breakpoint-xl: 1280px; /* Standard XL */
 	--breakpoint-lx: 1152px; /* Custom Large Extra */
 	--breakpoint-lg: 1024px; /* Standard LG */
