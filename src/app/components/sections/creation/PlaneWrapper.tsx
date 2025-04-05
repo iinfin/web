@@ -21,22 +21,38 @@ interface PlaneContentProps {
 	initialAnimProgress: number;
 	aspect: number;
 	fallbackMaterial: JSX.Element;
+	grainIntensity: number;
+	grainScale: number;
+	grainSpeed: number;
 }
 
 /**
  * Internal component to handle image texture loading and rendering.
  */
-const ImagePlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial }) => {
+const ImagePlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
 	const texture = useTexture(url);
 
-	return texture ? <AnimatedMaterial texture={texture} planeY={planeY} viewportHeight={viewportHeight} initialAnimProgress={initialAnimProgress} aspect={aspect} /> : fallbackMaterial;
+	return texture ? (
+		<AnimatedMaterial
+			texture={texture}
+			planeY={planeY}
+			viewportHeight={viewportHeight}
+			initialAnimProgress={initialAnimProgress}
+			aspect={aspect}
+			grainIntensity={grainIntensity}
+			grainScale={grainScale}
+			grainSpeed={grainSpeed}
+		/>
+	) : (
+		fallbackMaterial
+	);
 });
 ImagePlaneContent.displayName = 'ImagePlaneContent';
 
 /**
  * Internal component to handle video texture loading and rendering.
  */
-const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial }) => {
+const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
 	const texture = useVideoTexture(url, {
 		muted: true,
 		loop: true,
@@ -45,7 +61,20 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, view
 		start: true,
 	});
 
-	return texture ? <AnimatedMaterial texture={texture} planeY={planeY} viewportHeight={viewportHeight} initialAnimProgress={initialAnimProgress} aspect={aspect} /> : fallbackMaterial;
+	return texture ? (
+		<AnimatedMaterial
+			texture={texture}
+			planeY={planeY}
+			viewportHeight={viewportHeight}
+			initialAnimProgress={initialAnimProgress}
+			aspect={aspect}
+			grainIntensity={grainIntensity}
+			grainScale={grainScale}
+			grainSpeed={grainSpeed}
+		/>
+	) : (
+		fallbackMaterial
+	);
 });
 VideoPlaneContent.displayName = 'VideoPlaneContent';
 
@@ -60,6 +89,9 @@ interface PlaneWrapperProps {
 	onHoverChange: (name: string | null) => void;
 	viewportHeight: number; // Pass viewport height down
 	initialY: number; // Pass initial Y for stagger calculation
+	grainIntensity?: number; // Film grain intensity (0-1)
+	grainScale?: number; // Film grain scale
+	grainSpeed?: number; // Film grain animation speed
 }
 
 // Animation constants
@@ -80,6 +112,9 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		onHoverChange,
 		viewportHeight,
 		initialY, // Get initial Y for stagger
+		grainIntensity = 0.2, // Default grain intensity
+		grainScale = 100.0, // Default grain scale
+		grainSpeed = 0.4, // Default grain animation speed
 	}) => {
 		const groupRef = useRef<THREE.Group>(null!); // Use non-null assertion if confident it will be populated
 		const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
@@ -191,6 +226,9 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 				initialAnimProgress: initialAnimProgress,
 				aspect: aspect,
 				fallbackMaterial: fallbackMaterial,
+				grainIntensity: grainIntensity,
+				grainScale: grainScale,
+				grainSpeed: grainSpeed,
 			};
 
 			if (item.mediaType === 'video') {

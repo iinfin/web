@@ -13,6 +13,9 @@ interface AnimatedMaterialUniforms {
 	u_initialAnimProgress: number; // 0.0 to 1.0 for initial load animation
 	u_visibilityFade: number; // Controls how quickly items fade at edges (0.1 = sharp, 1.0 = gradual)
 	u_aspect: number; // Aspect ratio of the plane (width / height)
+	u_grainIntensity: number; // Controls the intensity of the film grain
+	u_grainScale: number; // Controls the scale/size of grain particles
+	u_grainSpeed: number; // Controls the animation speed of the grain
 }
 
 // Extend shaderMaterial
@@ -26,6 +29,9 @@ const AnimatedShaderMaterial = shaderMaterial(
 		u_initialAnimProgress: 0,
 		u_visibilityFade: 0.1, // Default fade distance factor
 		u_aspect: 1,
+		u_grainIntensity: 0.05, // Default grain intensity (0-1)
+		u_grainScale: 500.0, // Default grain scale - higher = finer grain
+		u_grainSpeed: 0.5, // Default grain animation speed
 	},
 	// Vertex Shader
 	/*glsl*/ `
@@ -79,31 +85,71 @@ const AnimatedShaderMaterial = shaderMaterial(
 
     uniform sampler2D map;
     uniform float u_aspect; // Use aspect ratio to correct UVs if needed
+    uniform float u_time;
+    uniform float u_grainIntensity;
+    uniform float u_grainScale;
+    uniform float u_grainSpeed;
+
+    // High-quality noise function based on Inigo Quilez's implementation
+    // Returns a value in the 0.0-1.0 range
+    float hash(vec2 p) {
+      p = fract(p * vec2(123.34, 456.21));
+      p += dot(p, p + 45.32);
+      return fract(p.x * p.y);
+    }
+
+    // Improved film grain using multiple noise layers with distribution control
+    float filmGrain(vec2 uv, float time) {
+      // Complex pattern with multiple layers of noise
+      vec2 uvScaled = uv * u_grainScale;
+      float t = time * u_grainSpeed;
+
+      // Multiple layers of varying frequency and orientation
+      float noise1 = hash(uvScaled + t);
+      float noise2 = hash(uvScaled * 1.4 + t * 1.2);
+      float noise3 = hash(uvScaled * 0.8 - t * 0.7);
+
+      // Blend layers with different weights for more natural distribution
+      float grainLayer = mix(noise1, noise2, 0.4);
+      grainLayer = mix(grainLayer, noise3, 0.3);
+
+      // Apply power curve for more film-like distribution
+      // (More small/medium grains, fewer large ones)
+      grainLayer = pow(grainLayer, 1.5);
+
+      return grainLayer;
+    }
 
     void main() {
         vec2 correctedUv = vUv;
-        // Simple aspect correction example if texture doesn't fit plane perfectly
-        // float textureAspect = textureSize(map, 0).x / textureSize(map, 0).y;
-        // if (u_aspect > textureAspect) {
-        //     correctedUv.x = correctedUv.x * textureAspect / u_aspect + 0.5 - textureAspect / u_aspect / 2.0;
-        // } else {
-        //     correctedUv.y = correctedUv.y * u_aspect / textureAspect + 0.5 - u_aspect / textureAspect / 2.0;
-        // }
-
         vec4 textureColor = texture2D(map, correctedUv);
 
-      // Combine initial animation alpha and continuous visibility alpha
-      float initialAlpha = smoothstep(0.0, 0.5, v_initialAnimProgress); // Fade in faster initially
-      float visibilityAlpha = smoothstep(0.0, 1.0, v_visibility); // Use full visibility range for continuous fade
+        // Combine initial animation alpha and continuous visibility alpha
+        float initialAlpha = smoothstep(0.0, 0.5, v_initialAnimProgress); // Fade in faster initially
+        float visibilityAlpha = smoothstep(0.0, 1.0, v_visibility); // Use full visibility range for continuous fade
 
-      float finalAlpha = textureColor.a * initialAlpha * visibilityAlpha;
+        float finalAlpha = textureColor.a * initialAlpha * visibilityAlpha;
 
-      // Discard transparent pixels if texture has alpha
-      if (finalAlpha < 0.01) discard;
+        // Discard transparent pixels if texture has alpha
+        if (finalAlpha < 0.01) discard;
 
-      gl_FragColor = vec4(textureColor.rgb, finalAlpha);
-      #include <tonemapping_fragment>
-      #include <colorspace_fragment>
+        // Generate film grain based on UV and time
+        float grain = filmGrain(correctedUv, u_time);
+
+        // Apply grain subtly based on intensity
+        // More intense in midtones, less in highlights and shadows for natural look
+        float luminance = dot(textureColor.rgb, vec3(0.299, 0.587, 0.114));
+        float grainMask = 4.0 * luminance * (1.0 - luminance); // Parabolic curve peaking at 0.5 luminance
+
+        // Scale grain intensity and mask it based on brightness
+        float scaledGrain = (grain * 2.0 - 1.0) * u_grainIntensity * grainMask;
+
+        // Apply grain to color
+        vec3 grainedColor = textureColor.rgb + scaledGrain;
+
+        gl_FragColor = vec4(grainedColor, finalAlpha);
+        #include <tonemapping_fragment>
+        #include <colorspace_fragment>
     }
   `,
 );
@@ -116,6 +162,9 @@ interface AnimatedMaterialProps extends Partial<AnimatedMaterialUniforms> {
 	viewportHeight: number;
 	initialAnimProgress: number; // Ensure this is passed
 	aspect: number;
+	grainIntensity?: number; // Optional grain intensity
+	grainScale?: number; // Optional grain scale
+	grainSpeed?: number; // Optional grain speed
 }
 
 export const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
@@ -125,6 +174,9 @@ export const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 	initialAnimProgress,
 	aspect,
 	u_visibilityFade = 0.5, // Provide default
+	grainIntensity = 0.05, // Default film grain intensity
+	grainScale = 500.0, // Default grain scale
+	grainSpeed = 0.5, // Default grain animation speed
 	...props // Pass any other standard material props like 'side', 'transparent'
 }) => {
 	const materialRef = useRef<typeof AnimatedShaderMaterial>(null!);
@@ -144,6 +196,12 @@ export const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 			materialRef.current.uniforms.u_aspect.value = aspect;
 			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
 			materialRef.current.uniforms.u_visibilityFade.value = u_visibilityFade;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_grainIntensity.value = grainIntensity;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_grainScale.value = grainScale;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_grainSpeed.value = grainSpeed;
 		}
 	});
 
@@ -166,6 +224,9 @@ export const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 			u_initialAnimProgress={initialAnimProgress}
 			u_aspect={aspect}
 			u_visibilityFade={u_visibilityFade}
+			u_grainIntensity={grainIntensity}
+			u_grainScale={grainScale}
+			u_grainSpeed={grainSpeed}
 			transparent // MUST be true for alpha blending
 			side={THREE.DoubleSide} // Assuming double sided planes
 			toneMapped={false} // Match original Video/Image materials
