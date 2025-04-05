@@ -1,0 +1,251 @@
+---
+description: PR Review Automation Rule for dev to main
+globs: []
+alwaysApply: true
+---
+## Description
+This rule automates the process of reviewing changes when creating a Pull Request from `dev` to `main`. It leverages the AI to analyze differences between branches, understand the CI/CD workflow context, and generate properly formatted PR titles and descriptions that follow the project's Conventional Commits standard.
+
+## Rule
+When requesting a review of current changes for a PR from `dev` to `main`:
+
+1. Compare the diff between `dev` and `main` branches to understand what has changed.
+2. Analyze the changes in the context of:
+   - The Conventional Commits specification (`01-git-conventional-commits.mdc`)
+   - The release workflow configuration (`.github/workflows/release.yml`)
+   - The semantic release configuration (`.releaserc.json`)
+   - Any affected CI/CD workflows
+   - Any changes to dependencies (`package.json`)
+   - Potential breaking changes or migration requirements
+
+3. Generate:
+   - A properly formatted PR title following the Conventional Commits format: `<type>(<scope>): <description>`
+   - A comprehensive PR description that explains the changes, their impact, and any special considerations
+   - Both outputs formatted in Markdown code blocks for easy copying
+
+4. Categorize changes into logical groups in the PR description:
+   - CI/CD Changes
+   - Features
+   - Bug Fixes
+   - Performance Improvements
+   - Documentation
+   - Style/UI Changes
+   - Refactoring
+   - Dependency Updates
+   - Breaking Changes (if any)
+   - Other Changes
+
+5. Include version impact analysis:
+   - Predict the semantic version bump (MAJOR, MINOR, PATCH) that will result from the changes
+   - Explain the reasoning behind the version bump prediction
+   - List commit types that influence the version bump decision
+
+6. Address potential merge issues:
+   - Identify and highlight any potential merge conflicts
+   - Verify that all required CI checks are passing (if applicable)
+   - Check test coverage changes (if applicable)
+
+7. Reference related issues:
+   - Extract and list any issue references from commit messages
+
+8. Explicitly explain what will happen after merging into `main`, including:
+   - How semantic-release will process the commits
+   - How the release workflow will create a new version
+   - How the merge-back process will sync changes back to `dev`
+   - A preview of how the CHANGELOG entries will appear
+
+## Implementation
+When a user asks for a review of changes with a query like "review current changes" or "prepare PR":
+
+1. Run necessary commands to fetch and compare branches:
+   ```bash
+   # Fetch the latest changes from both branches
+   git fetch origin main dev
+
+   # List files that differ between branches
+   git diff --name-status origin/main...origin/dev
+
+   # View commit history differences (what's in dev but not in main)
+   git log origin/main..origin/dev --oneline
+
+   # For more detailed commit messages with descriptions
+   git log origin/main..origin/dev --pretty=format:"%h %s%n%b" --no-merges
+
+   # Categorize commits by type for semantic versioning prediction
+   git log origin/main..origin/dev --pretty=format:"%h %s" | grep -E "^[a-z]+(\([a-z-]+\))?: " | sort -k1.1,1.7
+   ```
+
+2. Check for breaking changes specifically:
+   ```bash
+   # Detect breaking changes in commit messages
+   git log origin/main..origin/dev --pretty=format:"%B" | grep -i "BREAKING CHANGE"
+
+   # Look for breaking change marker (!) in commit types
+   git log origin/main..origin/dev --pretty=format:"%s" | grep -E "^[a-z]+(\([a-z-]+\))?!: "
+   ```
+
+3. For dependency analysis:
+   ```bash
+   # Check for package.json changes
+   git diff origin/main...origin/dev -- package.json
+   ```
+
+4. For changed files, analyze their contents:
+   ```bash
+   git show origin/dev:<file>
+   git show origin/main:<file>
+   ```
+
+5. For deeper understanding of specific changes:
+   ```bash
+   # File-specific diff
+   git diff origin/main...origin/dev -- <file>
+
+   # Show patches introduced by each commit
+   git log origin/main..origin/dev -p -- <file>
+
+   # Check for test coverage changes
+   git diff origin/main...origin/dev -- "**/*.test.js" "**/*.spec.js" "**/*.test.tsx" "**/*.spec.tsx"
+   ```
+
+6. Review these specific files to get context:
+   ```bash
+   # Git conventional commits rule
+   cat .cursor/rules/0_foundational_rules/01-git-conventional-commits.mdc
+
+   # Release workflow
+   cat .github/workflows/release.yml
+
+   # Semantic release configuration
+   cat .releaserc.json
+
+   # PR template (if exists)
+   cat .github/PULL_REQUEST_TEMPLATE.md 2>/dev/null
+
+   # List workflow files to understand CI/CD processes
+   ls -la .github/workflows/
+   ```
+
+7. Generate the PR title and description based on the analysis, formatted as:
+   ```markdown
+   ## PR Title
+   type(scope): concise description of changes
+
+   ## PR Description
+   Brief summary of the changes and their purpose.
+
+   ### Changes
+   #### Features
+   - Feature change 1
+   - Feature change 2
+
+   #### Bug Fixes
+   - Bug fix 1
+   - Bug fix 2
+
+   #### Documentation
+   - Doc change 1
+
+   #### Dependency Updates
+   - Updated X from v1.0 to v1.1
+
+   ### Version Impact
+   This PR will trigger a [MAJOR|MINOR|PATCH] release because:
+   - [List of commit types that influence the version]
+
+   ### Breaking Changes
+   [Include breaking changes if any, or "None"]
+
+   ### Related Issues
+   - Fixes #123
+   - Relates to #456
+
+   ### Documentation Status
+   - [ ] New features are documented
+   - [ ] API changes are documented
+   - [ ] Breaking changes include migration guides
+
+   ### Post-Merge Process
+   Once merged to main:
+   1. semantic-release will create a [version_type] release ([version_pattern])
+   2. The CHANGELOG.md will be updated with:
+      ```
+      [preview of changelog entries]
+      ```
+   3. A GitHub release will be created with these notes
+   4. Changes will be automatically merged back to dev
+   ```
+
+## Benefits
+- Ensures PR titles and descriptions follow project conventions
+- Saves time by automating the process of analyzing changes
+- Improves quality and consistency of PR documentation
+- Helps reviewers understand the purpose and impact of changes
+- Provides explicit version impact analysis
+- Identifies breaking changes and dependency updates
+- Links to related issues for better traceability
+- Provides context about the release process flow
+- Encourages documentation of changes
+
+## Examples
+✅ Correct User Query:
+```
+review current changes for PR from dev to main
+```
+
+✅ Correct Response:
+```markdown
+## PR Title
+feat(auth): implement social login providers
+
+## PR Description
+This PR adds support for social login providers to enhance user authentication options.
+
+### Changes
+#### Features
+- Added OAuth integration for Google, GitHub and Twitter
+- Implemented unified auth provider interface
+- Added user profile merge functionality
+
+#### Documentation
+- Updated authentication docs with new provider setup instructions
+
+### Version Impact
+This PR will trigger a MINOR release because:
+- Contains feat commits which trigger minor version bump
+- No breaking changes detected
+
+### Breaking Changes
+None
+
+### Related Issues
+- Resolves #42
+- Related to #55
+
+### Documentation Status
+- [x] New features are documented
+- [x] API changes are documented
+- [ ] Breaking changes include migration guides (N/A)
+
+### Post-Merge Process
+Once merged to main:
+1. semantic-release will create a minor version release (0.x.0)
+2. The CHANGELOG.md will be updated with:
+   ```
+   ## [0.2.0] - 2023-05-15
+   ### Features
+   - Added OAuth integration for Google, GitHub and Twitter
+   - Implemented unified auth provider interface
+   - Added user profile merge functionality
+
+   ### Documentation
+   - Updated authentication docs with new provider setup instructions
+   ```
+3. A GitHub release will be created with these notes
+4. Changes will be automatically merged back to dev
+```
+
+❌ Incorrect Response:
+```
+The changes look good, we should merge them.
+```
