@@ -16,9 +16,8 @@ import type { GalleryItem } from '@/app/lib/db/types';
 import { logger } from '@/utils/logger';
 
 // Import extracted components, config, and utils
-import { DISABLE_MEDIA, NUM_COLUMNS, PLANE_HEIGHT, RECYCLE_BUFFER, SCROLL_MULTIPLIER, VERTICAL_GAP, VERTICAL_JITTER } from './creation/config';
+import { DISABLE_MEDIA, LEFT_PADDING, PLANE_HEIGHT, RECYCLE_BUFFER, SCROLL_MULTIPLIER, VERTICAL_GAP } from './creation/config';
 import PlaneWrapper from './creation/PlaneWrapper';
-import { calculatePosition } from './creation/utils';
 
 // Define props interface for the component
 interface CreationContentProps {
@@ -31,7 +30,6 @@ interface PlaneState {
 	id: string; // Stable unique key for React
 	itemIndex: number; // Index into the galleryItems array
 	initialY: number; // Base Y position (includes vertical jitter) at scrollY = 0
-	col: number; // Column assignment (0 to NUM_COLUMNS - 1)
 	x: number; // Current calculated X position
 	z: number; // Current calculated Z position
 	currentY: number; // Final calculated Y position for rendering this frame
@@ -49,7 +47,7 @@ interface ScrollingPlanesProps {
 
 const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia, isTouchDevice, onHoverChange }) => {
 	// R3F hooks
-	const { camera } = useThree();
+	const { camera, viewport, size } = useThree();
 	// State and Refs
 	const scrollSpring = useSpring(0, {
 		stiffness: 150,
@@ -58,17 +56,38 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 	});
 	const [planeStates, setPlaneStates] = useState<PlaneState[]>([]);
 	const initialPositionsSet = useRef(false);
+	// Store computed left position that adapts to viewport changes
+	const leftPositionRef = useRef<number>(0);
 
 	// Calculate visible height in world units at Z=0
 	const cameraZ = camera.position.z;
 	const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
 	const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
+	// Calculate the visible width in world units
+	const aspectRatio = size.width / size.height;
+	const visibleWidth = visibleHeight * aspectRatio;
+
+	// Calculate left edge position in world units (considering LEFT_PADDING)
+	useEffect(() => {
+		// Calculate the left edge position in world units
+		// -visibleWidth/2 represents the left edge of the visible area
+		const leftEdgePosition = -visibleWidth / 2 + LEFT_PADDING;
+		leftPositionRef.current = leftEdgePosition;
+
+		logger.info('Calculated left edge position', {
+			leftEdgePosition,
+			visibleWidth,
+			visibleHeight,
+			aspectRatio,
+			viewport,
+		});
+	}, [visibleWidth, visibleHeight, aspectRatio, viewport]);
 
 	// Calculate the total height the content would occupy if laid out end-to-end
 	// Used for calculating recycling jumps
 	const totalContentHeight = useMemo(() => {
 		if (galleryItems.length === 0) return 0;
-		return Math.ceil(galleryItems.length / NUM_COLUMNS) * VERTICAL_GAP;
+		return galleryItems.length * VERTICAL_GAP;
 	}, [galleryItems.length]);
 
 	// Initialize the state for each plane once
@@ -81,20 +100,19 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		const startYOffset = totalContentHeight / 2 - VERTICAL_GAP / 2;
 
 		for (let i = 0; i < galleryItems.length; i++) {
-			const row = Math.floor(i / NUM_COLUMNS);
-			const col = i % NUM_COLUMNS;
-			// Calculate the base Y position for this item's row
-			const baseY = startYOffset - row * VERTICAL_GAP;
-			// Add random vertical jitter to the base Y
-			const initialY = baseY + (Math.random() - 0.5) * VERTICAL_JITTER * 2;
-			// Get the initial X and Z position based on the column
-			const { x, z } = calculatePosition(col);
+			// Calculate the base Y position for this item directly using index
+			const baseY = startYOffset - i * VERTICAL_GAP;
+			// Removed vertical jitter calculation
+			const initialY = baseY;
+			// Get the fixed Z position (no longer depends on column) - X will be calculated in useFrame
+			const z = 0;
+			// Use the calculated left position, x will be updated in useFrame
+			const x = leftPositionRef.current;
 
 			initialStates.push({
 				id: `plane-${i}`, // Stable key based on item index
 				itemIndex: i,
-				initialY: initialY, // Store the initial Y (including jitter)
-				col: col,
+				initialY: initialY, // Store the initial Y (no jitter)
 				x: x,
 				z: z,
 				currentY: initialY, // Start rendering at the initial calculated Y
@@ -135,7 +153,17 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		// Get the current scroll position from the spring
 		const currentScroll = scrollSpring.get();
 
-		// Update plane states based on scroll position
+		// Update left position if viewport changes
+		const aspectRatio = size.width / size.height;
+		const newVisibleWidth = visibleHeight * aspectRatio;
+		const newLeftEdgePosition = -newVisibleWidth / 2 + LEFT_PADDING;
+
+		// If left position has changed due to window resize, update it
+		if (Math.abs(newLeftEdgePosition - leftPositionRef.current) > 0.001) {
+			leftPositionRef.current = newLeftEdgePosition;
+		}
+
+		// Update plane states based on scroll position and current viewport
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialY = state.initialY;
@@ -143,44 +171,36 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 				const currentRelativeY = state.initialY - currentScroll;
 				// Keep track of potential changes
 				let positionChanged = false;
-				let newX = state.x;
-				let newZ = state.z;
+				// Always update X position to match current viewport
+				const newX = leftPositionRef.current;
 
 				// --- Recycling Logic --- //
 				// If plane is too far above the top bound, recycle it to the bottom
 				if (currentRelativeY > visibleHeight / 2 + RECYCLE_BUFFER) {
 					// Calculate the base Y position after jumping down by the total content height
 					const baseY = state.initialY - totalContentHeight;
-					// Add new random vertical jitter
-					newInitialY = baseY + (Math.random() - 0.5) * VERTICAL_JITTER * 2;
-					// Get new X and Z positions based on the plane's column
-					const pos = calculatePosition(state.col);
-					newX = pos.x;
-					newZ = pos.z;
+					// Removed vertical jitter calculation
+					newInitialY = baseY;
 					positionChanged = true;
 				}
 				// If plane is too far below the bottom bound, recycle it to the top
 				else if (currentRelativeY < -visibleHeight / 2 - RECYCLE_BUFFER) {
 					// Calculate the base Y position after jumping up by the total content height
 					const baseY = state.initialY + totalContentHeight;
-					// Add new random vertical jitter
-					newInitialY = baseY + (Math.random() - 0.5) * VERTICAL_JITTER * 2;
-					// Get new X and Z positions based on the plane's column
-					const pos = calculatePosition(state.col);
-					newX = pos.x;
-					newZ = pos.z;
+					// Removed vertical jitter calculation
+					newInitialY = baseY;
 					positionChanged = true;
 				}
 
 				// Calculate the final Y position for rendering in this frame using spring value
 				const finalCurrentY = newInitialY - currentScroll;
 
-				// Determine if the state needs updating
-				const needsUpdate = positionChanged || finalCurrentY !== state.currentY;
+				// Determine if the state needs updating (position or viewport changed)
+				const needsUpdate = positionChanged || finalCurrentY !== state.currentY || newX !== state.x;
 
 				if (needsUpdate) {
 					// Return a new state object only if necessary
-					return { ...state, initialY: newInitialY, currentY: finalCurrentY, x: newX, z: newZ };
+					return { ...state, initialY: newInitialY, currentY: finalCurrentY, x: newX };
 				} else {
 					// Otherwise, return the existing state object to prevent unnecessary re-renders
 					return state;

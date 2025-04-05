@@ -8,8 +8,9 @@ import Foundation from '@/app/components/sections/Foundation';
  * Uses a responsive grid layout that adapts for different screen sizes and orientations.
  * - Mobile Portrait (Smallest): Foundation (Top 2/3), Creation (Bottom 1/3)
  * - Tablet Portrait (Medium): Foundation (Top 1/3), Creation (Bottom 2/3)
- * - Desktop/Landscape (lg): Creation (Left 2/3), Foundation (Right 1/3)
- * - Wider Desktop (xl+): Creation (Left 3/5), Foundation (Right 2/5)
+ * - Desktop (lg): Creation (Left 40%), Foundation (Right 60%)
+ * - Wider Desktop (xl): Creation (Left 50%), Foundation (Right 50%)
+ * - Extra Wide Desktop (2xl): Creation (Left 70%), Foundation (Right 30%)
  * @returns {JSX.Element} The rendered home page
  */
 export default function Home(): JSX.Element {
@@ -29,10 +30,12 @@ export default function Home(): JSX.Element {
 						'md:row-span-1 md:row-start-1',
 						// Desktop (lg+): Reset row
 						'lg:row-span-1 lg:row-start-1',
-						// Desktop (lg & lx): Right 5/10 (50%)
-						'lg:col-span-5 lg:col-start-6',
-						// Wider Desktop (xl): Right 3/10 (30%)
-						'xl:col-span-3 xl:col-start-8',
+						// Desktop (lg): Right 6/10 (60%)
+						'lg:col-span-6 lg:col-start-5',
+						// Wider Desktop (xl): Right 5/10 (50%)
+						'xl:col-span-5 xl:col-start-6',
+						// Extra Wide Desktop (2xl): Right 3/10 (30%)
+						'2xl:col-span-3 2xl:col-start-8',
 					)}
 				>
 					<div className="absolute inset-0 h-full w-full">
@@ -51,10 +54,12 @@ export default function Home(): JSX.Element {
 						'md:row-span-2 md:row-start-2',
 						// Desktop (lg+): Reset row
 						'lg:row-span-1 lg:row-start-1',
-						// Desktop (lg & lx): Left 5/10 (50%)
-						'lg:col-span-5 lg:col-start-1',
-						// Wider Desktop (xl): Left 7/10 (70%)
-						'xl:col-span-7 xl:col-start-1',
+						// Desktop (lg): Left 4/10 (40%)
+						'lg:col-span-4 lg:col-start-1',
+						// Wider Desktop (xl): Left 5/10 (50%)
+						'xl:col-span-5 xl:col-start-1',
+						// Extra Wide Desktop (2xl): Left 7/10 (70%)
+						'2xl:col-span-7 2xl:col-start-1',
 					)}
 				>
 					<div className="absolute inset-0 h-full w-full">

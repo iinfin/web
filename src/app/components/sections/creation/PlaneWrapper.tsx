@@ -106,7 +106,7 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position,
 	if (disableMedia || !item.url) {
 		return (
 			<group ref={groupRef} userData={{ itemId: item.id }}>
-				<mesh scale={[dimensions[0], dimensions[1], 1]}>
+				<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
 					<planeGeometry />
 					{fallbackMaterial}
 				</mesh>
@@ -118,21 +118,21 @@ export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position,
 		<group ref={groupRef} userData={{ itemId: item.id }} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
 			<Suspense
 				fallback={
-					<mesh scale={[dimensions[0], dimensions[1], 1]}>
+					<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
 						<planeGeometry />
 						{fallbackMaterial}
 					</mesh>
 				}
 			>
 				{item.mediaType === 'image' ? (
-					<Image url={item.url} scale={dimensions} transparent opacity={1} side={THREE.DoubleSide} toneMapped={false} />
+					<Image url={item.url} scale={dimensions} position={[dimensions[0] / 2, 0, 0]} transparent opacity={1} side={THREE.DoubleSide} toneMapped={false} />
 				) : item.mediaType === 'video' ? (
-					<mesh scale={[dimensions[0], dimensions[1], 1]}>
+					<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
 						<planeGeometry />
 						<VideoMaterial src={item.url} />
 					</mesh>
 				) : (
-					<mesh scale={[dimensions[0], dimensions[1], 1]}>
+					<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
 						<planeGeometry />
 						<meshStandardMaterial color="#555" side={THREE.DoubleSide} />
 					</mesh>
