@@ -2,17 +2,81 @@ import React, { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import type { FC } from 'react';
 
 import * as THREE from 'three';
-import { Image } from '@react-three/drei';
+import { useTexture, useVideoTexture } from '@react-three/drei';
 import { type ThreeEvent, useFrame } from '@react-three/fiber';
 
 import type { GalleryItem } from '@/app/lib/db/types';
 import { logger } from '@/utils/logger';
 
-// Import the extracted component
+import AnimatedMaterial from './AnimatedMaterial';
 import { calculateDimensions, findClosestAspectRatio } from './utils';
-import VideoMaterial from './VideoMaterial';
 
-// Import utils
+/**
+ * Props for the internal content components.
+ */
+interface PlaneContentProps {
+	url: string;
+	planeY: number;
+	viewportHeight: number;
+	initialAnimProgress: number;
+	aspect: number;
+	fallbackMaterial: JSX.Element;
+	grainIntensity: number;
+	grainScale: number;
+	grainSpeed: number;
+}
+
+/**
+ * Internal component to handle image texture loading and rendering.
+ */
+const ImagePlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
+	const texture = useTexture(url);
+
+	return texture ? (
+		<AnimatedMaterial
+			texture={texture}
+			planeY={planeY}
+			viewportHeight={viewportHeight}
+			initialAnimProgress={initialAnimProgress}
+			aspect={aspect}
+			grainIntensity={grainIntensity}
+			grainScale={grainScale}
+			grainSpeed={grainSpeed}
+		/>
+	) : (
+		fallbackMaterial
+	);
+});
+ImagePlaneContent.displayName = 'ImagePlaneContent';
+
+/**
+ * Internal component to handle video texture loading and rendering.
+ */
+const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
+	const texture = useVideoTexture(url, {
+		muted: true,
+		loop: true,
+		playsInline: true,
+		crossOrigin: 'anonymous',
+		start: true,
+	});
+
+	return texture ? (
+		<AnimatedMaterial
+			texture={texture}
+			planeY={planeY}
+			viewportHeight={viewportHeight}
+			initialAnimProgress={initialAnimProgress}
+			aspect={aspect}
+			grainIntensity={grainIntensity}
+			grainScale={grainScale}
+			grainSpeed={grainSpeed}
+		/>
+	) : (
+		fallbackMaterial
+	);
+});
+VideoPlaneContent.displayName = 'VideoPlaneContent';
 
 /**
  * Props for the PlaneWrapper component.
@@ -23,124 +87,162 @@ interface PlaneWrapperProps {
 	planeHeight: number;
 	disableMedia: boolean;
 	onHoverChange: (name: string | null) => void;
+	viewportHeight: number; // Pass viewport height down
+	initialY: number; // Pass initial Y for stagger calculation
+	grainIntensity?: number; // Film grain intensity (0-1)
+	grainScale?: number; // Film grain scale
+	grainSpeed?: number; // Film grain animation speed
 }
+
+// Animation constants
+const INITIAL_ANIM_DURATION = 1.8; // seconds - slower, smoother fade in
 
 /**
  * R3F component that wraps a single gallery item (image or video).
  * Handles aspect ratio detection, dimension calculation, rendering logic, and fallback/suspense.
+ * Uses AnimatedMaterial for visibility and entrance effects.
  */
-export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(({ item, position, planeHeight, disableMedia, onHoverChange }) => {
-	const groupRef = useRef<THREE.Group>(null!); // Use non-null assertion if confident it will be populated
-	const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
+export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
+	({
+		item,
+		position,
+		planeHeight,
+		disableMedia,
+		onHoverChange,
+		viewportHeight,
+		grainIntensity = 0.2, // Default grain intensity
+		grainScale = 100.0, // Default grain scale
+		grainSpeed = 0.4, // Default grain animation speed
+	}) => {
+		const groupRef = useRef<THREE.Group>(null!); // Use non-null assertion if confident it will be populated
+		const [dimensions, setDimensions] = useState<[number, number]>([planeHeight, planeHeight]);
+		const [aspect, setAspect] = useState<number>(1);
+		const [initialAnimProgress, setInitialAnimProgress] = useState(0); // 0 to 1
+		const [isMounted, setIsMounted] = useState(false);
+		const startTimeRef = useRef<number | null>(null);
 
-	// --- Event Handlers ---
-	const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
-		event.stopPropagation(); // Prevent event from bubbling up if needed
-		logger.info('Hovering over item:', { id: item.id, title: item.title, url: item.url });
-		// Call the callback with the item's title
-		onHoverChange(item.title ?? null);
-		// Optional: Add visual feedback, e.g., slightly scale up
-		// groupRef.current.scale.setScalar(1.05);
-	};
-
-	const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
-		event.stopPropagation();
-		// logger.info('Hover stopped for item:', { id: item.id });
-		// Call the callback with null
-		onHoverChange(null);
-		// Optional: Reset visual feedback
-		// groupRef.current.scale.setScalar(1);
-	};
-
-	// Detect aspect ratio and set dimensions - ONLY IF MEDIA IS ENABLED
-	useEffect(() => {
-		if (disableMedia || !item.url) return; // Skip if media disabled or no URL
-
-		const detectAspectRatio = async () => {
-			if (!item.url) return;
-
-			try {
-				if (item.mediaType === 'video') {
-					const video = document.createElement('video');
-					video.src = item.url;
-					await new Promise<void>((resolve, reject) => {
-						video.onloadedmetadata = () => resolve();
-						video.onerror = reject;
-					});
-					const ratio = video.videoWidth / video.videoHeight;
-					const closest = findClosestAspectRatio(ratio);
-					if (closest) {
-						setDimensions(calculateDimensions(closest));
-					}
-				} else if (item.mediaType === 'image') {
-					const img = document.createElement('img');
-					img.src = item.url;
-					await new Promise<void>((resolve, reject) => {
-						img.onload = () => resolve();
-						img.onerror = reject;
-					});
-					const ratio = img.width / img.height;
-					const closest = findClosestAspectRatio(ratio);
-					if (closest) {
-						setDimensions(calculateDimensions(closest));
-					}
-				}
-			} catch (error) {
-				logger.error('Error detecting aspect ratio:', { url: item.url, error });
-			}
+		// --- Event Handlers ---
+		const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
+			event.stopPropagation(); // Prevent event from bubbling up if needed
+			onHoverChange(item.title ?? null);
 		};
 
-		detectAspectRatio();
-	}, [item.url, item.mediaType, disableMedia, planeHeight]); // Added planeHeight dependency
+		const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
+			event.stopPropagation();
+			onHoverChange(null);
+		};
 
-	// Update group position each frame
-	useFrame(() => {
-		if (groupRef.current) {
-			groupRef.current.position.copy(position);
-		}
-	});
+		// Detect aspect ratio and set dimensions - ONLY IF MEDIA IS ENABLED
+		useEffect(() => {
+			if (disableMedia || !item.url) return; // Skip if media disabled or no URL
 
-	const fallbackMaterial = useMemo(() => <meshStandardMaterial color="#ffffff" side={THREE.DoubleSide} />, []);
+			const detectAspectRatio = async () => {
+				if (!item.url) return;
 
-	// Always render fallback if media is disabled or no URL
-	if (disableMedia || !item.url) {
+				try {
+					let ratio = 1;
+					if (item.mediaType === 'video') {
+						const video = document.createElement('video');
+						video.src = item.url;
+						await new Promise<void>((resolve, reject) => {
+							video.onloadedmetadata = () => resolve();
+							video.onerror = reject;
+						});
+						ratio = video.videoWidth / video.videoHeight;
+					} else if (item.mediaType === 'image') {
+						// For images, we need to load them briefly to get dimensions
+						const img = document.createElement('img');
+						img.src = item.url;
+						await new Promise<void>((resolve, reject) => {
+							img.onload = () => resolve();
+							img.onerror = reject;
+						});
+						ratio = img.width / img.height;
+					}
+					const closest = findClosestAspectRatio(ratio);
+					if (closest) {
+						setDimensions(calculateDimensions(closest));
+						setAspect(closest.width / closest.height);
+					}
+				} catch (error) {
+					logger.error('Error detecting aspect ratio:', { url: item.url, error });
+				}
+			};
+
+			detectAspectRatio();
+		}, [item.url, item.mediaType, disableMedia, planeHeight]);
+
+		// Start initial animation on mount
+		useEffect(() => {
+			// Simply set mounted state to true to start animation
+			setIsMounted(true);
+		}, []);
+
+		// Update group position and animation progress each frame
+		useFrame((state, _delta) => {
+			if (groupRef.current) {
+				// Update position
+				groupRef.current.position.copy(position);
+
+				// Simple fade-in animation with no stagger
+				if (isMounted && initialAnimProgress < 1) {
+					// Initialize start time if not set
+					if (startTimeRef.current === null) {
+						startTimeRef.current = state.clock.elapsedTime;
+					}
+
+					// Calculate progress based on elapsed time
+					const elapsed = state.clock.elapsedTime - startTimeRef.current;
+					let progress = Math.min(elapsed / INITIAL_ANIM_DURATION, 1);
+
+					// Apply simple ease-out curve
+					progress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+
+					// Update animation progress
+					setInitialAnimProgress(progress);
+				}
+			}
+		});
+
+		const fallbackMaterial = useMemo(() => <meshStandardMaterial color="#ffffff" side={THREE.DoubleSide} transparent opacity={0.0} />, []);
+
+		// Conditionally render internal component based on media type
+		const renderContent = () => {
+			if (disableMedia || !item.url) {
+				return fallbackMaterial;
+			}
+
+			const contentProps = {
+				url: item.url,
+				planeY: position.y,
+				viewportHeight: viewportHeight,
+				initialAnimProgress: initialAnimProgress,
+				aspect: aspect,
+				fallbackMaterial: fallbackMaterial,
+				grainIntensity: grainIntensity,
+				grainScale: grainScale,
+				grainSpeed: grainSpeed,
+			};
+
+			if (item.mediaType === 'video') {
+				return <VideoPlaneContent {...contentProps} />;
+			} else if (item.mediaType === 'image') {
+				return <ImagePlaneContent {...contentProps} />;
+			}
+
+			return fallbackMaterial; // Fallback if unknown type
+		};
+
 		return (
-			<group ref={groupRef} userData={{ itemId: item.id }}>
+			<group ref={groupRef} userData={{ itemId: item.id }} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
 				<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
 					<planeGeometry />
-					{fallbackMaterial}
+					<Suspense fallback={fallbackMaterial}>{renderContent()}</Suspense>
 				</mesh>
 			</group>
 		);
-	}
-
-	return (
-		<group ref={groupRef} userData={{ itemId: item.id }} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
-			<Suspense
-				fallback={
-					<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
-						<planeGeometry />
-						{fallbackMaterial}
-					</mesh>
-				}
-			>
-				{item.mediaType === 'image' ? (
-					<Image url={item.url} scale={dimensions} position={[dimensions[0] / 2, 0, 0]} transparent opacity={1} side={THREE.DoubleSide} toneMapped={false} />
-				) : item.mediaType === 'video' ? (
-					<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
-						<planeGeometry />
-						<VideoMaterial src={item.url} />
-					</mesh>
-				) : (
-					<mesh scale={[dimensions[0], dimensions[1], 1]} position={[dimensions[0] / 2, 0, 0]}>
-						<planeGeometry />
-						<meshStandardMaterial color="#555" side={THREE.DoubleSide} />
-					</mesh>
-				)}
-			</Suspense>
-		</group>
-	);
-});
+	},
+);
 
 PlaneWrapper.displayName = 'PlaneWrapper';
 

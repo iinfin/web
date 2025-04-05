@@ -18,7 +18,7 @@ jobs:
       - name: Run PR Labeler
         uses: actions/labeler@v5 # Use latest major version
         with:
-          configuration-path: .github/prlabels.yml # You MUST create this file
+          configuration-path: .github/workflows/prlabels.yml # You MUST create this file
           sync-labels: false # Set to true if you want it to remove labels that no longer match
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
