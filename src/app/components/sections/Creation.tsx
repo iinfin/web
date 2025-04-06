@@ -16,7 +16,6 @@ const Creation: FC = async (): Promise<JSX.Element> => {
 
 	return (
 		<section id="creation" className="relative h-full w-full overflow-hidden">
-			{/* Pass the filtered array to the client component */}
 			<CreationContent galleryItems={galleryItems} />
 		</section>
 	);

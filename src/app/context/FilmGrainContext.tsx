@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
 
 interface FilmGrainContextType {
 	enabled: boolean;
@@ -45,25 +45,6 @@ export function FilmGrainProvider({ children, initialEnabled = true, initialSett
 		...defaultSettings,
 		...initialSettings,
 	});
-
-	// Check device performance on mount to auto-disable for lower-end devices
-	useEffect(() => {
-		// Simple performance check - could be expanded with more sophisticated detection
-		const checkPerformance = () => {
-			// Check if device is low-powered (mobile, tablet, etc.)
-			const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-
-			// If user has requested reduced motion, disable animations
-			const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-			// Auto-disable for low-powered devices or if reduced motion is preferred
-			if (prefersReducedMotion || (isMobile && navigator.hardwareConcurrency <= 4)) {
-				setEnabled(false);
-			}
-		};
-
-		checkPerformance();
-	}, []);
 
 	// Toggle enabled state
 	const toggleEnabled = useCallback(() => {

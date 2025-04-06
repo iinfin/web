@@ -33,8 +33,4 @@ declare namespace NodeJS {
 	}
 }
 
-// Fix any type usage
-// Replace:
-// declare function createImage(width?: any, height?: any): HTMLCanvasElement;
-// With:
 declare function createImage(width?: number, height?: number): HTMLCanvasElement;

@@ -13,8 +13,7 @@ const FONT_FILES = [
 ] as const;
 
 const CRITICAL_IMAGES = [
-	// '/assets/meta/cover.png',
-	// '/assets/meta/apple-touch-icon.png',
+	// No critical images currently listed for preload
 ] as const;
 
 /**
