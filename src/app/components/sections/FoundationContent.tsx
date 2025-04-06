@@ -122,16 +122,13 @@ const selectRandomParagraphs = (sourceArray: string[]): [string | undefined, str
 
 // Data for the client list displayed in the third column (desktop only).
 const clientList = [
-	{ text: '1', bold: false },
 	{ text: 'Porsche' },
 	{ text: 'Lotus Cars' },
-	{ text: '2', bold: false },
 	{ text: 'Coca-Cola' },
 	{ text: 'Calvin-Klein' },
 	{ text: 'Meta' },
 	{ text: 'Nohlab' },
 	{ text: 'Salon Architects' },
-	{ text: '3', bold: false },
 	{ text: 'Taiwan Nat. Museum of Fine Arts' },
 	{ text: 'Outernet London' },
 	{ text: 'Saasfee Pavillon' },
@@ -141,8 +138,7 @@ const clientList = [
 ];
 
 // Data for the services list displayed in the services column.
-const servicesList1 = ['Creative Strategy', 'Direction', 'Production'];
-const servicesList2 = ['& Art Exhibitions']; // Second part of the services list
+const servicesList1 = ['Creative Strategy', 'Reseach', 'Direction', '', 'Production', '', '& Art Exhibitions'];
 
 // Data for contact links displayed in the contact column.
 const contactLinks = [
@@ -291,14 +287,6 @@ const FoundationContent: FC = (): JSX.Element => {
 								</motion.span>
 							))}
 						</motion.div>
-						{/* Services List Part 2 */}
-						<motion.div className="flex flex-col" variants={listStaggerVariants}>
-							{servicesList2.map((service, index) => (
-								<motion.span key={index} variants={itemVariants}>
-									<AnimatedTextSlideUp text={service} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
-								</motion.span>
-							))}
-						</motion.div>
 					</motion.div>
 
 					{/* Column: Contact */}
@@ -352,7 +340,7 @@ const FoundationContent: FC = (): JSX.Element => {
 							variants={listItemStaggerVariants}
 						>
 							{clientList.map((item, index) => (
-								<motion.span key={index} variants={itemVariants} className={item.bold ? 'font-bold' : ''}>
+								<motion.span key={index} variants={itemVariants}>
 									<AnimatedTextSlideUp text={item.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
 								</motion.span>
 							))}

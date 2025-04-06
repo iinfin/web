@@ -18,40 +18,18 @@ export default function Home(): JSX.Element {
 		<>
 			{/* Grid Container: Adjusts columns based on breakpoints */}
 			{/* Default: Rows, md: Rows, lg+: 10 cols */}
-			<div className="grid h-full min-h-screen grid-rows-3 lg:grid-cols-10 lg:grid-rows-1" aria-label="Main page layout">
-				{/* Foundation Section Wrapper */}
-				<div
-					className={clsx(
-						// Static classes applied always
-						'relative h-full',
-						// Mobile: Top 2/3 (rows 1-2)
-						'row-span-2 row-start-1',
-						// Tablet (md): Top 1/3 (row 1)
-						'md:row-span-1 md:row-start-1',
-						// Desktop (lg+): Reset row
-						'lg:row-span-1 lg:row-start-1',
-						// Desktop (lg): Right 6/10 (60%)
-						'lg:col-span-6 lg:col-start-5',
-						// Wider Desktop (xl): Right 5/10 (50%)
-						'xl:col-span-5 xl:col-start-6',
-						// Extra Wide Desktop (2xl): Right 3/10 (30%)
-						'2xl:col-span-3 2xl:col-start-8',
-					)}
-				>
-					<div className="absolute inset-0 h-full w-full">
-						<Foundation />
-					</div>
-				</div>
-
+			<div className="grid h-full min-h-screen grid-rows-10 lg:grid-cols-10 lg:grid-rows-1" aria-label="Main page layout">
 				{/* Creation Section Wrapper */}
 				<div
 					className={clsx(
 						// Static classes applied always
 						'relative h-full',
-						// Mobile: Bottom 1/3 (row 3)
-						'row-span-1 row-start-3',
-						// Tablet (md): Bottom 2/3 (rows 2-3)
-						'md:row-span-2 md:row-start-2',
+
+						// Mobile: Bottom 6/10 (rows 5-10)
+						'col-span-1 col-start-1 row-span-6 row-start-5',
+						// Tablet (md): Bottom 6/10 (rows 5-10)
+						'md:row-span-6 md:row-start-5',
+
 						// Desktop (lg+): Reset row
 						'lg:row-span-1 lg:row-start-1',
 						// Desktop (lg): Left 4/10 (40%)
@@ -64,6 +42,35 @@ export default function Home(): JSX.Element {
 				>
 					<div className="absolute inset-0 h-full w-full">
 						<Creation />
+					</div>
+				</div>
+
+				{/* Foundation Section Wrapper */}
+				<div
+					className={clsx(
+						// Static classes applied always
+						'relative h-full',
+
+						// Gradient background
+						'bg-gradient-to-b from-white via-white/90 to-white/0',
+						// Mobile: Full height (rows 1-10)
+						'col-span-1 col-start-1 row-span-10 row-start-1',
+						// Tablet (md): Top 8/10 (rows 1-8)
+						'md:row-span-8 md:row-start-1',
+
+						'lg:bg-none',
+						// Desktop (lg+): Reset row
+						'lg:row-span-1 lg:row-start-1',
+						// Desktop (lg): Right 6/10 (60%)
+						'lg:col-span-6 lg:col-start-5',
+						// Wider Desktop (xl): Right 5/10 (50%)
+						'xl:col-span-5 xl:col-start-6',
+						// Extra Wide Desktop (2xl): Right 3/10 (30%)
+						'2xl:col-span-3 2xl:col-start-8',
+					)}
+				>
+					<div className="absolute inset-0 h-full w-full">
+						<Foundation />
 					</div>
 				</div>
 			</div>
