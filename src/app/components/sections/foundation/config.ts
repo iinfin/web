@@ -1,17 +1,77 @@
+import type { Variants } from 'framer-motion';
+
 /**
- * Static data arrays for the Foundation content section.
+ * Configuration, static data, and animation variants
+ * for the Foundation content section.
  */
 
-// Combine description text for AnimatedText
-export const descriptionText = [
-	'Incomplete Infinity is an evolving, multifaceted creative practice working with companies and institutions in pursuit of a better future. Embracing an enigmatic style, we create work that is completed by the viewer and lives on in their minds.',
-	'', // Add a blank line for spacing equivalent to the original <p> margin
-	'At the intersection of imperfection, mystery, and openness, Incomplete Infinity crafts experiences that resist finite closure. We navigate liminal spaces where technology functions as collaborative language rather than mere tool, where sustainability manifests as regenerative dialogue with natural systems, and where creativity transforms abstract potential into tangible yet unresolved encounters. Our work exists not as static artifact but as living ecosystem—adapting, evolving, and completing itself anew with each engagement.',
-	'', // Add a blank line for spacing
-	'We exist in the deliberate pause between completion and becoming. Incomplete Infinity navigates the territories where technology becomes language, where sustainability becomes conversation, and where creativity transmutes the abstract into the experiential. Our work inhabits the fertile tensions between disorder and pattern, between revelation and concealment, between finite expression and finite interpretation.',
-];
+// ==================================
+// SECTION: Animation Configuration
+// ==================================
 
-// Array of alternative paragraphs for random selection
+// --- Animation Constants ---
+export const durationPrimary = 1.0; // Duration for main description and titles
+export const durationSecondary = 0.5; // Duration for list items and links
+export const staggerFast = 0.1; // Stagger for items within lists
+export const staggerMedium = 0.2; // Stagger for lists within columns or link groups
+export const staggerSlow = 0.5; // Stagger for main columns
+// -------------------------
+
+// --- Animation Variants ---
+
+// Stagger Variants for the top details section container
+export const detailsContainerVariants: Variants = {
+	hidden: {},
+	visible: {
+		transition: {
+			staggerChildren: staggerSlow, // Stagger the columns
+		},
+	},
+};
+
+// Variants for individual columns within the details section
+export const columnVariants: Variants = {
+	hidden: { opacity: 0 },
+	visible: {
+		opacity: 1,
+		transition: {
+			staggerChildren: staggerSlow, // Stagger items within columns
+		},
+	},
+};
+
+// Variants for individual items (text, links) within columns
+export const itemVariants: Variants = {
+	hidden: { opacity: 0, y: 10 }, // Start invisible and slightly down
+	visible: {
+		opacity: 1,
+		y: 0, // Animate to original position
+		transition: {
+			duration: durationSecondary, // Use secondary duration for items
+			ease: [0.22, 1, 0.36, 1], // easeOutCirc
+		},
+	},
+};
+
+// Variants for staggering lists (like services or contact links)
+export const listStaggerVariants: Variants = {
+	hidden: {},
+	visible: { transition: { staggerChildren: staggerMedium } },
+};
+
+// Variants for staggering items within a list (faster than list staggering)
+export const listItemStaggerVariants: Variants = {
+	hidden: {},
+	visible: { transition: { staggerChildren: staggerFast } },
+};
+
+// ==================================
+// SECTION: Static Content Data
+// ==================================
+
+// --- Description Text ---
+
+// Array of alternative paragraphs for random selection in DescriptionSection
 export const paragraphs = [
 	'In the fertile void between disciplines, Incomplete Infinity cultivates living frameworks rather than final artifacts.',
 	'We exist in the deliberate pause between completion and becoming. Incomplete Infinity navigates the territories where technology becomes language, where sustainability becomes conversation, and where creativity transmutes the abstract into the experiential. Our work inhabits the fertile tensions between disorder and pattern, between revelation and concealment, between finite expression and infinite interpretation.',
@@ -22,7 +82,7 @@ export const paragraphs = [
 	'Between conception and completion lies a fertile territory of possibility. We transform apparent limitations into portals of potential, crafting experiences that gain strength through vulnerability and resonance through ambiguity. Each project exists as structured emergence: deliberately unresolved systems that invite completion without dictating conclusion.',
 ];
 
-// Function to select two unique paragraphs for dynamic content
+// Function to select two unique paragraphs for dynamic content in DescriptionSection
 export const selectRandomParagraphs = (sourceArray: string[]): [string | undefined, string | undefined] => {
 	let paragraph1: string | undefined;
 	let paragraph2: string | undefined;
@@ -32,17 +92,22 @@ export const selectRandomParagraphs = (sourceArray: string[]): [string | undefin
 		paragraph1 = sourceArray[index1];
 
 		let index2 = Math.floor(Math.random() * sourceArray.length);
+		// Ensure the second index is different from the first
 		while (index2 === index1) {
 			index2 = Math.floor(Math.random() * sourceArray.length);
 		}
 		paragraph2 = sourceArray[index2];
 	} else if (sourceArray.length === 1) {
+		// If only one paragraph available, use it for the first slot
 		paragraph1 = sourceArray[0];
 	}
+	// If fewer than 2 paragraphs, the second slot will remain undefined
 	return [paragraph1, paragraph2];
 };
 
-// Array for client list items to easily map over
+// --- Lists Data ---
+
+// Array for client list items displayed in the third column (desktop)
 export const clientList = [
 	{ text: '1', bold: false },
 	{ text: 'Porsche' },
@@ -62,11 +127,12 @@ export const clientList = [
 	{ text: 'Eglise De La Madeleine' },
 ];
 
-// Arrays for services list
+// Arrays for services list displayed in the services column
 export const servicesList1 = ['Creative Strategy', 'Direction', 'Production'];
-export const servicesList2 = ['& Art Exhibitions']; // Keep & static with Art Exhibitions
+// Second part of the services list
+export const servicesList2 = ['& Art Exhibitions'];
 
-// Array for contact links
+// Array for contact links displayed in the contact column
 export const contactLinks = [
 	{ href: 'mailto:hey@u29dc.com', text: 'hey@u29dc.com' },
 	{ href: 'https://cal.com/u29dc', text: 'cal.com/u29dc' },

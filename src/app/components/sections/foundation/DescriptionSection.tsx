@@ -10,7 +10,7 @@ import { motion } from 'framer-motion';
 
 import AnimatedTextFadeIn from '@/app/components/shared/AnimatedTextFadeIn';
 
-import { paragraphs, selectRandomParagraphs } from './data';
+import { paragraphs, selectRandomParagraphs } from './config';
 
 interface DescriptionSectionProps {
 	durationPrimary: number;

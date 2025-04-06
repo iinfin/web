@@ -12,22 +12,32 @@ import AnimatedMaterial from './AnimatedMaterial';
 import { calculateDimensions, findClosestAspectRatio } from './utils';
 
 /**
- * Props for the internal content components.
+ * Props for the internal media content components (Image/Video).
  */
 interface PlaneContentProps {
+	/** URL of the image or video source */
 	url: string;
+	/** Current Y position of the plane in world space */
 	planeY: number;
+	/** Calculated height of the viewport in world space */
 	viewportHeight: number;
+	/** Progress of the initial entrance animation (0 to 1) */
 	initialAnimProgress: number;
+	/** Calculated aspect ratio of the media */
 	aspect: number;
+	/** Fallback material to display during loading or if media is disabled */
 	fallbackMaterial: JSX.Element;
+	/** Film grain intensity uniform value (0-1) */
 	grainIntensity: number;
+	/** Film grain scale uniform value */
 	grainScale: number;
+	/** Film grain animation speed uniform value */
 	grainSpeed: number;
 }
 
 /**
- * Internal component to handle image texture loading and rendering.
+ * Internal component: Loads and renders an image texture using AnimatedMaterial.
+ * Memoized for performance.
  */
 const ImagePlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
 	const texture = useTexture(url);
@@ -50,7 +60,9 @@ const ImagePlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, view
 ImagePlaneContent.displayName = 'ImagePlaneContent';
 
 /**
- * Internal component to handle video texture loading and rendering.
+ * Internal component: Loads and renders a video texture using AnimatedMaterial.
+ * Configures video properties (muted, loop, etc.) via useVideoTexture.
+ * Memoized for performance.
  */
 const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
 	const texture = useVideoTexture(url, {
@@ -82,25 +94,45 @@ VideoPlaneContent.displayName = 'VideoPlaneContent';
  * Props for the PlaneWrapper component.
  */
 interface PlaneWrapperProps {
+	/** The gallery item data object */
 	item: GalleryItem;
+	/** Target position vector for the plane group */
 	position: THREE.Vector3;
+	/** Base height for the plane geometry */
 	planeHeight: number;
+	/** Flag indicating if media loading/rendering is disabled */
 	disableMedia: boolean;
+	/** Callback invoked when the pointer hovers over or leaves the plane */
 	onHoverChange: (name: string | null) => void;
-	viewportHeight: number; // Pass viewport height down
-	initialY: number; // Pass initial Y for stagger calculation
-	grainIntensity?: number; // Film grain intensity (0-1)
-	grainScale?: number; // Film grain scale
-	grainSpeed?: number; // Film grain animation speed
+	/** Calculated height of the viewport in world space (passed from parent) */
+	viewportHeight: number;
+	/** Initial Y position used for staggering calculations (passed from parent) - currently unused here */
+	initialY: number;
+	/** Optional: Film grain intensity (0-1), defaults to 0.2 */
+	grainIntensity?: number;
+	/** Optional: Film grain scale, defaults to 100.0 */
+	grainScale?: number;
+	/** Optional: Film grain animation speed, defaults to 0.4 */
+	grainSpeed?: number;
 }
 
-// Animation constants
+/** Duration for the initial fade-in animation in seconds */
 const INITIAL_ANIM_DURATION = 1.8; // seconds - slower, smoother fade in
 
 /**
- * R3F component that wraps a single gallery item (image or video).
- * Handles aspect ratio detection, dimension calculation, rendering logic, and fallback/suspense.
- * Uses AnimatedMaterial for visibility and entrance effects.
+ * R3F component wrapping a single gallery item (image or video) plane.
+ *
+ * Responsibilities:
+ * - Handles aspect ratio detection for media.
+ * - Calculates plane dimensions based on aspect ratio and fixed height.
+ * - Manages pointer hover events to display item titles.
+ * - Renders the appropriate media type (Image or Video) via internal components.
+ * - Provides a fallback material and uses Suspense for loading.
+ * - Implements a simple initial fade-in animation controlled by `useFrame`.
+ * - Passes necessary uniforms (grain, animation progress) to `AnimatedMaterial`.
+ *
+ * @param {PlaneWrapperProps} props - Component props.
+ * @returns {JSX.Element} The rendered plane group.
  */
 export const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 	({

@@ -22,44 +22,63 @@ interface CreationContentProps {
 	galleryItems: GalleryItem[];
 }
 
-// --- Scrolling Content Manager --- (Keep this core logic here)
-// Manages the state and recycling logic for all gallery items
+// --- Scrolling Content Manager ---
+// Manages the state and recycling logic for all gallery items within the R3F Canvas.
+// This component handles the core animation loop and positioning.
 interface PlaneState {
-	id: string; // Stable unique key for React
-	itemIndex: number; // Index into the galleryItems array
-	initialY: number; // Base Y position (includes vertical jitter) at scrollY = 0
-	x: number; // Current calculated X position
-	z: number; // Current calculated Z position
-	currentY: number; // Final calculated Y position for rendering this frame
+	/** Stable unique key for React reconciliation */
+	id: string;
+	/** Index into the original galleryItems array for data lookup */
+	itemIndex: number;
+	/** Base Y position at scrollY=0, used for relative calculations */
+	initialY: number;
+	/** Current calculated X position based on viewport */
+	x: number;
+	/** Current calculated Z position (currently static) */
+	z: number;
+	/** Final calculated Y position for rendering this frame, incorporating scroll offset */
+	currentY: number;
 }
 
-const AUTO_SCROLL_SPEED = 15; // Adjust speed as needed (pixels per second equivalent)
+/** Speed for automatic scrolling on touch devices, mimicking pixels per second */
+const AUTO_SCROLL_SPEED = 15;
 
-// Update ScrollingPlanes Props
+// Props for the ScrollingPlanes component
 interface ScrollingPlanesProps {
+	/** The array of gallery items to display */
 	galleryItems: GalleryItem[];
+	/** Flag to prevent loading/displaying media assets */
 	disableMedia: boolean;
+	/** Flag indicating if the device is touch-capable (affects scroll behavior) */
 	isTouchDevice: boolean;
-	onHoverChange: (name: string | null) => void; // Add hover callback prop
+	/** Callback function invoked when a plane's hover state changes */
+	onHoverChange: (name: string | null) => void;
 }
 
+/**
+ * Renders the scrollable/recyclable gallery planes within the Canvas.
+ * Handles the primary animation loop, position updates, and recycling logic.
+ */
 const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia, isTouchDevice, onHoverChange }) => {
-	// R3F hooks
+	// R3F hooks to access scene properties
 	const { camera, size } = useThree();
 	// State and Refs
+	/** Spring physics for smooth scrolling animation */
 	const scrollSpring = useSpring(0, {
 		stiffness: 150,
-		damping: 25, // Slightly adjusted damping
+		damping: 25, // Adjusted damping for a slightly less bouncy feel
 		mass: 1,
 	});
+	/** Array holding the current state (position, index) of each plane */
 	const [planeStates, setPlaneStates] = useState<PlaneState[]>([]);
+	/** Flag to ensure initial positions are calculated only once */
 	const initialPositionsSet = useRef(false);
-	// Store computed left position that adapts to viewport changes
+	/** Ref storing the calculated world-space X position for the left edge, adapting to viewport */
 	const leftPositionRef = useRef<number>(0);
-	// Store viewport height
+	/** Ref storing the calculated world-space height of the viewport */
 	const viewportHeightRef = useRef<number>(0);
 
-	// Calculate visible height in world units at Z=0
+	// Calculate visible height and initial left edge position in world units at Z=0
 	useEffect(() => {
 		const cameraZ = camera.position.z;
 		const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
@@ -82,16 +101,17 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 			visibleHeight,
 			aspectRatio,
 		});
-	}, [camera, size.width, size.height]); // Re-run if camera or size changes
+	}, [camera, size.width, size.height]); // Recalculate if camera properties or viewport size change
 
-	// Calculate the total height the content would occupy if laid out end-to-end
-	// Used for calculating recycling jumps
+	// Calculate the total height the content would occupy if laid out end-to-end.
+	// This is crucial for determining the jump distance during recycling.
 	const totalContentHeight = useMemo(() => {
 		if (galleryItems.length === 0) return 0;
 		return galleryItems.length * VERTICAL_GAP;
 	}, [galleryItems.length]);
 
-	// Initialize the state for each plane once
+	// Initialize the state (position, ID) for each plane based on the gallery items.
+	// Runs only once after galleryItems are available.
 	useEffect(() => {
 		if (galleryItems.length === 0 || initialPositionsSet.current) return;
 
@@ -123,94 +143,94 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		initialPositionsSet.current = true;
 	}, [galleryItems, totalContentHeight]);
 
-	// Setup scroll listener
+	// Setup scroll listener for non-touch devices
 	useEffect(() => {
-		// Only attach wheel listener if NOT a touch device
+		// Only attach wheel listener if NOT a touch device to avoid conflicts
 		if (isTouchDevice) return;
 
 		const handleWheel = (event: WheelEvent) => {
-			// Update the spring target directly based on scroll delta
+			// Update the scroll spring target directly based on wheel delta.
+			// The spring handles the smooth animation towards the target.
 			scrollSpring.set(scrollSpring.get() - event.deltaY * SCROLL_MULTIPLIER);
 
-			// Prevent default behavior to avoid browser scrolling
-			// event.preventDefault(); // Keep this commented unless needed
+			// Prevent default browser scroll behavior if necessary (currently disabled).
+			// Use passive: true for performance when preventDefault is not needed.
+			// event.preventDefault();
 		};
 
-		// Use passive: false to allow preventDefault() if uncommented
+		// Use passive: true when preventDefault() is not called for better scroll performance.
 		window.addEventListener('wheel', handleWheel, { passive: true });
 		return () => window.removeEventListener('wheel', handleWheel);
-	}, [scrollSpring, isTouchDevice]); // Added isTouchDevice dependency
+	}, [scrollSpring, isTouchDevice]); // Re-attach if scrollSpring instance or touch status changes
 
-	// Main frame loop for updating positions and handling recycling
+	// Main R3F frame loop: Updates plane positions, handles recycling, and manages auto-scroll.
 	useFrame((_, delta) => {
-		if (planeStates.length === 0 || totalContentHeight === 0) return;
+		if (planeStates.length === 0 || totalContentHeight === 0) return; // Skip if no items or layout defined
 
-		// Handle Auto-scroll for touch devices
+		// Handle Auto-scroll for touch devices by incrementing scroll based on frame time
 		if (isTouchDevice) {
-			// Increment scroll position based on delta time
 			scrollSpring.set(scrollSpring.get() + AUTO_SCROLL_SPEED * delta);
 		}
 
-		// Get the current scroll position from the spring
+		// Get the current raw scroll position from the physics spring
 		const currentScroll = scrollSpring.get();
 
-		// Update left position if viewport changes
+		// Recalculate left edge position based on current viewport size (handles resize)
 		const aspectRatio = size.width / size.height;
 		const newVisibleWidth = viewportHeightRef.current * aspectRatio;
 		const newLeftEdgePosition = -newVisibleWidth / 2 + LEFT_PADDING;
 
-		// If left position has changed due to window resize, update it
+		// Update the stored left position ref if it has changed significantly
 		if (Math.abs(newLeftEdgePosition - leftPositionRef.current) > 0.001) {
 			leftPositionRef.current = newLeftEdgePosition;
 		}
 
-		// Update plane states based on scroll position and current viewport
+		// Update plane states based on scroll position, viewport changes, and recycling logic
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialY = state.initialY;
-				// Calculate current Y relative to the center of the viewport (0) using spring value
+				// Calculate the plane's current Y position relative to the viewport center (0)
 				const currentRelativeY = state.initialY - currentScroll;
-				// Keep track of potential changes
-				let positionChanged = false;
-				// Always update X position to match current viewport
-				const newX = leftPositionRef.current;
+				let positionChanged = false; // Flag to track if recycling occurred
 
-				// --- Recycling Logic --- //
-				// If plane is too far above the top bound, recycle it to the bottom
+				// --- Recycling Logic ---
+				// This ensures seamless infinite scrolling by repositioning planes
+				// that move too far out of the view bounds (+ buffer).
+
+				// If plane is too far above the top bound, recycle it to the bottom.
 				if (currentRelativeY > viewportHeightRef.current / 2 + RECYCLE_BUFFER) {
-					// Calculate the base Y position after jumping down by the total content height
-					const baseY = state.initialY - totalContentHeight;
-					// Removed vertical jitter calculation
-					newInitialY = baseY;
+					// Jump down by the total height of all content.
+					newInitialY = state.initialY - totalContentHeight;
 					positionChanged = true;
 				}
-				// If plane is too far below the bottom bound, recycle it to the top
+				// If plane is too far below the bottom bound, recycle it to the top.
 				else if (currentRelativeY < -viewportHeightRef.current / 2 - RECYCLE_BUFFER) {
-					// Calculate the base Y position after jumping up by the total content height
-					const baseY = state.initialY + totalContentHeight;
-					// Removed vertical jitter calculation
-					newInitialY = baseY;
+					// Jump up by the total height of all content.
+					newInitialY = state.initialY + totalContentHeight;
 					positionChanged = true;
 				}
 
-				// Calculate the final Y position for rendering in this frame using spring value
+				// Always update the X position to match the potentially resized viewport's left edge.
+				const newX = leftPositionRef.current;
+				// Calculate the final Y position for rendering, applying the current scroll offset.
 				const finalCurrentY = newInitialY - currentScroll;
 
-				// Determine if the state needs updating (position or viewport changed)
+				// Determine if the state needs updating (recycled, Y changed, or X changed due to resize).
+				// This optimizes state updates by avoiding changes if nothing moved.
 				const needsUpdate = positionChanged || finalCurrentY !== state.currentY || newX !== state.x;
 
 				if (needsUpdate) {
-					// Return a new state object only if necessary
+					// Return a new state object only if necessary to trigger re-render.
 					return { ...state, initialY: newInitialY, currentY: finalCurrentY, x: newX };
 				} else {
-					// Otherwise, return the existing state object to prevent unnecessary re-renders
+					// Otherwise, return the existing state object to prevent unnecessary updates.
 					return state;
 				}
 			}),
 		);
 	});
 
-	// Render the PlaneWrappers based on the current state
+	// Render the PlaneWrappers based on the current calculated state
 	return (
 		<group>
 			{planeStates.map((state) => {
@@ -236,23 +256,29 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 	);
 };
 
-// Main component
+/**
+ * Main component for the "Creation" section.
+ * Sets up the R3F Canvas, manages device features (touch, DPR),
+ * handles hover state for displaying item names, and renders the ScrollingPlanes.
+ */
 const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
 	const [isTouchDevice, setIsTouchDevice] = useState(false);
-	const [hoveredName, setHoveredName] = useState<string | null>(null); // State for hovered item name
-	const inputState = useInputState(); // Get input state
+	/** State storing the name of the currently hovered gallery item, or null */
+	const [hoveredName, setHoveredName] = useState<string | null>(null);
+	const inputState = useInputState(); // Hook to get mouse/touch input coordinates
 
-	// Read environment variable to disable media loading in dev
+	// Determine if media loading should be disabled based on environment variable
 	const disableMedia = useMemo(() => DISABLE_MEDIA, []);
 
-	// Callback to update hovered name
+	// Callback passed to PlaneWrapper to update the hovered item's name
 	const handleHoverChange = useCallback((name: string | null) => {
 		setHoveredName(name);
 	}, []);
 
+	// Detect device capabilities (touch, pixel ratio) on component mount
 	useEffect(() => {
-		// Check for touch support on the client
+		// Check for touch support on the client-side window object
 		const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 		setIsTouchDevice(touchDetected);
 
@@ -262,26 +288,27 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 		}
 	}, [disableMedia]);
 
-	// Use real items or generate test ones
+	// Process gallery items: ensure defaults for missing optional fields.
 	const items: GalleryItem[] = useMemo(() => {
 		if (galleryItems.length > 0) {
-			// Ensure required fields have defaults if missing in fetched data
+			// Map over fetched items to provide default values for potentially missing fields,
+			// ensuring type safety before passing to child components.
 			const processedItems = galleryItems.map((item) => ({
 				description: '', // Default empty string if undefined
 				tags: [], // Default empty array if undefined
-				...item, // Spread item afterwards to keep original values if they exist
-				url: item.url || '', // Use empty string if URL is missing
-				// Provide a default mediaType if it's missing/undefined
+				...item, // Spread original item to preserve existing values
+				url: item.url || '', // Default to empty string if URL is missing
+				// Provide a default mediaType ('image') if it's missing/undefined
 				mediaType: item.mediaType || 'image',
 			}));
 			logger.info(`Using ${processedItems.length} real gallery items`);
-			// Cast to GalleryItem[] should be safe now if defaults cover required fields
+			// Cast should be safe now as defaults cover required fields in GalleryItem
 			return processedItems as GalleryItem[];
 		} else {
 			logger.info('No gallery items provided.');
-			return []; // Return empty array if no items are passed
+			return []; // Return empty array if no items are fetched/passed
 		}
-	}, [galleryItems]);
+	}, [galleryItems]); // Recalculate only if the input galleryItems array changes
 
 	if (disableMedia) {
 		logger.info('Rendering CreationContent with media disabled');

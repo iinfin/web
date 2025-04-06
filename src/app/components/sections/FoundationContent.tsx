@@ -8,20 +8,26 @@ import { motion } from 'framer-motion';
 
 import AnimatedTextSlideUp from '@/app/components/shared/AnimatedTextSlideUp';
 
+// Update imports to use the consolidated config file
 import {
+	clientList,
 	columnVariants,
+	contactLinks,
 	detailsContainerVariants,
 	durationPrimary,
 	durationSecondary,
 	itemVariants,
 	listItemStaggerVariants,
 	listStaggerVariants,
+	servicesList1,
+	servicesList2,
 	staggerFast,
 	staggerMedium,
-	// staggerSlow,
-} from './foundation/animations';
+} from './foundation/config';
+// <- Updated path
 import ContactLink from './foundation/ContactLink';
-import { clientList, contactLinks, servicesList1, servicesList2 } from './foundation/data';
+// Remove old data import
+// import { clientList, contactLinks, servicesList1, servicesList2 } from './foundation/data';
 import DescriptionSection from './foundation/DescriptionSection';
 
 // Main component for the Foundation content
@@ -58,7 +64,8 @@ const FoundationContent: FC = (): JSX.Element => {
 					initial="hidden"
 					animate="visible"
 				>
-					{/* Column: Services  */}
+					{/* Column: Services - Contains two lists of services. */}
+					{/* Responsive Order: Displays 3rd on mobile, 2nd on desktop. */}
 					<motion.div
 						className={clsx(
 							// Column positioning and flex layout
@@ -102,7 +109,8 @@ const FoundationContent: FC = (): JSX.Element => {
 						</motion.div>
 					</motion.div>
 
-					{/* Column: Contact */}
+					{/* Column: Contact - Contains social/contact links. */}
+					{/* Responsive Order: Displays 2nd on mobile, 1st on desktop. */}
 					<motion.div
 						className={clsx(
 							// Column positioning and flex layout
@@ -140,7 +148,8 @@ const FoundationContent: FC = (): JSX.Element => {
 						</motion.div>
 					</motion.div>
 
-					{/* Column: Brands, Studios & Exhibitions */}
+					{/* Column: Brands, Studios & Exhibitions - Contains a list of clients/partners. */}
+					{/* Responsive Behavior: Hidden on mobile, displays 3rd on desktop. */}
 					<motion.div
 						id="about-details-content-brands"
 						className={clsx(

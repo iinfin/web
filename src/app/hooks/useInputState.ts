@@ -75,8 +75,10 @@ function getEventClientCoords(event: MouseEvent | TouchEvent): Vector2 {
 
 /**
  * Hook to track raw mouse, touch, and wheel input state globally.
- * Attaches event listeners to the window.
- * @returns The current input state.
+ * Attaches event listeners to the window and updates state using requestAnimationFrame
+ * for performance.
+ *
+ * @returns {InputState} The current input state, updated each frame.
  */
 export function useInputState(): InputState {
 	// Using refs for state that updates frequently within event listeners
@@ -173,9 +175,6 @@ export function useInputState(): InputState {
 			deltaNormalized,
 			isDown: false,
 			wasDown: stateRef.current.isDown, // Capture previous state
-			// Reset deltas related to 'down' state? Optional, depends on need.
-			// deltaDownPixel: { ...initialVector },
-			// deltaDownNormalized: { ...initialVector },
 		};
 		hasPendingUpdate.current = true;
 	}, []);

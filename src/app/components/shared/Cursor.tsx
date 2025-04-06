@@ -9,8 +9,6 @@ import { motion, type SpringOptions, useSpring } from 'framer-motion';
 import { useCursor } from '@/app/context/CursorContext';
 import { useInputState } from '@/app/hooks/useInputState';
 
-// Use cursor context
-
 // Spring options for the central dot (slightly tighter/faster)
 const dotSpringOptions: SpringOptions = {
 	stiffness: 1200,
@@ -94,14 +92,13 @@ export default function Cursor(): JSX.Element | null {
 	// Determine cursor states from context
 	const isHidden = cursorType === 'hidden';
 	const isPointer = cursorType === 'pointer';
-	// const isText = cursorType === 'text'; // Can be used for text-specific styling
 	const isDefault = cursorType === 'default';
 
 	// Base styles for the container
 	const containerClasses = clsx(
-		'pointer-events-none fixed inset-0 z-[9999]', // Use high z-index like CustomCursor
-		'transition-opacity duration-300 ease-in-out',
-		// Combine visibility conditions: visible only if NOT hidden AND mouse is in window
+		'pointer-events-none fixed inset-0 z-[9999]', // Ensure cursor is on top
+		'transition-opacity duration-300 ease-in-out', // Fade in/out
+		// Hide the custom cursor if the context demands it OR if the system mouse has left the browser window entirely.
 		!isHidden && isMouseInWindow ? 'opacity-100' : 'opacity-0',
 	);
 
@@ -114,46 +111,48 @@ export default function Cursor(): JSX.Element | null {
 	return (
 		<motion.div // Use motion.div for potential future container animations
 			className={containerClasses}
-			aria-hidden="true" // Hide from screen readers
+			aria-hidden="true" // Accessibility: Hide decorative cursor from screen readers
 		>
-			{/* Vertical cursor line - Use lineSmoothX */}
+			{/* Vertical cursor line - animated with its own spring */}
 			<motion.div
 				className={clsx(lineBaseClasses, 'top-0 h-full w-[1px]')}
 				style={{ x: lineSmoothX }} // Use X spring for the vertical line
-				animate={{ opacity: isDefault ? 0.2 : 0 }} // Fade out lines when not default (adjust opacity as desired)
+				// Lines are only visible (slightly transparent) in the 'default' state
+				animate={{ opacity: isDefault ? 0.2 : 0 }}
 				transition={{ duration: 0.2, ease: 'easeOut' }}
 			/>
 
-			{/* Horizontal cursor line - Use lineSmoothY */}
+			{/* Horizontal cursor line - animated with its own spring */}
 			<motion.div
 				className={clsx(lineBaseClasses, 'left-0 h-[1px] w-full')}
 				style={{ y: lineSmoothY }} // Use Y spring for the horizontal line
-				animate={{ opacity: isDefault ? 0.2 : 0 }} // Fade out lines when not default (adjust opacity as desired)
+				// Lines are only visible (slightly transparent) in the 'default' state
+				animate={{ opacity: isDefault ? 0.2 : 0 }}
 				transition={{ duration: 0.2, ease: 'easeOut' }}
 			/>
 
-			{/* Cursor dot - Uses original smoothX/smoothY */}
+			{/* Cursor dot - animated with its own spring and style transitions */}
 			<motion.div
 				className={clsx(
 					dotBaseClasses,
-					// Conditional styling for the dot
-					isPointer ? 'bg-black/20 dark:bg-white/20' : 'bg-black dark:bg-white', // Example: lighter/larger for pointer
+					// Use a lighter background for the dot when in 'pointer' state
+					isPointer ? 'bg-black/20 dark:bg-white/20' : 'bg-black dark:bg-white',
 				)}
 				style={{
 					x: smoothX, // Dot uses original springs
 					y: smoothY,
-					translateX: '-50%', // Center the dot
-					translateY: '-50%',
+					translateX: '-50%', // Center the dot horizontally
+					translateY: '-50%', // Center the dot vertically
 				}}
-				// Animate size and potentially other properties
+				// Animate dot size based on pointer state
 				animate={{
-					width: isPointer ? 24 : 6,
+					width: isPointer ? 24 : 6, // Larger dot for pointer state
 					height: isPointer ? 24 : 6,
-					// scale: isPointer ? 1.2 : 1, // Optional scaling
+					scale: isPointer ? 1.2 : 1,
 				}}
 			/>
 
-			{/* Optional: Element to display text */}
+			{/* Optional: Element to display text near the cursor */}
 			{cursorText && (
 				<motion.div
 					className="absolute text-sm whitespace-nowrap text-black mix-blend-difference dark:text-white"

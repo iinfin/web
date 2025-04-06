@@ -1,5 +1,3 @@
-import { BlockObjectResponse, PageObjectResponse } from '@notionhq/client/build/src/api-endpoints';
-
 import { logger } from '@/utils/logger';
 
 import { NotionProvider } from './notion';
@@ -11,18 +9,25 @@ export { GalleryItem };
 let notionProvider: NotionProvider | null = null;
 
 /**
- * Database Service - The main entry point for accessing data
+ * Database Service - Provides a consistent interface for accessing data,
+ * abstracting the underlying data source (currently Notion).
+ * Manages a singleton instance of the data provider.
  */
 class DatabaseService {
 	private provider: DatabaseProvider;
 
+	/**
+	 * Initializes the service by getting the Notion provider instance.
+	 */
 	constructor() {
 		this.provider = this.getNotionProvider();
 	}
 
 	/**
-	 * Get or create the Notion provider instance.
-	 * Lazily initializes the provider on first access.
+	 * Retrieves or lazily initializes the singleton Notion provider instance.
+	 * Throws an error if initialization fails (e.g., missing env vars).
+	 * @returns {DatabaseProvider} The initialized Notion provider.
+	 * @throws {Error} If provider initialization fails.
 	 */
 	private getNotionProvider(): DatabaseProvider {
 		if (!notionProvider) {
@@ -37,7 +42,11 @@ class DatabaseService {
 	}
 
 	/**
-	 * Get all gallery items from Notion
+	 * Retrieves all gallery items, optionally shuffled.
+	 * Delegates to the underlying provider.
+	 * @param {object} [options] - Options for retrieval.
+	 * @param {boolean} [options.shuffle] - Whether to shuffle the results.
+	 * @returns {Promise<GalleryItem[]>} A promise resolving to an array of gallery items.
 	 */
 	async getGalleryItems(options?: { shuffle?: boolean }): Promise<GalleryItem[]> {
 		const items = await this.provider.getGalleryItems(options);
@@ -45,27 +54,34 @@ class DatabaseService {
 	}
 
 	/**
-	 * Get a specific gallery item by ID
+	 * Retrieves a single gallery item by its ID.
+	 * Delegates to the underlying provider.
+	 * @param {string} id - The ID of the gallery item.
+	 * @returns {Promise<GalleryItem | null>} A promise resolving to the item or null if not found.
 	 */
 	async getGalleryItem(id: string): Promise<GalleryItem | null> {
 		const item = await this.provider.getGalleryItem(id);
 
-		// Return null if item not found
+		// Return null if item not found by provider
 		if (!item) return null;
 
 		return item; // Return item directly
 	}
 
 	/**
-	 * Search gallery items using the provider's search method
+	 * Searches gallery items based on a query string.
+	 * Delegates to the provider's search method if available, otherwise performs a fallback client-side search.
+	 * @param {string} query - The search query.
+	 * @returns {Promise<GalleryItem[]>} A promise resolving to an array of matching gallery items.
 	 */
 	async searchGallery(query: string): Promise<GalleryItem[]> {
 		let items: GalleryItem[];
 
 		if (this.provider.searchGallery) {
+			// Use provider's implementation if it exists
 			items = await this.provider.searchGallery(query);
 		} else {
-			// Fallback: Case-insensitive search on title and description.
+			// Fallback: Case-insensitive client-side search on title and description.
 			logger.warn('Provider does not implement searchGallery, using fallback.');
 			items = await this.provider.getGalleryItems();
 			const lowerQuery = query.toLowerCase();
@@ -76,53 +92,33 @@ class DatabaseService {
 	}
 }
 
-// Export a singleton instance by default
+/** Export a singleton instance of the DatabaseService. */
 export const db = new DatabaseService();
 
-// Get gallery items (convenience function)
+/**
+ * Convenience function to get all gallery items.
+ * @param {object} [options] - Options for retrieval.
+ * @param {boolean} [options.shuffle] - Whether to shuffle the results.
+ * @returns {Promise<GalleryItem[]>} A promise resolving to an array of gallery items.
+ */
 export async function getGalleryItems(options?: { shuffle?: boolean }): Promise<GalleryItem[]> {
 	return db.getGalleryItems(options);
 }
 
-// Get a specific gallery item (convenience function)
+/**
+ * Convenience function to get a specific gallery item by ID.
+ * @param {string} id - The ID of the gallery item.
+ * @returns {Promise<GalleryItem | null>} A promise resolving to the item or null if not found.
+ */
 export async function getGalleryItem(id: string): Promise<GalleryItem | null> {
 	return db.getGalleryItem(id);
 }
 
-// Search gallery items (convenience function)
+/**
+ * Convenience function to search gallery items.
+ * @param {string} query - The search query.
+ * @returns {Promise<GalleryItem[]>} A promise resolving to an array of matching gallery items.
+ */
 export async function searchGallery(query: string): Promise<GalleryItem[]> {
 	return db.searchGallery(query);
-}
-
-// Function to query a specific database (example usage)
-export async function queryDatabase(databaseId: string): Promise<PageObjectResponse[]> {
-	try {
-		// Implementation would go here
-		return [];
-	} catch (error) {
-		logger.error(`Error querying database ${databaseId}:`, { error });
-		return [];
-	}
-}
-
-// Function to retrieve a specific page (example usage)
-export async function retrievePage(pageId: string): Promise<PageObjectResponse | null> {
-	try {
-		// Implementation would go here
-		return null;
-	} catch (error) {
-		logger.error(`Error retrieving page ${pageId}:`, { error });
-		return null;
-	}
-}
-
-// Function to retrieve block children (example usage)
-export async function retrieveBlockChildren(blockId: string): Promise<BlockObjectResponse[]> {
-	try {
-		// Implementation would go here
-		return [];
-	} catch (error) {
-		logger.error(`Error retrieving block children for block ${blockId}:`, { error });
-		return [];
-	}
 }
