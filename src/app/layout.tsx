@@ -36,7 +36,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 					{children}
 				</main>
 
-				{/* Global film grain effect overlay */}
 				<FilmGrainProvider initialSettings={{ intensity: 0.5, scale: 0.5, speed: 0.15 }}>
 					<FilmGrain />
 				</FilmGrainProvider>
@@ -47,7 +46,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
 				<ContextMenuDisabler />
 
-				{/* Analytics script with nonce for CSP compliance */}
 				{nonce && <Script src="https://www.googletagmanager.com/gtag/js" strategy="afterInteractive" nonce={nonce} />}
 			</body>
 		</html>
