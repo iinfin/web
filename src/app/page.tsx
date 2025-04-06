@@ -6,8 +6,8 @@ import Foundation from '@/app/components/sections/Foundation';
 /**
  * Home page component that displays the main sections of the site
  * Uses a responsive grid layout that adapts for different screen sizes and orientations.
- * - Mobile Portrait (Smallest): Foundation (Top 2/3), Creation (Bottom 1/3)
- * - Tablet Portrait (Medium): Foundation (Top 1/3), Creation (Bottom 2/3)
+ * - Mobile Portrait (Smallest): Foundation (Full height overlay), Creation (Bottom 6/10)
+ * - Tablet Portrait (md): Foundation (Top 8/10), Creation (Bottom 6/10)
  * - Desktop (lg): Creation (Left 40%), Foundation (Right 60%)
  * - Wider Desktop (xl): Creation (Left 50%), Foundation (Right 50%)
  * - Extra Wide Desktop (2xl): Creation (Left 70%), Foundation (Right 30%)
