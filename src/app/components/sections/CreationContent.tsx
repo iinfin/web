@@ -15,8 +15,10 @@ import { logger } from '@/utils/logger';
 
 /**
  * Configuration constants for the Creation content 3D scene.
+ * Consolidates constants previously in config.ts and utils.ts.
  */
 
+// --- Aspect Ratios ---
 // Define common aspect ratios and their dimensions
 export type AspectRatioType = 'square' | '16:9' | '9:16' | '4:5' | '5:4';
 
@@ -45,13 +47,12 @@ export const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // Viewport buffer for recycling
 export const LEFT_PADDING = 0.0; // Distance from left edge of canvas to content
 
 // --- Debugging/Development --- //
-// Disable media loading in development for faster iteration
+// Flag to disable loading actual image/video assets during development
+// for faster iteration and testing of layout/animation logic.
 export const DISABLE_MEDIA = false; // process.env.NODE_ENV === 'development';
 
-// --- Merged from utils.ts ---
-
 /**
- * Utility functions for the Creation content 3D scene.
+ * Utility functions previously in utils.ts, merged here for consolidation.
  */
 
 /**
@@ -90,9 +91,7 @@ export function findClosestAspectRatio(ratio: number): AspectRatio {
 	return closestRatio;
 }
 
-// --- Merged from AnimatedMaterial.tsx ---
-
-// Define uniforms for the shader
+// Define uniforms for the custom shader material
 interface AnimatedMaterialUniforms {
 	map: THREE.Texture | null;
 	u_time: number;
@@ -174,29 +173,36 @@ const AnimatedShaderMaterial = shaderMaterial(
     uniform float u_grainSpeed;
 
     // High-quality noise function based on Inigo Quilez's implementation
-    // Returns a value in the 0.0-1.0 range
+    // Returns a pseudo-random value in the 0.0 to 1.0 range for a given 2D coordinate.
     float hash(vec2 p) {
       p = fract(p * vec2(123.34, 456.21));
       p += dot(p, p + 45.32);
       return fract(p.x * p.y);
     }
 
-    // Improved film grain using multiple noise layers with distribution control
+    /**
+     * Generates a procedural film grain effect.
+     * Uses multiple layers of hash noise with different scales and speeds,
+     * combined and adjusted with a power curve for a more natural appearance.
+     * @param uv The texture coordinate.
+     * @param time The current time, used for animating the grain.
+     * @returns A float value representing the grain intensity at this point.
+     */
     float filmGrain(vec2 uv, float time) {
-      // Complex pattern with multiple layers of noise
+      // Scale UVs for finer grain control
       vec2 uvScaled = uv * u_grainScale;
       float t = time * u_grainSpeed;
 
-      // Multiple layers of varying frequency and orientation
+      // Sample noise at different scales and temporal offsets
       float noise1 = hash(uvScaled + t);
       float noise2 = hash(uvScaled * 1.4 + t * 1.2);
       float noise3 = hash(uvScaled * 0.8 - t * 0.7);
 
-      // Blend layers with different weights for more natural distribution
+      // Blend the noise layers
       float grainLayer = mix(noise1, noise2, 0.4);
       grainLayer = mix(grainLayer, noise3, 0.3);
 
-      // Apply power curve for more film-like distribution
+      // Apply a power curve to adjust the grain distribution (makes it less uniform)
       grainLayer = pow(grainLayer, 1.5);
 
       return grainLayer;
@@ -206,21 +212,21 @@ const AnimatedShaderMaterial = shaderMaterial(
         vec2 correctedUv = vUv;
         vec4 textureColor = texture2D(map, correctedUv);
 
-        // Combine initial animation and edge visibility
-        // Simple multiplication ensures both factors are considered
-        // Using v_initialAnimProgress (varying) instead of u_initialAnimProgress (uniform)
+        // Combine visibility factors: base alpha * initial animation progress * edge fade visibility.
+        // Uses varyings passed from vertex shader.
         float alpha = textureColor.a * v_initialAnimProgress * v_visibility;
 
-        // Discard transparent pixels
+        // Discard transparent pixels early to save computation
         if (alpha < 0.01) discard;
 
-        // Generate film grain
+        // Generate film grain value for this pixel
         float grain = filmGrain(correctedUv, u_time);
 
-        // Apply grain based on luminance
+        // Apply grain primarily to mid-tones using a luminance mask
+        // This prevents grain from being too strong in pure blacks or whites.
         float luminance = dot(textureColor.rgb, vec3(0.299, 0.587, 0.114));
-        float grainMask = 4.0 * luminance * (1.0 - luminance);
-        float scaledGrain = (grain * 2.0 - 1.0) * u_grainIntensity * grainMask;
+        float grainMask = 4.0 * luminance * (1.0 - luminance); // Parabolic mask peaking at luminance 0.5
+        float scaledGrain = (grain * 2.0 - 1.0) * u_grainIntensity * grainMask; // Scale grain to -intensity..+intensity
 
         // Apply grain to color
         vec3 grainedColor = textureColor.rgb + scaledGrain;
@@ -234,17 +240,26 @@ const AnimatedShaderMaterial = shaderMaterial(
 
 extend({ AnimatedShaderMaterial });
 
+/**
+ * Props interface for the AnimatedMaterial component.
+ * Extends the uniforms and adds specific required props.
+ */
 interface AnimatedMaterialProps extends Partial<AnimatedMaterialUniforms> {
 	texture: THREE.Texture;
 	planeY: number;
 	viewportHeight: number;
 	initialAnimProgress: number; // Ensure this is passed
 	aspect: number;
-	grainIntensity?: number; // Optional grain intensity
-	grainScale?: number; // Optional grain scale
-	grainSpeed?: number; // Optional grain speed
+	grainIntensity?: number; // Optional override for grain intensity
+	grainScale?: number; // Optional override for grain scale
+	grainSpeed?: number; // Optional override for grain speed
 }
 
+/**
+ * React component wrapper for the `animatedShaderMaterial`.
+ * Manages updating shader uniforms via `useFrame` and handles texture updates.
+ * Provides default values for optional grain parameters.
+ */
 const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 	texture,
 	planeY,
@@ -290,7 +305,7 @@ const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 		}
 	}, [texture]);
 	return (
-		// @ts-expect-error - Custom extended shader material not correctly typed
+		// @ts-expect-error - Custom extended shader material not correctly typed by `extend`
 		<animatedShaderMaterial
 			ref={materialRef}
 			key={AnimatedShaderMaterial.key}
@@ -312,10 +327,8 @@ const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 	);
 };
 
-// --- Merged from PlaneWrapper.tsx ---
-
 /**
- * Props for the internal media content components (Image/Video).
+ * Props for the internal media content components (ImagePlaneContent/VideoPlaneContent).
  */
 interface PlaneContentProps {
 	/** URL of the image or video source */
@@ -343,7 +356,7 @@ interface PlaneContentProps {
  * Memoized for performance.
  */
 const ImagePlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
-	const texture = useTexture(url);
+	const texture = useTexture(url); // Loads image texture
 
 	return texture ? (
 		<AnimatedMaterial
@@ -369,6 +382,7 @@ ImagePlaneContent.displayName = 'ImagePlaneContent';
  */
 const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
 	const texture = useVideoTexture(url, {
+		// Loads video texture with specific settings
 		muted: true,
 		loop: true,
 		playsInline: true,
@@ -399,23 +413,19 @@ VideoPlaneContent.displayName = 'VideoPlaneContent';
 interface PlaneWrapperProps {
 	/** The gallery item data object */
 	item: GalleryItem;
-	/** Target position vector for the plane group */
+	/** Target position vector for the plane group (calculated by ScrollingPlanes) */
 	position: THREE.Vector3;
-	/** Base height for the plane geometry */
-	planeHeight: number; // Kept for potential future use, but dimensions calculated directly now
 	/** Flag indicating if media loading/rendering is disabled */
 	disableMedia: boolean;
 	/** Callback invoked when the pointer hovers over or leaves the plane */
 	onHoverChange: (name: string | null) => void;
 	/** Calculated height of the viewport in world space (passed from parent) */
 	viewportHeight: number;
-	/** Initial Y position used for staggering calculations (passed from parent) - currently unused here */
-	initialY: number; // Kept for potential future use
-	/** Optional: Film grain intensity (0-1), defaults to 0.2 */
+	/** Optional: Film grain intensity (0-1) */
 	grainIntensity?: number;
-	/** Optional: Film grain scale, defaults to 100.0 */
+	/** Optional: Film grain scale */
 	grainScale?: number;
-	/** Optional: Film grain animation speed, defaults to 0.4 */
+	/** Optional: Film grain animation speed */
 	grainSpeed?: number;
 }
 
@@ -444,7 +454,6 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		disableMedia,
 		onHoverChange,
 		viewportHeight,
-		// initialY, // Currently unused here
 		grainIntensity = 0.05, // Use default from AnimatedMaterial
 		grainScale = 500.0, // Use default from AnimatedMaterial
 		grainSpeed = 0.5, // Use default from AnimatedMaterial
@@ -499,15 +508,15 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 						setAspect(closest.width / closest.height);
 					}
 				} catch (error) {
-					logger.error('Error detecting aspect ratio:', { url: item.url, error });
-					// Keep default square aspect on error
+					logger.error('Error detecting aspect ratio, defaulting to square:', { url: item.url, error });
+					// Fallback to default square aspect on error
 					setDimensions(calculateDimensions(COMMON_ASPECT_RATIOS.SQUARE));
 					setAspect(1);
 				}
 			};
 
 			detectAspectRatio();
-		}, [item.url, item.mediaType, disableMedia]); // Removed planeHeight dependency
+		}, [item.url, item.mediaType, disableMedia]);
 
 		// Start initial animation on mount
 		useEffect(() => {
@@ -520,7 +529,8 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 				// Update position smoothly (can add lerping later if needed)
 				groupRef.current.position.copy(position);
 
-				// Simple fade-in animation
+				// Run the initial entrance animation (scale/fade-in via shader)
+				// controlled by initialAnimProgress uniform.
 				if (isMounted && initialAnimProgress < 1) {
 					if (startTimeRef.current === null) {
 						startTimeRef.current = state.clock.elapsedTime;
@@ -572,16 +582,14 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		);
 	},
 );
-PlaneWrapper.displayName = 'PlaneWrapper';
+PlaneWrapper.displayName = 'PlaneWrapper'; // Helps in React DevTools
 
-// --- Moved Definitions for Linter ---
-
-// Define props interface for the main component (Moved from bottom)
+// Define props interface for the main component
 interface CreationContentProps {
 	galleryItems: GalleryItem[];
 }
 
-// Define state structure for individual planes (Moved from middle)
+// Define state structure for individual planes, managed by ScrollingPlanes.
 interface PlaneState {
 	/** Stable unique key for React reconciliation */
 	id: string;
@@ -597,10 +605,10 @@ interface PlaneState {
 	currentY: number;
 }
 
-/** Speed for automatic scrolling on touch devices, mimicking pixels per second (Moved from middle) */
+/** Speed for automatic scrolling on touch devices, mimicking pixels per second */
 const AUTO_SCROLL_SPEED = 15;
 
-// Props for the ScrollingPlanes component (Moved from middle)
+// Props for the ScrollingPlanes component
 interface ScrollingPlanesProps {
 	/** The array of gallery items to display */
 	galleryItems: GalleryItem[];
@@ -648,15 +656,12 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		const visibleWidth = visibleHeight * aspectRatio;
 
 		// Calculate left edge position in world units (considering LEFT_PADDING)
-
-		// Calculate the left edge position in world units
-		// -visibleWidth/2 represents the left edge of the visible area
 		const leftEdgePosition = -visibleWidth / 2 + LEFT_PADDING;
 		leftPositionRef.current = leftEdgePosition;
 
 		logger.info('Calculated viewport/edge positions', {
 			leftEdgePosition,
-			visibleWidth,
+			visibleWidth, // Log width for debugging
 			visibleHeight,
 			aspectRatio,
 		});
@@ -677,25 +682,24 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		logger.info('Initializing plane states', { count: galleryItems.length, totalContentHeight });
 		const initialStates: PlaneState[] = [];
 		// Calculate offset to center the initial block of items vertically in the view
+		// (places the middle item near y=0 initially).
 		const startYOffset = totalContentHeight / 2 - VERTICAL_GAP / 2;
 
 		for (let i = 0; i < galleryItems.length; i++) {
 			// Calculate the base Y position for this item directly using index
 			const baseY = startYOffset - i * VERTICAL_GAP;
-			// Removed vertical jitter calculation
-			const initialY = baseY;
-			// Get the fixed Z position (no longer depends on column) - X will be calculated in useFrame
+			// Use the fixed Z position.
 			const z = 0;
-			// Use the calculated left position, x will be updated in useFrame
+			// X position will be updated in useFrame based on the dynamic left edge.
 			const x = leftPositionRef.current;
 
 			initialStates.push({
-				id: `plane-${i}`, // Stable key based on item index
+				id: `plane-${galleryItems[i]?.id ?? i}`, // Use item ID if available, otherwise index
 				itemIndex: i,
-				initialY: initialY, // Store the initial Y (no jitter)
+				initialY: baseY, // Store the initial Y (no jitter)
 				x: x,
 				z: z,
-				currentY: initialY, // Start rendering at the initial calculated Y
+				currentY: baseY, // Start rendering at the initial calculated Y
 			});
 		}
 		setPlaneStates(initialStates);
@@ -712,18 +716,18 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 			// The spring handles the smooth animation towards the target.
 			scrollSpring.set(scrollSpring.get() - event.deltaY * SCROLL_MULTIPLIER);
 
-			// Prevent default browser scroll behavior if necessary (currently disabled).
-			// Use passive: true for performance when preventDefault is not needed.
-			// event.preventDefault();
+			// Use passive: true for performance when preventDefault is not called for better scroll performance.
+			window.addEventListener('wheel', handleWheel, { passive: true });
+			return () => window.removeEventListener('wheel', handleWheel);
 		};
 
-		// Use passive: true when preventDefault() is not called for better scroll performance.
+		// Re-attach if scrollSpring instance or touch status changes
 		window.addEventListener('wheel', handleWheel, { passive: true });
 		return () => window.removeEventListener('wheel', handleWheel);
-	}, [scrollSpring, isTouchDevice]); // Re-attach if scrollSpring instance or touch status changes
+	}, [scrollSpring, isTouchDevice]);
 
 	// Main R3F frame loop: Updates plane positions, handles recycling, and manages auto-scroll.
-	useFrame((_, delta) => {
+	useFrame((_state, delta) => {
 		if (planeStates.length === 0 || totalContentHeight === 0) return; // Skip if no items or layout defined
 
 		// Handle Auto-scroll for touch devices by incrementing scroll based on frame time
@@ -748,9 +752,9 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialY = state.initialY;
-				// Calculate the plane's current Y position relative to the viewport center (0)
+				// Calculate the plane's current Y position *if scroll were 0*.
 				const currentRelativeY = state.initialY - currentScroll;
-				let positionChanged = false; // Flag to track if recycling occurred
+				let hasRecycled = false; // Flag to track if recycling occurred this frame
 
 				// --- Recycling Logic ---
 				// This ensures seamless infinite scrolling by repositioning planes
@@ -760,13 +764,13 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 				if (currentRelativeY > viewportHeightRef.current / 2 + RECYCLE_BUFFER) {
 					// Jump down by the total height of all content.
 					newInitialY = state.initialY - totalContentHeight;
-					positionChanged = true;
+					hasRecycled = true;
 				}
 				// If plane is too far below the bottom bound, recycle it to the top.
 				else if (currentRelativeY < -viewportHeightRef.current / 2 - RECYCLE_BUFFER) {
 					// Jump up by the total height of all content.
 					newInitialY = state.initialY + totalContentHeight;
-					positionChanged = true;
+					hasRecycled = true;
 				}
 
 				// Always update the X position to match the potentially resized viewport's left edge.
@@ -776,13 +780,13 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 
 				// Determine if the state needs updating (recycled, Y changed, or X changed due to resize).
 				// This optimizes state updates by avoiding changes if nothing moved.
-				const needsUpdate = positionChanged || finalCurrentY !== state.currentY || newX !== state.x;
+				const needsUpdate = hasRecycled || finalCurrentY !== state.currentY || newX !== state.x;
 
 				if (needsUpdate) {
-					// Return a new state object only if necessary to trigger re-render.
+					// Return a *new* state object only if necessary to trigger re-render.
 					return { ...state, initialY: newInitialY, currentY: finalCurrentY, x: newX };
 				} else {
-					// Otherwise, return the existing state object to prevent unnecessary updates.
+					// Otherwise, return the *existing* state object to prevent unnecessary updates.
 					return state;
 				}
 			}),
@@ -802,12 +806,10 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 						key={state.id} // Use stable ID as key
 						item={item}
 						position={position}
-						planeHeight={PLANE_HEIGHT}
 						disableMedia={disableMedia}
 						onHoverChange={onHoverChange} // Pass down the callback
 						// Pass down required props for animation
 						viewportHeight={viewportHeightRef.current}
-						initialY={state.initialY}
 					/>
 				);
 			})}
@@ -815,12 +817,11 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 	);
 };
 
-// --- Main Creation Content Component ---
-
 /**
- * Main component for the "Creation" section.
- * Sets up the R3F Canvas, manages device features (touch, DPR),
- * handles hover state for displaying item names, and renders the ScrollingPlanes.
+ * Main component for the "Creation" section showcase.
+ * Sets up the R3F Canvas, manages device feature detection (touch, DPR),
+ * handles hover state for displaying item names, prepares gallery data,
+ * and renders the ScrollingPlanes component which contains the core 3D logic.
  */
 const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
@@ -828,41 +829,40 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [hoveredName, setHoveredName] = useState<string | null>(null);
 	const inputState = useInputState();
 
-	// Use constant defined above
-	const disableMedia = useMemo(() => DISABLE_MEDIA, []);
+	const disableMedia = useMemo(() => DISABLE_MEDIA, []); // Memoize the constant value
 
-	const handleHoverChange = useCallback((name: string | null) => {
-		setHoveredName(name);
-	}, []);
+	const handleHoverChange = useCallback(
+		(name: string | null) => {
+			setHoveredName(name);
+			const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+			setIsTouchDevice(touchDetected);
+			setDprValue(Math.min(window.devicePixelRatio, 2)); // Cap DPR at 2 for performance
 
-	useEffect(() => {
-		const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-		setIsTouchDevice(touchDetected);
-		setDprValue(Math.min(window.devicePixelRatio, 2)); // Cap DPR at 2 for performance
-
-		if (disableMedia) {
-			logger.warn('Gallery media loading is DISABLED');
-		}
-	}, [disableMedia]);
+			// Log if media loading is disabled (useful for debugging)
+			if (disableMedia) {
+				logger.warn('Gallery media loading is DISABLED');
+			}
+		},
+		[disableMedia],
+	);
 
 	const items: GalleryItem[] = useMemo(() => {
 		if (galleryItems.length > 0) {
 			const processedItems = galleryItems.map((item: GalleryItem) => ({
-				// Added explicit type here
-				description: '',
-				tags: [],
+				// Ensure required fields have defaults if missing from input data
+				description: '', // Default empty description
+				tags: [], // Default empty tags array
 				...item,
-				url: item.url || '',
-				mediaType: item.mediaType || 'image',
+				url: item.url || '', // Default empty string URL
+				mediaType: item.mediaType || 'image', // Default to image
 			}));
 			logger.info(`Using ${processedItems.length} real gallery items`);
-			// Type assertion after ensuring defaults
 			return processedItems as GalleryItem[];
 		} else {
 			logger.info('No gallery items provided.');
 			return [];
 		}
-	}, [galleryItems]);
+	}, [galleryItems]); // Dependency: recalculate if input items change
 
 	if (disableMedia) {
 		logger.info('Rendering CreationContent with media disabled');
@@ -886,9 +886,9 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 				}}
 			>
 				<Suspense fallback={null}>
+					{/* Suspense for async asset loading (textures) */}
 					<ambientLight intensity={0.8} />
 					<directionalLight position={[5, 15, 10]} intensity={1.2} />
-
 					<ScrollingPlanes galleryItems={items} disableMedia={disableMedia} isTouchDevice={isTouchDevice} onHoverChange={handleHoverChange} />
 				</Suspense>
 			</Canvas>
