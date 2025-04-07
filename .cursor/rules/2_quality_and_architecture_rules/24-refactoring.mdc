@@ -1,0 +1,194 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Description
+This rule provides guidelines for refactoring and cleaning up code without changing core logic or visual output. It focuses on creating a meticulously organized codebase with consistent patterns, symmetrical structures, and harmonious naming that together create a sense of perfect order and balance.
+
+## Rule
+1. **Preserve Core Logic**: 
+   * Do not alter the fundamental logic or behavior of the code.
+   * Do not change algorithm implementations unless they are clearly inefficient.
+   * Do not modify state management patterns or data flow architecture.
+
+2. **Symmetrical Naming Patterns**:
+   * Select component, function, and file names that create visual and phonetic harmony.
+   * Prefer names with similar length, syllable count, and phonetic qualities when they represent parallel concepts.
+   * Consider how names sound together and how they look when written adjacently in code.
+   * Maintain consistent casing, word order, and naming patterns across related elements.
+   * Choose names that reflect both purpose and relationship to other elements.
+
+3. **Visual Code Symmetry**:
+   * Structure similar components with identical formatting patterns.
+   * Align related code blocks to create visual symmetry in the editor.
+   * Maintain consistent comment blocks, indentation, and line spacing.
+   * Organize props, attributes, and class names in consistent, logical groupings.
+   * Ensure parallel elements have similar structure and organization.
+
+4. **Class and Style Organization**:
+   * Group CSS classes by their purpose (layout, spacing, typography, etc.).
+   * Maintain consistent ordering of class groups across similar components.
+   * Separate classes with empty lines or comments to create visual groupings.
+   * Use consistent patterns for conditional class application.
+   * Align similar elements to have the same number and structure of classes when possible.
+
+5. **Structural Parallelism**:
+   * Ensure similar components have parallel internal structures.
+   * Maintain consistent patterns for component composition.
+   * Organize imports, props, hooks, and render logic in identical patterns across similar files.
+   * Structure directories to reflect the symmetry of the components they contain.
+
+6. **Documentation Harmony**:
+   * Create comment blocks with consistent formatting across all files.
+   * Ensure JSDoc comments follow identical patterns for similar functions/components.
+   * Maintain parallel structure in documentation for related elements.
+   * Use consistent terminology and phrasing in comments.
+
+7. **Import and Export Symmetry**:
+   * Organize imports in consistent, logical groups.
+   * Maintain identical import ordering across similar files.
+   * Ensure export patterns are consistent throughout the codebase.
+   * Group related imports together with consistent spacing.
+
+8. **Refactoring for Perfect Balance**:
+   * Rename elements to create more harmonious naming patterns.
+   * Restructure code to enhance visual symmetry and balance.
+   * Reorganize files to create more logical groupings and relationships.
+   * Ensure all references are meticulously updated when renaming.
+
+## Implementation
+When refactoring code:
+
+1. **Pre-Refactoring Analysis**:
+   * Identify patterns and inconsistencies in the current codebase.
+   * Look for opportunities to create more symmetrical structures.
+   * Plan naming strategies that enhance phonetic and visual harmony.
+   * Analyze the visual structure of the code in the editor.
+
+2. **During Refactoring**:
+   * Apply changes systematically, focusing on one pattern at a time.
+   * Verify visual symmetry in the editor after each change.
+   * Maintain consistent spacing, indentation, and formatting.
+   * Test frequently to ensure functionality is preserved.
+
+3. **Post-Refactoring Verification**:
+   * Review the code in the editor to confirm visual symmetry.
+   * Verify naming patterns create logical and phonetic harmony.
+   * Ensure the build process completes successfully.
+   * Confirm no visual or functional regressions.
+
+## Examples
+
+### ✅ Symmetrical Component Structure
+
+```typescript
+// Two related components with perfectly parallel structure
+
+// Creation.tsx
+export default function Creation(): JSX.Element {
+  return (
+    <section className="h-full flex flex-col justify-center">
+      <div className="container mx-auto">
+        <h2 className="text-3xl font-bold mb-4">Creation</h2>
+        <p className="text-lg mb-6">Description of creative works...</p>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Content items */}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// Foundation.tsx
+export default function Foundation(): JSX.Element {
+  return (
+    <section className="h-full flex flex-col justify-center">
+      <div className="container mx-auto">
+        <h2 className="text-3xl font-bold mb-4">Foundation</h2>
+        <p className="text-lg mb-6">Description of foundational skills...</p>
+        <div className="grid grid-cols-2 gap-4">
+          {/* Content items */}
+        </div>
+      </div>
+    </section>
+  );
+}
+```
+
+### ✅ Symmetrical Class Structure
+
+```typescript
+// Perfectly balanced class organization with consistent grouping and ordering
+
+<div
+  className={clsx(
+    // Base styles
+    'relative h-full w-full',
+    
+    // Layout positioning
+    'flex flex-col justify-center',
+    
+    // Responsive adjustments
+    'px-4 md:px-6 lg:px-8',
+    
+    // Visual styling
+    'bg-white shadow-md rounded-lg',
+    
+    // Conditional classes
+    isActive && 'border-2 border-blue-500'
+  )}
+>
+  {/* Content */}
+</div>
+```
+
+### ✅ Harmonious Naming Patterns
+
+```typescript
+// Functions with parallel naming structure and similar phonetic qualities
+const fetchUserData = async (userId: string) => { /* ... */ };
+const storeUserData = async (userData: UserData) => { /* ... */ };
+
+// Components with balanced, rhythmic names
+function HeaderSection() { /* ... */ }
+function FooterSection() { /* ... */ }
+
+// Variables with consistent patterns
+const isLoading = useState(false);
+const isSubmitting = useState(false);
+```
+
+### ❌ Asymmetrical Structure (Avoid)
+
+```typescript
+// Inconsistent class organization
+<div className="relative h-full bg-white md:px-6 flex flex-col lg:px-8 justify-center px-4 shadow-md rounded-lg">
+  {/* Content */}
+</div>
+
+// Mismatched naming patterns
+function AboutSection() { /* ... */ }
+function getWorkContent() { /* ... */ }
+
+// Inconsistent import grouping
+import React, { useState } from 'react';
+import styles from './styles.module.css';
+import { User } from '../../types';
+import clsx from 'clsx';
+```
+
+## Benefits
+- Creates a sense of visual harmony that makes code more readable
+- Reduces cognitive load through consistent patterns
+- Makes code behavior more predictable through structural consistency
+- Improves maintainability by making patterns immediately recognizable
+- Creates a more aesthetically pleasing development experience
+- Preserves functionality while enhancing code quality
+
+## Cautionary Notes
+- Balance the pursuit of perfect symmetry with practical considerations
+- Avoid forcing symmetry where it doesn't naturally fit the problem domain
+- Remember that the ultimate goal is improved maintainability and readability
+- Test thoroughly after refactoring to ensure all functionality is preserved
+- Document your organizational patterns for other developers

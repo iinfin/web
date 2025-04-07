@@ -6,9 +6,9 @@ import type { GalleryItem } from '@/app/lib/db/types';
 
 /**
  * Creation section component.
- * Fetches gallery items and passes them to the client component.
- * This server component handles data loading for the interactive 3D gallery.
- * @returns {Promise<JSX.Element>} The rendered creations section.
+ * Loads the client component for the interactive 3D gallery display.
+ * This server component handles data fetching and content preparation.
+ * @returns {Promise<JSX.Element>} The rendered creation section.
  */
 const Creation: FC = async (): Promise<JSX.Element> => {
 	// Fetch gallery items from the database

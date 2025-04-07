@@ -4,11 +4,11 @@ import FoundationContent from '@/app/components/sections/FoundationContent';
 
 /**
  * Foundation section component.
- * Renders the foundational information section of the application.
- * This server component loads the client component for interactive content.
- * @returns {JSX.Element} The rendered foundation section.
+ * Loads the client component for the foundation information display.
+ * This server component handles rendering the interactive content area.
+ * @returns {Promise<JSX.Element>} The rendered foundation section.
  */
-const Foundation: FC = (): JSX.Element => {
+const Foundation: FC = async (): Promise<JSX.Element> => {
 	return (
 		<section id="foundation" className="relative h-full w-full overflow-hidden">
 			<FoundationContent />
