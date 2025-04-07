@@ -368,6 +368,82 @@ interface ScrollingPlanesProps {
 }
 
 // =============================================
+// MATERIAL COMPONENTS
+// =============================================
+
+/**
+ * React component wrapper for the `animatedShaderMaterial`.
+ * Manages updating shader uniforms via `useFrame` and handles texture updates.
+ */
+const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
+	texture,
+	planeY,
+	viewportHeight,
+	initialAnimProgress,
+	aspect,
+	u_visibilityFade = MATERIAL.visibility.fade,
+	grainIntensity = MATERIAL.grain.intensity,
+	grainScale = MATERIAL.grain.scale,
+	grainSpeed = MATERIAL.grain.speed,
+	...props // Pass any other standard material props
+}) => {
+	const materialRef = useRef<THREE.ShaderMaterial>(null!); // Use THREE.ShaderMaterial type
+
+	// Update uniforms efficiently
+	useFrame((_, delta) => {
+		if (materialRef.current) {
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_time.value += delta;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_planeY.value = planeY;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_viewportHeight.value = viewportHeight;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_initialAnimProgress.value = initialAnimProgress;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_aspect.value = aspect;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_visibilityFade.value = u_visibilityFade;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_grainIntensity.value = grainIntensity;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_grainScale.value = grainScale;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.u_grainSpeed.value = grainSpeed;
+		}
+	});
+
+	useEffect(() => {
+		if (materialRef.current) {
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
+			materialRef.current.uniforms.map.value = texture;
+		}
+	}, [texture]);
+
+	return (
+		// @ts-expect-error - Custom extended shader material not correctly typed by `extend`
+		<animatedShaderMaterial
+			ref={materialRef}
+			key={AnimatedShaderMaterial.key}
+			attach="material"
+			map={texture} // Initial map uniform set
+			u_planeY={planeY}
+			u_viewportHeight={viewportHeight}
+			u_initialAnimProgress={initialAnimProgress}
+			u_aspect={aspect}
+			u_visibilityFade={u_visibilityFade}
+			u_grainIntensity={grainIntensity}
+			u_grainScale={grainScale}
+			u_grainSpeed={grainSpeed}
+			transparent // MUST be true for alpha blending
+			side={THREE.DoubleSide} // Assuming double sided planes
+			toneMapped={false} // Match original Video/Image materials
+			{...props}
+		/>
+	);
+};
+
+// =============================================
 // MEDIA COMPONENTS
 // =============================================
 
