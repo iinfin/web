@@ -1,3 +1,9 @@
+## [1.1.1](https://github.com/iinfin/web/compare/v1.1.0...v1.1.1) (2025-04-07)
+
+### Bug Fixes
+
+- **components:** add animatedmaterial to creationcontent ([cf6754b](https://github.com/iinfin/web/commit/cf6754bdfd2ce9a544012ee881b547d568630614))
+
 # [1.1.0](https://github.com/iinfin/web/compare/v1.0.0...v1.1.0) (2025-04-05)
 
 ### Features
