@@ -26,9 +26,9 @@ export default function Home(): JSX.Element {
 						'relative h-full',
 
 						// Mobile: Bottom 6/10 (rows 5-10)
-						'col-span-1 col-start-1 row-span-6 row-start-5',
+						'col-span-1 col-start-1 row-span-10 row-start-1',
 						// Tablet (md): Bottom 6/10 (rows 5-10)
-						'md:row-span-6 md:row-start-5',
+						'md:row-span-10 md:row-start-1',
 
 						// Desktop (lg+): Reset row
 						'lg:row-span-1 lg:row-start-1',
@@ -56,7 +56,7 @@ export default function Home(): JSX.Element {
 						// Mobile: Full height (rows 1-10)
 						'col-span-1 col-start-1 row-span-10 row-start-1',
 						// Tablet (md): Top 8/10 (rows 1-8)
-						'md:row-span-8 md:row-start-1',
+						'md:row-span-10 md:row-start-1',
 
 						'lg:bg-none',
 						// Desktop (lg+): Reset row

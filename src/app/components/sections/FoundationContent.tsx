@@ -24,8 +24,8 @@ import AnimatedTextSlideUp from '@/app/components/animations/AnimatedTextSlideUp
 // Durations and stagger delays for Framer Motion animations
 const durationPrimary = 1.0; // Duration for main description and titles
 const durationSecondary = 0.5; // Duration for list items and links
-const staggerFast = 0.1; // Stagger delay for items within lists
-const staggerMedium = 0.2; // Stagger delay for lists within columns or link groups
+const staggerPrimary = 0.1; // Stagger delay for items within lists
+const staggerSecondary = 0.2; // Stagger delay for lists within columns or link groups
 const staggerSlow = 0.5; // Stagger delay for main columns/sections
 
 // --- Animation Variants ---
@@ -68,13 +68,13 @@ const itemVariants: Variants = {
 // Variants for staggering lists (like services or contact links)
 const listStaggerVariants: Variants = {
 	hidden: {},
-	visible: { transition: { staggerChildren: staggerMedium } },
+	visible: { transition: { staggerChildren: staggerSecondary } },
 };
 
 // Variants for staggering items within a list (faster than list staggering)
 const listItemStaggerVariants: Variants = {
 	hidden: {},
-	visible: { transition: { staggerChildren: staggerFast } },
+	visible: { transition: { staggerChildren: staggerPrimary } },
 };
 
 // --- Description Text ---
@@ -89,6 +89,7 @@ const paragraphs = [
 	'Incomplete Infinity occupies the tension between definition and possibility.',
 	'We architect the unfinished—creating systems and experiences that evolve beyond their origins through engagement.',
 	'Between conception and completion lies a fertile territory of possibility. We transform apparent limitations into portals of potential, crafting experiences that gain strength through vulnerability and resonance through ambiguity. Each project exists as structured emergence: deliberately unresolved systems that invite completion without dictating conclusion.',
+	"At Incomplete Infinity, we navigate the threshold between order and chaos, embracing imperfection as the fertile ground where true innovation emerges. We craft experiences that resist immediate comprehension, preferring instead to dwell in the mysterious territories where meaning remains partially concealed, inviting deeper contemplation. Our work deliberately preserves spaces of emptiness—incomplete by design—creating frameworks that await your participation to fulfill their purpose, ensuring each encounter becomes uniquely yours. We find resonance in Carl Jung's insight that within apparent disorder lies hidden pattern, in Khalil Gibran's journey toward the arcane, and in Degas' understanding that true art manifests in the space between creator and observer.",
 ];
 
 /**
@@ -172,8 +173,12 @@ const ContactLink: FC<ContactLinkProps> = ({ href, children }): JSX.Element => (
 interface DescriptionSectionProps {
 	/** Duration for primary animations (e.g., main text fade). */
 	durationPrimary: number;
-	/** Stagger delay between items in the description paragraph animation. */
-	staggerMedium: number;
+	/** Duration for secondary animations (e.g., list items). */
+	durationSecondary: number;
+	/** Stagger delay between main items. */
+	staggerPrimary: number;
+	/** Stagger delay between secondary items. */
+	staggerSecondary: number;
 }
 
 /**
@@ -183,7 +188,7 @@ interface DescriptionSectionProps {
  * preventing unnecessary re-animations of other FoundationContent parts
  * when only the text changes.
  */
-const DescriptionSection: FC<DescriptionSectionProps> = ({ durationPrimary, staggerMedium }): JSX.Element => {
+const DescriptionSection: FC<DescriptionSectionProps> = ({ durationPrimary, staggerSecondary }): JSX.Element => {
 	// State holds the two currently selected random paragraphs.
 	// Initialized client-side in useEffect to ensure dynamic content.
 	const [selectedParagraphs, setSelectedParagraphs] = useState<[string | undefined, string | undefined]>([undefined, undefined]);
@@ -227,7 +232,7 @@ const DescriptionSection: FC<DescriptionSectionProps> = ({ durationPrimary, stag
 				onClick={regenerateParagraphs} // Regenerate paragraphs on click
 			>
 				{/* Animated text block */}
-				<AnimatedTextFadeIn text={descriptionText} el="div" className="space-y-0" duration={durationPrimary} staggerChildren={staggerMedium} />
+				<AnimatedTextFadeIn text={descriptionText} el="div" className="space-y-0" duration={durationPrimary} staggerChildren={staggerSecondary} />
 
 				{/* Logo displayed below the text */}
 				<motion.div className="mt-12 flex w-full justify-start mix-blend-multiply" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: durationPrimary }}>
@@ -235,6 +240,121 @@ const DescriptionSection: FC<DescriptionSectionProps> = ({ durationPrimary, stag
 				</motion.div>
 			</div>
 		</div>
+	);
+};
+
+/**
+ * Props for the DetailsSection component.
+ */
+interface DetailsSectionProps {
+	/** Duration for primary animations (e.g., main text fade). */
+	durationPrimary: number;
+	/** Duration for secondary animations (e.g., list items). */
+	durationSecondary: number;
+	/** Stagger delay between main items. */
+	staggerPrimary: number;
+	/** Stagger delay between secondary items. */
+	staggerSecondary: number;
+}
+
+/**
+ * Renders the top details section with services, contact, and clients information.
+ * This component handles the top row of the Foundation content with columns
+ * for different types of information.
+ */
+const DetailsSection: FC<DetailsSectionProps> = ({ durationPrimary, durationSecondary, staggerPrimary }): JSX.Element => {
+	return (
+		<motion.div
+			className={clsx(
+				'row-start-1 self-end', // Position at the top, aligned to bottom of its row space
+				'text-xs md:text-sm', // Typography
+				'grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-4', // Responsive grid layout
+			)}
+			variants={detailsContainerVariants}
+			initial="hidden"
+			animate="visible"
+		>
+			{/* Column: Services */}
+			{/* Responsive Order: 3rd on mobile, 2nd on desktop. */}
+			<motion.div
+				className={clsx(
+					'col-span-1 flex flex-col justify-between space-y-4',
+					'order-3 md:order-2', // CSS order for responsiveness
+				)}
+				variants={columnVariants}
+			>
+				{/* Services Title */}
+				<motion.div className="flex flex-col" variants={itemVariants}>
+					<AnimatedTextSlideUp text="Services" el="span" duration={durationPrimary} />
+				</motion.div>
+				{/* Services List Part 1 */}
+				<motion.div className="flex flex-col" variants={listStaggerVariants}>
+					{servicesList1.map((service, index) => (
+						<motion.span key={index} variants={itemVariants}>
+							<AnimatedTextSlideUp text={service} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
+						</motion.span>
+					))}
+				</motion.div>
+			</motion.div>
+
+			{/* Column: Contact */}
+			{/* Responsive Order: 2nd on mobile, 1st on desktop. */}
+			<motion.div
+				className={clsx(
+					'col-span-1 flex flex-col justify-between space-y-4',
+					'order-2 md:order-1', // CSS order for responsiveness
+				)}
+				variants={columnVariants}
+			>
+				{/* Contact Links List */}
+				<motion.div className="flex flex-col" variants={listStaggerVariants}>
+					{contactLinks.map((link) => (
+						<motion.div key={link.href} variants={itemVariants}>
+							<ContactLink href={link.href}>
+								<AnimatedTextSlideUp text={link.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
+							</ContactLink>
+						</motion.div>
+					))}
+					{/* Link Arrow */}
+					<motion.span className="mt-1" variants={itemVariants}>
+						<AnimatedTextSlideUp text="→" el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
+					</motion.span>
+				</motion.div>
+				{/* Contact Title */}
+				<motion.div className="flex flex-col" variants={itemVariants}>
+					<AnimatedTextSlideUp text="Contact" el="span" duration={durationPrimary} />
+				</motion.div>
+			</motion.div>
+
+			{/* Column: Brands, Studios & Exhibitions (Desktop Only) */}
+			{/* Contains a list of clients/partners. Hidden on mobile. */}
+			<motion.div
+				id="about-details-content-brands" // Consider if ID is strictly needed
+				className={clsx(
+					'col-span-1 flex flex-col justify-between space-y-4',
+					'hidden md:order-3 md:flex', // Hide on mobile, show as 3rd item on desktop
+				)}
+				variants={columnVariants}
+			>
+				{/* Titles */}
+				<motion.div className="flex flex-col" variants={itemVariants}>
+					<AnimatedTextSlideUp text={['Brands, Studios', '& Exhibitions']} el="div" staggerChildren={staggerPrimary} duration={durationPrimary} />
+				</motion.div>
+				{/* Client List */}
+				<motion.div
+					className={clsx(
+						'grid grid-cols-1 gap-x-4 gap-y-1', // Single column layout for list items
+					)}
+					variants={listItemStaggerVariants}
+				>
+					{clientList.map((item, index) => (
+						<motion.span key={index} variants={itemVariants}>
+							<AnimatedTextSlideUp text={item.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
+						</motion.span>
+					))}
+				</motion.div>
+			</motion.div>
+		</motion.div>
 	);
 };
 
@@ -251,105 +371,15 @@ const FoundationContent: FC = (): JSX.Element => {
 			{/* Inner grid structure for overall content layout */}
 			<div
 				className={clsx(
-					'grid h-full w-full grid-rows-[auto_1fr_auto]', // Defines rows for details, description, implicit spacer?
+					'grid h-full w-full grid-rows-[auto_1fr_auto_auto]', // Updated to include philosophy section
 					'gap-20 md:gap-12 lg:gap-16', // Responsive vertical spacing
 				)}
 			>
 				{/* Top Details Section: Services, Contact, Brands */}
-				<motion.div
-					className={clsx(
-						'row-start-1 self-end', // Position at the top, aligned to bottom of its row space
-						'text-xs md:text-sm', // Typography
-						'grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-4', // Responsive grid layout
-					)}
-					variants={detailsContainerVariants}
-					initial="hidden"
-					animate="visible"
-				>
-					{/* Column: Services */}
-					{/* Responsive Order: 3rd on mobile, 2nd on desktop. */}
-					<motion.div
-						className={clsx(
-							'col-span-1 flex flex-col justify-between space-y-4',
-							'order-3 md:order-2', // CSS order for responsiveness
-						)}
-						variants={columnVariants}
-					>
-						{/* Services Title */}
-						<motion.div className="flex flex-col" variants={itemVariants}>
-							<AnimatedTextSlideUp text="Services" el="span" duration={durationPrimary} />
-						</motion.div>
-						{/* Services List Part 1 */}
-						<motion.div className="flex flex-col" variants={listStaggerVariants}>
-							{servicesList1.map((service, index) => (
-								<motion.span key={index} variants={itemVariants}>
-									<AnimatedTextSlideUp text={service} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
-								</motion.span>
-							))}
-						</motion.div>
-					</motion.div>
-
-					{/* Column: Contact */}
-					{/* Responsive Order: 2nd on mobile, 1st on desktop. */}
-					<motion.div
-						className={clsx(
-							'col-span-1 flex flex-col justify-between space-y-4',
-							'order-2 md:order-1', // CSS order for responsiveness
-						)}
-						variants={columnVariants}
-					>
-						{/* Contact Links List */}
-						<motion.div className="flex flex-col" variants={listStaggerVariants}>
-							{contactLinks.map((link) => (
-								<motion.div key={link.href} variants={itemVariants}>
-									<ContactLink href={link.href}>
-										<AnimatedTextSlideUp text={link.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
-									</ContactLink>
-								</motion.div>
-							))}
-							{/* Link Arrow */}
-							<motion.span className="mt-1" variants={itemVariants}>
-								<AnimatedTextSlideUp text="→" el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
-							</motion.span>
-						</motion.div>
-						{/* Contact Title */}
-						<motion.div className="flex flex-col" variants={itemVariants}>
-							<AnimatedTextSlideUp text="Contact" el="span" duration={durationPrimary} />
-						</motion.div>
-					</motion.div>
-
-					{/* Column: Brands, Studios & Exhibitions (Desktop Only) */}
-					{/* Contains a list of clients/partners. Hidden on mobile. */}
-					<motion.div
-						id="about-details-content-brands" // Consider if ID is strictly needed
-						className={clsx(
-							'col-span-1 flex flex-col justify-between space-y-4',
-							'hidden md:order-3 md:flex', // Hide on mobile, show as 3rd item on desktop
-						)}
-						variants={columnVariants}
-					>
-						{/* Titles */}
-						<motion.div className="flex flex-col" variants={itemVariants}>
-							<AnimatedTextSlideUp text={['Brands, Studios', '& Exhibitions']} el="div" staggerChildren={staggerFast} duration={durationPrimary} />
-						</motion.div>
-						{/* Client List */}
-						<motion.div
-							className={clsx(
-								'grid grid-cols-1 gap-x-4 gap-y-1', // Single column layout for list items
-							)}
-							variants={listItemStaggerVariants}
-						>
-							{clientList.map((item, index) => (
-								<motion.span key={index} variants={itemVariants}>
-									<AnimatedTextSlideUp text={item.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerFast} />
-								</motion.span>
-							))}
-						</motion.div>
-					</motion.div>
-				</motion.div>
+				<DetailsSection durationPrimary={durationPrimary} durationSecondary={durationSecondary} staggerPrimary={staggerPrimary} staggerSecondary={staggerSecondary} />
 
 				{/* Main Description Section Component */}
-				<DescriptionSection durationPrimary={durationPrimary} staggerMedium={staggerMedium} />
+				<DescriptionSection durationPrimary={durationPrimary} durationSecondary={durationSecondary} staggerPrimary={staggerPrimary} staggerSecondary={staggerSecondary} />
 			</div>
 		</div>
 	);
