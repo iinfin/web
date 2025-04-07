@@ -1,7 +1,7 @@
 import clsx from 'clsx';
 
-import Creation from '@/app/components/sections/Creation';
-import Foundation from '@/app/components/sections/Foundation';
+import Creation from '@/components/sections/Creation';
+import Foundation from '@/components/sections/Foundation';
 
 /**
  * Home page component that displays the main sections of the site.

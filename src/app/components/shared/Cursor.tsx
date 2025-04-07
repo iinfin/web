@@ -6,8 +6,8 @@ import clsx from 'clsx';
 import { motion, type SpringOptions, useSpring } from 'framer-motion';
 
 // Use centralized input hook
-import { useCursor } from '@/app/context/CursorContext';
-import { useInputState } from '@/app/hooks/useInputState';
+import { useCursor } from '@/hooks/useCursor';
+import { useInputState } from '@/hooks/useInputState';
 
 /**
  * Animation spring options for the cursor dot.

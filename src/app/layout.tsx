@@ -7,8 +7,8 @@ import FilmGrain from '@/components/shared/FilmGrain';
 import MetadataTemplate from '@/components/shared/Metadata';
 import Preload from '@/components/shared/Preload';
 
-import { CursorProvider } from '@/app/context/CursorContext';
-import { FilmGrainProvider } from '@/app/context/FilmGrainContext';
+import { CursorProvider } from '@/hooks/useCursor';
+import { FilmGrainProvider } from '@/hooks/useFilmGrain';
 
 import './styles/global.css';
 

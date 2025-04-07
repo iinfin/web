@@ -1,4 +1,4 @@
-import { logger } from '@/utils/logger';
+import { logger } from '@/lib/utils/logger';
 
 import { NotionProvider } from './notion';
 import type { DatabaseProvider, GalleryItem } from './types';

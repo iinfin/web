@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 
-import { useFilmGrain } from '@/app/context/FilmGrainContext';
-import { logger } from '@/app/utils/logger';
+import { logger } from '@/lib/utils/logger';
+
+import { useFilmGrain } from '@/hooks/useFilmGrain';
 
 /**
  * Props for the FilmGrain component.
@@ -85,69 +86,69 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 		// --- Shader Sources ---
 		// Vertex shader for positioning
 		const vertexShaderSource = `
-      attribute vec2 a_position;
-      attribute vec2 a_texCoord;
-      varying vec2 v_texCoord;
+			attribute vec2 a_position;
+			attribute vec2 a_texCoord;
+			varying vec2 v_texCoord;
 
-      void main() {
-        gl_Position = vec4(a_position, 0.0, 1.0);
-        v_texCoord = a_texCoord;
-      }
-    `;
+			void main() {
+				gl_Position = vec4(a_position, 0.0, 1.0);
+				v_texCoord = a_texCoord;
+			}
+		`;
 
 		// Fragment shader for grain generation
 		const fragmentShaderSource = `
-      precision mediump float;
-      varying vec2 v_texCoord;
+			precision mediump float;
+			varying vec2 v_texCoord;
 
-      uniform float u_time;
-      uniform float u_intensity;
-      uniform float u_scale;
-      uniform float u_speed;
-      uniform vec2 u_resolution;
+			uniform float u_time;
+			uniform float u_intensity;
+			uniform float u_scale;
+			uniform float u_speed;
+			uniform vec2 u_resolution;
 
-      // Fast hash function - no trig or complex math
-      float hash(vec2 p) {
-        p = fract(p * vec2(123.34, 456.21));
-        p += dot(p, p + 45.32);
-        return fract(p.x * p.y);
-      }
+			// Fast hash function - no trig or complex math
+			float hash(vec2 p) {
+				p = fract(p * vec2(123.34, 456.21));
+				p += dot(p, p + 45.32);
+				return fract(p.x * p.y);
+			}
 
-      float filmGrain(vec2 uv, float time) {
-        // Apply scale to UVs
-        vec2 uvScaled = uv * u_scale * (u_resolution.y * 0.05);
-        float t = time * u_speed;
+			float filmGrain(vec2 uv, float time) {
+				// Apply scale to UVs
+				vec2 uvScaled = uv * u_scale * (u_resolution.y * 0.05);
+				float t = time * u_speed;
 
-        // Multiple noise layers with slightly different frequencies and orientations
-        float noise1 = hash(uvScaled + t);
-        float noise2 = hash(uvScaled * 1.4 + t * 1.2);
-        float noise3 = hash(uvScaled * 0.8 - t * 0.7);
+				// Multiple noise layers with slightly different frequencies and orientations
+				float noise1 = hash(uvScaled + t);
+				float noise2 = hash(uvScaled * 1.4 + t * 1.2);
+				float noise3 = hash(uvScaled * 0.8 - t * 0.7);
 
-        // Mix the layers for a more organic look
-        float grainLayer = mix(noise1, noise2, 0.4);
-        grainLayer = mix(grainLayer, noise3, 0.3);
+				// Mix the layers for a more organic look
+				float grainLayer = mix(noise1, noise2, 0.4);
+				grainLayer = mix(grainLayer, noise3, 0.3);
 
-        // Curve the distribution for a more film-like appearance
-        return pow(grainLayer, 1.5);
-      }
+				// Curve the distribution for a more film-like appearance
+				return pow(grainLayer, 1.5);
+			}
 
-      void main() {
-        // Generate film grain
-        float grain = filmGrain(v_texCoord, u_time);
+			void main() {
+				// Generate film grain
+				float grain = filmGrain(v_texCoord, u_time);
 
-        // Remap from [0,1] to [-1,1] and scale by intensity
-        float grainValue = (grain * 2.0 - 1.0) * u_intensity;
+				// Remap from [0,1] to [-1,1] and scale by intensity
+				float grainValue = (grain * 2.0 - 1.0) * u_intensity;
 
-        // For stronger visual effect, use black and white for grain
-        // This creates more visible grain than a gray midpoint
-        vec3 grainColor = vec3(step(0.5, grain + 0.5 * (grainValue * 0.1)));
+				// For stronger visual effect, use black and white for grain
+				// This creates more visible grain than a gray midpoint
+				vec3 grainColor = vec3(step(0.5, grain + 0.5 * (grainValue * 0.1)));
 
-        // Higher alpha for more visibility - adjust based on intensity
-        float alpha = min(0.2 + u_intensity * 0.5, 0.9);
+				// Higher alpha for more visibility - adjust based on intensity
+				float alpha = min(0.2 + u_intensity * 0.5, 0.9);
 
-        gl_FragColor = vec4(grainColor, alpha);
-      }
-    `;
+				gl_FragColor = vec4(grainColor, alpha);
+			}
+		`;
 
 		// --- Shader Compilation ---
 		const compileShader = (source: string, type: number): WebGLShader | null => {

@@ -1,6 +1,6 @@
 import type { FC } from 'react';
 
-import FoundationContent from '@/app/components/sections/FoundationContent';
+import FoundationContent from '@/components/sections/FoundationContent';
 
 /**
  * Foundation section component.

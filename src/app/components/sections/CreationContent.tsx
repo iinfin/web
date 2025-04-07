@@ -11,7 +11,7 @@ import { useSpring } from 'framer-motion';
 
 import { useInputState } from '@/app/hooks/useInputState';
 import type { GalleryItem } from '@/app/lib/db/types';
-import { logger } from '@/utils/logger';
+import { logger } from '@/app/lib/utils/logger';
 
 // =============================================
 // CONFIGURATION AND CONSTANTS
@@ -146,120 +146,120 @@ const AnimatedShaderMaterial = shaderMaterial(
 	},
 	// Vertex Shader
 	/*glsl*/ `
-    varying vec2 vUv;
-    varying float v_visibility; // Pass visibility to fragment shader
-    varying float v_initialAnimProgress; // Pass progress to fragment shader
+		varying vec2 vUv;
+		varying float v_visibility; // Pass visibility to fragment shader
+		varying float v_initialAnimProgress; // Pass progress to fragment shader
 
-    uniform float u_planeY;
-    uniform float u_viewportHeight;
-    uniform float u_initialAnimProgress;
-    uniform float u_visibilityFade; // Smaller = sharper fade edge
+		uniform float u_planeY;
+		uniform float u_viewportHeight;
+		uniform float u_initialAnimProgress;
+		uniform float u_visibilityFade; // Smaller = sharper fade edge
 
-    const float FADE_DISTANCE_FACTOR = 0.2; // Portion of viewport height used for fade edge
+		const float FADE_DISTANCE_FACTOR = 0.2; // Portion of viewport height used for fade edge
 
-    void main() {
-      vUv = uv;
-      v_initialAnimProgress = u_initialAnimProgress;
+		void main() {
+		vUv = uv;
+		v_initialAnimProgress = u_initialAnimProgress;
 
-      // Calculate visibility based on plane's Y position relative to viewport edges
-      float halfViewport = u_viewportHeight / 2.0;
-      float topEdge = halfViewport;
-      float bottomEdge = -halfViewport;
+		// Calculate visibility based on plane's Y position relative to viewport edges
+		float halfViewport = u_viewportHeight / 2.0;
+		float topEdge = halfViewport;
+		float bottomEdge = -halfViewport;
 
-      // Distance from edge where fade starts/ends
-      float fadeDistance = u_viewportHeight * FADE_DISTANCE_FACTOR * u_visibilityFade;
+		// Distance from edge where fade starts/ends
+		float fadeDistance = u_viewportHeight * FADE_DISTANCE_FACTOR * u_visibilityFade;
 
-      // Simple fade-in/out at viewport edges
-      float visibilityBottom = smoothstep(bottomEdge - fadeDistance, bottomEdge + fadeDistance, u_planeY);
-      float visibilityTop = smoothstep(topEdge + fadeDistance, topEdge - fadeDistance, u_planeY);
-      v_visibility = visibilityBottom * visibilityTop;
+		// Simple fade-in/out at viewport edges
+		float visibilityBottom = smoothstep(bottomEdge - fadeDistance, bottomEdge + fadeDistance, u_planeY);
+		float visibilityTop = smoothstep(topEdge + fadeDistance, topEdge - fadeDistance, u_planeY);
+		v_visibility = visibilityBottom * visibilityTop;
 
-      // Simple initial scale animation - no other transformations
-      float initialScale = mix(0.95, 1.0, smoothstep(0.0, 1.0, u_initialAnimProgress));
+		// Simple initial scale animation - no other transformations
+		float initialScale = mix(0.95, 1.0, smoothstep(0.0, 1.0, u_initialAnimProgress));
 
-      // Apply the scaling
-      vec3 scaledPosition = position * initialScale;
+		// Apply the scaling
+		vec3 scaledPosition = position * initialScale;
 
-      gl_Position = projectionMatrix * modelViewMatrix * vec4(scaledPosition, 1.0);
-    }
-  `,
+		gl_Position = projectionMatrix * modelViewMatrix * vec4(scaledPosition, 1.0);
+		}
+	`,
 	// Fragment Shader
 	/*glsl*/ `
-    varying vec2 vUv;
-    varying float v_visibility;
-    varying float v_initialAnimProgress;
+		varying vec2 vUv;
+		varying float v_visibility;
+		varying float v_initialAnimProgress;
 
-    uniform sampler2D map;
-    uniform float u_aspect; // Use aspect ratio to correct UVs if needed
-    uniform float u_time;
-    uniform float u_grainIntensity;
-    uniform float u_grainScale;
-    uniform float u_grainSpeed;
+		uniform sampler2D map;
+		uniform float u_aspect; // Use aspect ratio to correct UVs if needed
+		uniform float u_time;
+		uniform float u_grainIntensity;
+		uniform float u_grainScale;
+		uniform float u_grainSpeed;
 
-    // High-quality noise function based on Inigo Quilez's implementation
-    // Returns a pseudo-random value in the 0.0 to 1.0 range for a given 2D coordinate.
-    float hash(vec2 p) {
-      p = fract(p * vec2(123.34, 456.21));
-      p += dot(p, p + 45.32);
-      return fract(p.x * p.y);
-    }
+		// High-quality noise function based on Inigo Quilez's implementation
+		// Returns a pseudo-random value in the 0.0 to 1.0 range for a given 2D coordinate.
+		float hash(vec2 p) {
+		p = fract(p * vec2(123.34, 456.21));
+		p += dot(p, p + 45.32);
+		return fract(p.x * p.y);
+		}
 
-    /**
-     * Generates a procedural film grain effect.
-     * Uses multiple layers of hash noise with different scales and speeds,
-     * combined and adjusted with a power curve for a more natural appearance.
-     * @param uv The texture coordinate.
-     * @param time The current time, used for animating the grain.
-     * @returns A float value representing the grain intensity at this point.
-     */
-    float filmGrain(vec2 uv, float time) {
-      // Scale UVs for finer grain control
-      vec2 uvScaled = uv * u_grainScale;
-      float t = time * u_grainSpeed;
+		/**
+		 * Generates a procedural film grain effect.
+		 * Uses multiple layers of hash noise with different scales and speeds,
+		 * combined and adjusted with a power curve for a more natural appearance.
+		 * @param uv The texture coordinate.
+		 * @param time The current time, used for animating the grain.
+		 * @returns A float value representing the grain intensity at this point.
+		 */
+		float filmGrain(vec2 uv, float time) {
+		// Scale UVs for finer grain control
+		vec2 uvScaled = uv * u_grainScale;
+		float t = time * u_grainSpeed;
 
-      // Sample noise at different scales and temporal offsets
-      float noise1 = hash(uvScaled + t);
-      float noise2 = hash(uvScaled * 1.4 + t * 1.2);
-      float noise3 = hash(uvScaled * 0.8 - t * 0.7);
+		// Sample noise at different scales and temporal offsets
+		float noise1 = hash(uvScaled + t);
+		float noise2 = hash(uvScaled * 1.4 + t * 1.2);
+		float noise3 = hash(uvScaled * 0.8 - t * 0.7);
 
-      // Blend the noise layers
-      float grainLayer = mix(noise1, noise2, 0.4);
-      grainLayer = mix(grainLayer, noise3, 0.3);
+		// Blend the noise layers
+		float grainLayer = mix(noise1, noise2, 0.4);
+		grainLayer = mix(grainLayer, noise3, 0.3);
 
-      // Apply a power curve to adjust the grain distribution (makes it less uniform)
-      grainLayer = pow(grainLayer, 1.5);
+		// Apply a power curve to adjust the grain distribution (makes it less uniform)
+		grainLayer = pow(grainLayer, 1.5);
 
-      return grainLayer;
-    }
+		return grainLayer;
+		}
 
-    void main() {
-        vec2 correctedUv = vUv;
-        vec4 textureColor = texture2D(map, correctedUv);
+		void main() {
+			vec2 correctedUv = vUv;
+			vec4 textureColor = texture2D(map, correctedUv);
 
-        // Combine visibility factors: base alpha * initial animation progress * edge fade visibility.
-        // Uses varyings passed from vertex shader.
-        float alpha = textureColor.a * v_initialAnimProgress * v_visibility;
+			// Combine visibility factors: base alpha * initial animation progress * edge fade visibility.
+			// Uses varyings passed from vertex shader.
+			float alpha = textureColor.a * v_initialAnimProgress * v_visibility;
 
-        // Discard transparent pixels early to save computation
-        if (alpha < 0.01) discard;
+			// Discard transparent pixels early to save computation
+			if (alpha < 0.01) discard;
 
-        // Generate film grain value for this pixel
-        float grain = filmGrain(correctedUv, u_time);
+			// Generate film grain value for this pixel
+			float grain = filmGrain(correctedUv, u_time);
 
-        // Apply grain primarily to mid-tones using a luminance mask
-        // This prevents grain from being too strong in pure blacks or whites.
-        float luminance = dot(textureColor.rgb, vec3(0.299, 0.587, 0.114));
-        float grainMask = 4.0 * luminance * (1.0 - luminance); // Parabolic mask peaking at luminance 0.5
-        float scaledGrain = (grain * 2.0 - 1.0) * u_grainIntensity * grainMask; // Scale grain to -intensity..+intensity
+			// Apply grain primarily to mid-tones using a luminance mask
+			// This prevents grain from being too strong in pure blacks or whites.
+			float luminance = dot(textureColor.rgb, vec3(0.299, 0.587, 0.114));
+			float grainMask = 4.0 * luminance * (1.0 - luminance); // Parabolic mask peaking at luminance 0.5
+			float scaledGrain = (grain * 2.0 - 1.0) * u_grainIntensity * grainMask; // Scale grain to -intensity..+intensity
 
-        // Apply grain to color
-        vec3 grainedColor = textureColor.rgb + scaledGrain;
+			// Apply grain to color
+			vec3 grainedColor = textureColor.rgb + scaledGrain;
 
-        gl_FragColor = vec4(grainedColor, alpha);
-        #include <tonemapping_fragment>
-        #include <colorspace_fragment>
-    }
-  `,
+			gl_FragColor = vec4(grainedColor, alpha);
+			#include <tonemapping_fragment>
+			#include <colorspace_fragment>
+		}
+	`,
 );
 
 extend({ AnimatedShaderMaterial });

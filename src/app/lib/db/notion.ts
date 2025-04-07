@@ -9,7 +9,7 @@ import type {
 	TitlePropertyItemObjectResponse,
 } from '@notionhq/client/build/src/api-endpoints';
 
-import { logger } from '@/utils/logger';
+import { logger } from '@/lib/utils/logger';
 
 import { DatabaseProvider, GalleryItem, MediaType } from './types';
 

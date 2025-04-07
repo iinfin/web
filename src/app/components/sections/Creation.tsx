@@ -1,8 +1,9 @@
 import type { FC } from 'react';
 
-import CreationContent from '@/app/components/sections/CreationContent';
-import { getGalleryItems } from '@/app/lib/db';
-import type { GalleryItem } from '@/app/lib/db/types';
+import CreationContent from '@/components/sections/CreationContent';
+
+import { getGalleryItems } from '@/lib/db';
+import type { GalleryItem } from '@/lib/db/types';
 
 /**
  * Creation section component.
