@@ -3,7 +3,9 @@ import type { FC } from 'react';
 import FoundationContent from '@/app/components/sections/FoundationContent';
 
 /**
- * Foundation section component placeholder.
+ * Foundation section component.
+ * Renders the foundational information section of the application.
+ * This server component loads the client component for interactive content.
  * @returns {JSX.Element} The rendered foundation section.
  */
 const Foundation: FC = (): JSX.Element => {

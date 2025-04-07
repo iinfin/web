@@ -7,11 +7,12 @@ import type { GalleryItem } from '@/app/lib/db/types';
 /**
  * Creation section component.
  * Fetches gallery items and passes them to the client component.
+ * This server component handles data loading for the interactive 3D gallery.
  * @returns {Promise<JSX.Element>} The rendered creations section.
  */
 const Creation: FC = async (): Promise<JSX.Element> => {
 	// Fetch gallery items from the database
-	// Use shuffle: true for variety on each load
+	// Use shuffle: true for variety on each page load
 	const galleryItems: GalleryItem[] = await getGalleryItems({ shuffle: true });
 
 	return (
