@@ -13,13 +13,13 @@ import { useInputState } from '@/app/hooks/useInputState';
 import type { GalleryItem } from '@/app/lib/db/types';
 import { logger } from '@/utils/logger';
 
-/**
- * Configuration constants for the Creation content 3D scene.
- * Consolidates constants previously in config.ts and utils.ts.
- */
+// =============================================
+// CONFIGURATION AND CONSTANTS
+// =============================================
 
-// --- Aspect Ratios ---
-// Define common aspect ratios and their dimensions
+/**
+ * Aspect ratio types and configuration.
+ */
 export type AspectRatioType = 'square' | '16:9' | '9:16' | '4:5' | '5:4';
 
 export interface AspectRatio {
@@ -36,24 +36,44 @@ export const COMMON_ASPECT_RATIOS = {
 	LANDSCAPE_5_4: { width: 5, height: 4, name: '5:4' } as AspectRatio,
 } as const;
 
-// --- Scene Layout Configuration ---
-export const NUM_COLUMNS = 1; // Kept for context, though not directly used in single-column layout
-export const PLANE_HEIGHT = 1; // Base height for scaling calculations
-export const VERTICAL_GAP = 1.05; // Set slightly larger than PLANE_HEIGHT for spacing
-export const SCROLL_MULTIPLIER = 0.075; // Scroll sensitivity
-export const RECYCLE_BUFFER = PLANE_HEIGHT * 2; // Viewport buffer for recycling items
-
-// Edge positioning
-export const LEFT_PADDING = 0.0; // Distance from left edge of canvas to content
-
-// --- Debugging/Development --- //
-// Flag to disable loading actual image/video assets during development
-// for faster iteration and testing of layout/animation logic.
-export const DISABLE_MEDIA = false; // process.env.NODE_ENV === 'development';
+/**
+ * Scene layout configuration.
+ */
+const SCENE = {
+	columns: 1, // Columns in layout (kept for context)
+	planeHeight: 1, // Base height for scaling calculations
+	verticalGap: 1.05, // Spacing between items (larger than planeHeight)
+	scrollMultiplier: 0.075, // Scroll sensitivity factor
+	recycleBuffer: 2, // Viewport buffer (multiple of planeHeight) for recycling items
+	leftPadding: 0.0, // Distance from left edge of canvas
+	autoScrollSpeed: 15, // Speed for automatic scrolling on touch devices
+	initialAnimDuration: 1.8, // Duration for the initial fade-in animation
+};
 
 /**
- * Utility functions previously in utils.ts, merged here for consolidation.
+ * Default material properties.
  */
+const MATERIAL = {
+	grain: {
+		intensity: 0.05, // Default film grain intensity (0-1)
+		scale: 500.0, // Default grain scale - higher = finer grain
+		speed: 0.5, // Default grain animation speed
+	},
+	visibility: {
+		fade: 0.5, // Controls edge fade distance
+	},
+};
+
+/**
+ * Feature flags.
+ */
+const FEATURES = {
+	disableMedia: false, // Flag to disable loading media assets
+};
+
+// =============================================
+// UTILITY FUNCTIONS
+// =============================================
 
 /**
  * Calculate plane dimensions based on aspect ratio, maintaining a constant height.
@@ -62,8 +82,8 @@ export const DISABLE_MEDIA = false; // process.env.NODE_ENV === 'development';
  */
 export function calculateDimensions(aspectRatio: AspectRatio): [number, number] {
 	const ratio = aspectRatio.width / aspectRatio.height;
-	// Always use the fixed PLANE_HEIGHT
-	const height = PLANE_HEIGHT;
+	// Always use the fixed SCENE.planeHeight
+	const height = SCENE.planeHeight;
 	// Calculate width based on the fixed height and aspect ratio
 	const width = height * ratio;
 	return [width, height];
@@ -91,6 +111,10 @@ export function findClosestAspectRatio(ratio: number): AspectRatio {
 	return closestRatio;
 }
 
+// =============================================
+// SHADER DEFINITIONS
+// =============================================
+
 // Define uniforms for the custom shader material
 interface AnimatedMaterialUniforms {
 	map: THREE.Texture | null;
@@ -116,9 +140,9 @@ const AnimatedShaderMaterial = shaderMaterial(
 		u_initialAnimProgress: 0,
 		u_visibilityFade: 0.1, // Default fade distance factor
 		u_aspect: 1,
-		u_grainIntensity: 0.05, // Default grain intensity (0-1)
-		u_grainScale: 500.0, // Default grain scale - higher = finer grain
-		u_grainSpeed: 0.5, // Default grain animation speed
+		u_grainIntensity: MATERIAL.grain.intensity,
+		u_grainScale: MATERIAL.grain.scale,
+		u_grainSpeed: MATERIAL.grain.speed,
 	},
 	// Vertex Shader
 	/*glsl*/ `
@@ -240,95 +264,26 @@ const AnimatedShaderMaterial = shaderMaterial(
 
 extend({ AnimatedShaderMaterial });
 
+// =============================================
+// COMPONENT INTERFACES
+// =============================================
+
 /**
- * Props interface for the AnimatedMaterial component.
- * Extends the uniforms and adds specific required props.
+ * Props for the AnimatedMaterial component.
  */
 interface AnimatedMaterialProps extends Partial<AnimatedMaterialUniforms> {
 	texture: THREE.Texture;
 	planeY: number;
 	viewportHeight: number;
-	initialAnimProgress: number; // Ensure this is passed
+	initialAnimProgress: number;
 	aspect: number;
-	grainIntensity?: number; // Optional override for grain intensity
-	grainScale?: number; // Optional override for grain scale
-	grainSpeed?: number; // Optional override for grain speed
+	grainIntensity?: number;
+	grainScale?: number;
+	grainSpeed?: number;
 }
 
 /**
- * React component wrapper for the `animatedShaderMaterial`.
- * Manages updating shader uniforms via `useFrame` and handles texture updates.
- * Provides default values for optional grain parameters.
- */
-const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
-	texture,
-	planeY,
-	viewportHeight,
-	initialAnimProgress,
-	aspect,
-	u_visibilityFade = 0.5, // Provide default
-	grainIntensity = 0.05, // Default film grain intensity
-	grainScale = 500.0, // Default grain scale
-	grainSpeed = 0.5, // Default grain animation speed
-	...props // Pass any other standard material props like 'side', 'transparent'
-}) => {
-	const materialRef = useRef<THREE.ShaderMaterial>(null!); // Use THREE.ShaderMaterial type
-
-	// Update uniforms efficiently
-	useFrame((_, delta) => {
-		if (materialRef.current) {
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_time.value += delta;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_planeY.value = planeY;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_viewportHeight.value = viewportHeight;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_initialAnimProgress.value = initialAnimProgress;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_aspect.value = aspect;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_visibilityFade.value = u_visibilityFade;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_grainIntensity.value = grainIntensity;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_grainScale.value = grainScale;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.u_grainSpeed.value = grainSpeed;
-		}
-	});
-
-	useEffect(() => {
-		if (materialRef.current) {
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed in drei extension
-			materialRef.current.uniforms.map.value = texture;
-		}
-	}, [texture]);
-	return (
-		// @ts-expect-error - Custom extended shader material not correctly typed by `extend`
-		<animatedShaderMaterial
-			ref={materialRef}
-			key={AnimatedShaderMaterial.key}
-			attach="material"
-			map={texture} // Initial map uniform set
-			u_planeY={planeY}
-			u_viewportHeight={viewportHeight}
-			u_initialAnimProgress={initialAnimProgress}
-			u_aspect={aspect}
-			u_visibilityFade={u_visibilityFade}
-			u_grainIntensity={grainIntensity}
-			u_grainScale={grainScale}
-			u_grainSpeed={grainSpeed}
-			transparent // MUST be true for alpha blending
-			side={THREE.DoubleSide} // Assuming double sided planes
-			toneMapped={false} // Match original Video/Image materials
-			{...props}
-		/>
-	);
-};
-
-/**
- * Props for the internal media content components (ImagePlaneContent/VideoPlaneContent).
+ * Props for the internal media content components.
  */
 interface PlaneContentProps {
 	/** URL of the image or video source */
@@ -352,8 +307,72 @@ interface PlaneContentProps {
 }
 
 /**
+ * Props for the PlaneWrapper component.
+ */
+interface PlaneWrapperProps {
+	/** The gallery item data object */
+	item: GalleryItem;
+	/** Target position vector for the plane group */
+	position: THREE.Vector3;
+	/** Flag indicating if media loading/rendering is disabled */
+	disableMedia: boolean;
+	/** Callback invoked when the pointer hovers over or leaves the plane */
+	onHoverChange: (name: string | null) => void;
+	/** Calculated height of the viewport in world space */
+	viewportHeight: number;
+	/** Optional: Film grain intensity (0-1) */
+	grainIntensity?: number;
+	/** Optional: Film grain scale */
+	grainScale?: number;
+	/** Optional: Film grain animation speed */
+	grainSpeed?: number;
+}
+
+/**
+ * Props for the main component.
+ */
+interface CreationContentProps {
+	galleryItems: GalleryItem[];
+}
+
+/**
+ * State structure for individual planes, managed by ScrollingPlanes.
+ */
+interface PlaneState {
+	/** Stable unique key for React reconciliation */
+	id: string;
+	/** Index into the original galleryItems array for data lookup */
+	itemIndex: number;
+	/** Base Y position at scrollY=0, used for relative calculations */
+	initialY: number;
+	/** Current calculated X position based on viewport */
+	x: number;
+	/** Current calculated Z position (currently static) */
+	z: number;
+	/** Final calculated Y position for rendering this frame, incorporating scroll offset */
+	currentY: number;
+}
+
+/**
+ * Props for the ScrollingPlanes component.
+ */
+interface ScrollingPlanesProps {
+	/** The array of gallery items to display */
+	galleryItems: GalleryItem[];
+	/** Flag to prevent loading/displaying media assets */
+	disableMedia: boolean;
+	/** Flag indicating if the device is touch-capable (affects scroll behavior) */
+	isTouchDevice: boolean;
+	/** Callback function invoked when a plane's hover state changes */
+	onHoverChange: (name: string | null) => void;
+}
+
+// =============================================
+// MEDIA COMPONENTS
+// =============================================
+
+/**
  * Internal component: Loads and renders an image texture using AnimatedMaterial.
- * Memoized for performance.
  */
 const ImagePlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
 	const texture = useTexture(url); // Loads image texture
@@ -377,12 +396,9 @@ ImagePlaneContent.displayName = 'ImagePlaneContent';
 
 /**
  * Internal component: Loads and renders a video texture using AnimatedMaterial.
- * Configures video properties (muted, loop, etc.) via useVideoTexture.
- * Memoized for performance.
  */
 const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, viewportHeight, initialAnimProgress, aspect, fallbackMaterial, grainIntensity, grainScale, grainSpeed }) => {
 	const texture = useVideoTexture(url, {
-		// Loads video texture with specific settings
 		muted: true,
 		loop: true,
 		playsInline: true,
@@ -407,59 +423,18 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(({ url, planeY, view
 });
 VideoPlaneContent.displayName = 'VideoPlaneContent';
 
-/**
- * Props for the PlaneWrapper component.
- */
-interface PlaneWrapperProps {
-	/** The gallery item data object */
-	item: GalleryItem;
-	/** Target position vector for the plane group (calculated by ScrollingPlanes) */
-	position: THREE.Vector3;
-	/** Flag indicating if media loading/rendering is disabled */
-	disableMedia: boolean;
-	/** Callback invoked when the pointer hovers over or leaves the plane */
-	onHoverChange: (name: string | null) => void;
-	/** Calculated height of the viewport in world space (passed from parent) */
-	viewportHeight: number;
-	/** Optional: Film grain intensity (0-1) */
-	grainIntensity?: number;
-	/** Optional: Film grain scale */
-	grainScale?: number;
-	/** Optional: Film grain animation speed */
-	grainSpeed?: number;
-}
-
-/** Duration for the initial fade-in animation in seconds */
-const INITIAL_ANIM_DURATION = 1.8; // seconds - slower, smoother fade in
+// =============================================
+// PLANE COMPONENTS
+// =============================================
 
 /**
- * R3F component wrapping a single gallery item (image or video) plane.
- *
- * Responsibilities:
- * - Handles aspect ratio detection for media.
- * - Calculates plane dimensions based on aspect ratio and fixed height.
- * - Manages pointer hover events to display item titles.
- * - Renders the appropriate media type (Image or Video) via internal components.
- * - Provides a fallback material and uses Suspense for loading.
- * - Implements a simple initial fade-in animation controlled by `useFrame`.
- * - Passes necessary uniforms (grain, animation progress) to `AnimatedMaterial`.
- *
- * @param {PlaneWrapperProps} props - Component props.
- * @returns {JSX.Element} The rendered plane group.
+ * Wraps a single gallery item (image or video) plane in the 3D scene.
+ * Handles aspect ratio detection, dimensions, hover events, and media rendering.
  */
 const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
-	({
-		item,
-		position,
-		disableMedia,
-		onHoverChange,
-		viewportHeight,
-		grainIntensity = 0.05, // Use default from AnimatedMaterial
-		grainScale = 500.0, // Use default from AnimatedMaterial
-		grainSpeed = 0.5, // Use default from AnimatedMaterial
-	}) => {
+	({ item, position, disableMedia, onHoverChange, viewportHeight, grainIntensity = MATERIAL.grain.intensity, grainScale = MATERIAL.grain.scale, grainSpeed = MATERIAL.grain.speed }) => {
 		const groupRef = useRef<THREE.Group>(null!);
-		const [dimensions, setDimensions] = useState<[number, number]>([PLANE_HEIGHT, PLANE_HEIGHT]); // Use constant PLANE_HEIGHT for default
+		const [dimensions, setDimensions] = useState<[number, number]>([SCENE.planeHeight, SCENE.planeHeight]);
 		const [aspect, setAspect] = useState<number>(1);
 		const [initialAnimProgress, setInitialAnimProgress] = useState(0); // 0 to 1
 		const [isMounted, setIsMounted] = useState(false);
@@ -504,7 +479,7 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 					}
 					const closest = findClosestAspectRatio(ratio);
 					if (closest) {
-						setDimensions(calculateDimensions(closest)); // Use calculateDimensions from this file
+						setDimensions(calculateDimensions(closest));
 						setAspect(closest.width / closest.height);
 					}
 				} catch (error) {
@@ -526,17 +501,16 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		// Update group position and animation progress each frame
 		useFrame((state, _delta) => {
 			if (groupRef.current) {
-				// Update position smoothly (can add lerping later if needed)
+				// Update position smoothly
 				groupRef.current.position.copy(position);
 
 				// Run the initial entrance animation (scale/fade-in via shader)
-				// controlled by initialAnimProgress uniform.
 				if (isMounted && initialAnimProgress < 1) {
 					if (startTimeRef.current === null) {
 						startTimeRef.current = state.clock.elapsedTime;
 					}
 					const elapsed = state.clock.elapsedTime - startTimeRef.current;
-					let progress = Math.min(elapsed / INITIAL_ANIM_DURATION, 1);
+					let progress = Math.min(elapsed / SCENE.initialAnimDuration, 1);
 					progress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
 					setInitialAnimProgress(progress);
 				}
@@ -557,7 +531,7 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 				initialAnimProgress: initialAnimProgress,
 				aspect: aspect,
 				fallbackMaterial: fallbackMaterial,
-				grainIntensity: grainIntensity, // Pass down optional props
+				grainIntensity: grainIntensity,
 				grainScale: grainScale,
 				grainSpeed: grainSpeed,
 			};
@@ -582,45 +556,11 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		);
 	},
 );
-PlaneWrapper.displayName = 'PlaneWrapper'; // Helps in React DevTools
+PlaneWrapper.displayName = 'PlaneWrapper';
 
-// Define props interface for the main component
-interface CreationContentProps {
-	galleryItems: GalleryItem[];
-}
-
-// Define state structure for individual planes, managed by ScrollingPlanes.
-interface PlaneState {
-	/** Stable unique key for React reconciliation */
-	id: string;
-	/** Index into the original galleryItems array for data lookup */
-	itemIndex: number;
-	/** Base Y position at scrollY=0, used for relative calculations */
-	initialY: number;
-	/** Current calculated X position based on viewport */
-	x: number;
-	/** Current calculated Z position (currently static) */
-	z: number;
-	/** Final calculated Y position for rendering this frame, incorporating scroll offset */
-	currentY: number;
-}
-
-/** Speed for automatic scrolling on touch devices, mimicking pixels per second */
-const AUTO_SCROLL_SPEED = 15;
-
-// Props for the ScrollingPlanes component
-interface ScrollingPlanesProps {
-	/** The array of gallery items to display */
-	galleryItems: GalleryItem[];
-	/** Flag to prevent loading/displaying media assets */
-	disableMedia: boolean;
-	/** Flag indicating if the device is touch-capable (affects scroll behavior) */
-	isTouchDevice: boolean;
-	/** Callback function invoked when a plane's hover state changes */
-	onHoverChange: (name: string | null) => void;
-}
-
-// --- Scrolling Content Manager Component ---
+// =============================================
+// SCROLLING SYSTEM
+// =============================================
 
 /**
  * Renders the scrollable/recyclable gallery planes within the Canvas.
@@ -629,20 +569,17 @@ interface ScrollingPlanesProps {
 const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia, isTouchDevice, onHoverChange }) => {
 	// R3F hooks to access scene properties
 	const { camera, size } = useThree();
+
 	// State and Refs
-	/** Spring physics for smooth scrolling animation */
 	const scrollSpring = useSpring(0, {
 		stiffness: 150,
 		damping: 25, // Adjusted damping for a slightly less bouncy feel
 		mass: 1,
 	});
-	/** Array holding the current state (position, index) of each plane */
+
 	const [planeStates, setPlaneStates] = useState<PlaneState[]>([]);
-	/** Flag to ensure initial positions are calculated only once */
 	const initialPositionsSet = useRef(false);
-	/** Ref storing the calculated world-space X position for the left edge, adapting to viewport */
 	const leftPositionRef = useRef<number>(0);
-	/** Ref storing the calculated world-space height of the viewport */
 	const viewportHeightRef = useRef<number>(0);
 
 	// Calculate visible height and initial left edge position in world units at Z=0
@@ -651,12 +588,13 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
 		const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
 		viewportHeightRef.current = visibleHeight;
+
 		// Calculate the visible width in world units
 		const aspectRatio = size.width / size.height;
 		const visibleWidth = visibleHeight * aspectRatio;
 
-		// Calculate left edge position in world units (considering LEFT_PADDING)
-		const leftEdgePosition = -visibleWidth / 2 + LEFT_PADDING;
+		// Calculate left edge position in world units (considering SCENE.leftPadding)
+		const leftEdgePosition = -visibleWidth / 2 + SCENE.leftPadding;
 		leftPositionRef.current = leftEdgePosition;
 
 		logger.info('Calculated viewport/edge positions', {
@@ -667,30 +605,28 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		});
 	}, [camera, size.width, size.height]); // Recalculate if camera properties or viewport size change
 
-	// Calculate the total height the content would occupy if laid out end-to-end.
-	// This is crucial for determining the jump distance during recycling.
+	// Calculate the total height the content would occupy if laid out end-to-end
 	const totalContentHeight = useMemo(() => {
 		if (galleryItems.length === 0) return 0;
-		return galleryItems.length * VERTICAL_GAP;
+		return galleryItems.length * SCENE.verticalGap;
 	}, [galleryItems.length]);
 
-	// Initialize the state (position, ID) for each plane based on the gallery items.
-	// Runs only once after galleryItems are available.
+	// Initialize the state for each plane based on the gallery items
 	useEffect(() => {
 		if (galleryItems.length === 0 || initialPositionsSet.current) return;
 
 		logger.info('Initializing plane states', { count: galleryItems.length, totalContentHeight });
 		const initialStates: PlaneState[] = [];
+
 		// Calculate offset to center the initial block of items vertically in the view
-		// (places the middle item near y=0 initially).
-		const startYOffset = totalContentHeight / 2 - VERTICAL_GAP / 2;
+		const startYOffset = totalContentHeight / 2 - SCENE.verticalGap / 2;
 
 		for (let i = 0; i < galleryItems.length; i++) {
-			// Calculate the base Y position for this item directly using index
-			const baseY = startYOffset - i * VERTICAL_GAP;
-			// Use the fixed Z position.
+			// Calculate the base Y position for this item
+			const baseY = startYOffset - i * SCENE.verticalGap;
+			// Use fixed Z position
 			const z = 0;
-			// X position will be updated in useFrame based on the dynamic left edge.
+			// X position from the dynamic left edge
 			const x = leftPositionRef.current;
 
 			initialStates.push({
@@ -712,36 +648,31 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		if (isTouchDevice) return;
 
 		const handleWheel = (event: WheelEvent) => {
-			// Update the scroll spring target directly based on wheel delta.
-			// The spring handles the smooth animation towards the target.
-			scrollSpring.set(scrollSpring.get() - event.deltaY * SCROLL_MULTIPLIER);
-
-			// Use passive: true for performance when preventDefault is not called for better scroll performance.
-			window.addEventListener('wheel', handleWheel, { passive: true });
-			return () => window.removeEventListener('wheel', handleWheel);
+			// Update the scroll spring target based on wheel delta
+			scrollSpring.set(scrollSpring.get() - event.deltaY * SCENE.scrollMultiplier);
 		};
 
-		// Re-attach if scrollSpring instance or touch status changes
+		// Use passive: true for performance when preventDefault is not called
 		window.addEventListener('wheel', handleWheel, { passive: true });
 		return () => window.removeEventListener('wheel', handleWheel);
 	}, [scrollSpring, isTouchDevice]);
 
-	// Main R3F frame loop: Updates plane positions, handles recycling, and manages auto-scroll.
+	// Main R3F frame loop: Updates plane positions, handles recycling, and manages auto-scroll
 	useFrame((_state, delta) => {
 		if (planeStates.length === 0 || totalContentHeight === 0) return; // Skip if no items or layout defined
 
-		// Handle Auto-scroll for touch devices by incrementing scroll based on frame time
+		// Handle Auto-scroll for touch devices
 		if (isTouchDevice) {
-			scrollSpring.set(scrollSpring.get() + AUTO_SCROLL_SPEED * delta);
+			scrollSpring.set(scrollSpring.get() + SCENE.autoScrollSpeed * delta);
 		}
 
-		// Get the current raw scroll position from the physics spring
+		// Get current scroll position from the physics spring
 		const currentScroll = scrollSpring.get();
 
 		// Recalculate left edge position based on current viewport size (handles resize)
 		const aspectRatio = size.width / size.height;
 		const newVisibleWidth = viewportHeightRef.current * aspectRatio;
-		const newLeftEdgePosition = -newVisibleWidth / 2 + LEFT_PADDING;
+		const newLeftEdgePosition = -newVisibleWidth / 2 + SCENE.leftPadding;
 
 		// Update the stored left position ref if it has changed significantly
 		if (Math.abs(newLeftEdgePosition - leftPositionRef.current) > 0.001) {
@@ -752,41 +683,35 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialY = state.initialY;
-				// Calculate the plane's current Y position *if scroll were 0*.
+				// Calculate the plane's current Y position *if scroll were 0*
 				const currentRelativeY = state.initialY - currentScroll;
 				let hasRecycled = false; // Flag to track if recycling occurred this frame
 
 				// --- Recycling Logic ---
-				// This ensures seamless infinite scrolling by repositioning planes
-				// that move too far out of the view bounds (+ buffer).
-
-				// If plane is too far above the top bound, recycle it to the bottom.
-				if (currentRelativeY > viewportHeightRef.current / 2 + RECYCLE_BUFFER) {
-					// Jump down by the total height of all content.
+				// If plane is too far above the top bound, recycle it to the bottom
+				if (currentRelativeY > viewportHeightRef.current / 2 + SCENE.recycleBuffer) {
+					// Jump down by the total height of all content
 					newInitialY = state.initialY - totalContentHeight;
 					hasRecycled = true;
 				}
-				// If plane is too far below the bottom bound, recycle it to the top.
-				else if (currentRelativeY < -viewportHeightRef.current / 2 - RECYCLE_BUFFER) {
-					// Jump up by the total height of all content.
+				// If plane is too far below the bottom bound, recycle it to the top
+				else if (currentRelativeY < -viewportHeightRef.current / 2 - SCENE.recycleBuffer) {
+					// Jump up by the total height of all content
 					newInitialY = state.initialY + totalContentHeight;
 					hasRecycled = true;
 				}
 
-				// Always update the X position to match the potentially resized viewport's left edge.
+				// Update X position to match the potentially resized viewport's left edge
 				const newX = leftPositionRef.current;
-				// Calculate the final Y position for rendering, applying the current scroll offset.
+				// Calculate the final Y position for rendering, applying current scroll offset
 				const finalCurrentY = newInitialY - currentScroll;
 
-				// Determine if the state needs updating (recycled, Y changed, or X changed due to resize).
-				// This optimizes state updates by avoiding changes if nothing moved.
+				// Only update state if necessary to prevent unnecessary renders
 				const needsUpdate = hasRecycled || finalCurrentY !== state.currentY || newX !== state.x;
 
 				if (needsUpdate) {
-					// Return a *new* state object only if necessary to trigger re-render.
 					return { ...state, initialY: newInitialY, currentY: finalCurrentY, x: newX };
 				} else {
-					// Otherwise, return the *existing* state object to prevent unnecessary updates.
 					return state;
 				}
 			}),
@@ -799,16 +724,17 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 			{planeStates.map((state) => {
 				const item = galleryItems[state.itemIndex];
 				if (!item) return null;
+
 				// Current position vector for the wrapper component
 				const position = new THREE.Vector3(state.x, state.currentY, state.z);
+
 				return (
 					<PlaneWrapper
 						key={state.id} // Use stable ID as key
 						item={item}
 						position={position}
 						disableMedia={disableMedia}
-						onHoverChange={onHoverChange} // Pass down the callback
-						// Pass down required props for animation
+						onHoverChange={onHoverChange}
 						viewportHeight={viewportHeightRef.current}
 					/>
 				);
@@ -817,56 +743,56 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 	);
 };
 
+// =============================================
+// MAIN COMPONENT
+// =============================================
+
 /**
  * Main component for the "Creation" section showcase.
- * Sets up the R3F Canvas, manages device feature detection (touch, DPR),
- * handles hover state for displaying item names, prepares gallery data,
- * and renders the ScrollingPlanes component which contains the core 3D logic.
+ * Sets up the R3F Canvas, manages device detection, and renders the scrollable gallery.
  */
 const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
 	const [isTouchDevice, setIsTouchDevice] = useState(false);
 	const [hoveredName, setHoveredName] = useState<string | null>(null);
 	const inputState = useInputState();
+	const disableMedia = useMemo(() => FEATURES.disableMedia, []);
 
-	const disableMedia = useMemo(() => DISABLE_MEDIA, []); // Memoize the constant value
+	// Initialize device detection
+	useEffect(() => {
+		const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+		setIsTouchDevice(touchDetected);
+		setDprValue(Math.min(window.devicePixelRatio, 2)); // Cap DPR at 2 for performance
 
-	const handleHoverChange = useCallback(
-		(name: string | null) => {
-			setHoveredName(name);
-			const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-			setIsTouchDevice(touchDetected);
-			setDprValue(Math.min(window.devicePixelRatio, 2)); // Cap DPR at 2 for performance
+		if (disableMedia) {
+			logger.warn('Gallery media loading is DISABLED');
+		}
+	}, [disableMedia]);
 
-			// Log if media loading is disabled (useful for debugging)
-			if (disableMedia) {
-				logger.warn('Gallery media loading is DISABLED');
-			}
-		},
-		[disableMedia],
-	);
+	// Handle hover state changes for item names
+	const handleHoverChange = useCallback((name: string | null) => {
+		setHoveredName(name);
+	}, []);
 
+	// Process gallery items for consistency
 	const items: GalleryItem[] = useMemo(() => {
 		if (galleryItems.length > 0) {
 			const processedItems = galleryItems.map((item: GalleryItem) => ({
-				// Ensure required fields have defaults if missing from input data
+				// Ensure required fields have defaults if missing
 				description: '', // Default empty description
 				tags: [], // Default empty tags array
 				...item,
 				url: item.url || '', // Default empty string URL
 				mediaType: item.mediaType || 'image', // Default to image
 			}));
+
 			logger.info(`Using ${processedItems.length} real gallery items`);
 			return processedItems as GalleryItem[];
 		} else {
 			logger.info('No gallery items provided.');
 			return [];
 		}
-	}, [galleryItems]); // Dependency: recalculate if input items change
-
-	if (disableMedia) {
-		logger.info('Rendering CreationContent with media disabled');
-	}
+	}, [galleryItems]); // Recalculate if input items change
 
 	return (
 		<div className="relative h-screen w-full touch-none">
@@ -886,7 +812,6 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 				}}
 			>
 				<Suspense fallback={null}>
-					{/* Suspense for async asset loading (textures) */}
 					<ambientLight intensity={0.8} />
 					<directionalLight position={[5, 15, 10]} intensity={1.2} />
 					<ScrollingPlanes galleryItems={items} disableMedia={disableMedia} isTouchDevice={isTouchDevice} onHoverChange={handleHoverChange} />
