@@ -1,53 +1,51 @@
 /**
- * Database model types and provider interfaces
- * Contains type definitions for gallery items and database providers
+ * Database Model Types and Provider Interfaces
+ * Core type definitions for the database abstraction layer
  */
 
 /**
- * Media type enum for gallery items
- * Defines the supported media formats that can be displayed in the gallery
+ * Media type supported by gallery items
+ * Defines content formats displayable in the gallery
  */
 export type MediaType = 'image' | 'video';
 
 /**
- * Gallery Item (for works/portfolio section)
- * Represents a single item in the gallery/portfolio display
+ * Gallery Item Model
+ * Represents a single portfolio/gallery entry
  */
 export interface GalleryItem {
-	id: string; // Notion page ID
-	title: string; // From Notion 'Name' property
-	description?: string; // From Notion 'Description' property
-	tags?: string[]; // From Notion 'Tags' property
-	url?: string; // From Notion 'URL' property
-	mediaType?: MediaType; // Determined from URL extension
-	// Removed: imageUrl, videoUrl, gifUrl, category, date, dimensions
+	id: string; // Unique identifier
+	title: string; // Display title
+	description?: string; // Optional descriptive text
+	tags?: string[]; // Optional categorization tags
+	url?: string; // Optional media resource URL
+	mediaType?: MediaType; // Type of media (derived from URL)
 }
 
 /**
  * Database Provider Interface
- * Defines the contract that any database provider implementation must fulfill
- * to provide gallery data to the application
+ * Contract for data access implementations
  */
 export interface DatabaseProvider {
 	/**
-	 * Retrieves a collection of gallery items
-	 * @param options - Optional configuration for retrieving items
-	 * @param options.shuffle - Whether to randomize the order of returned items
-	 * @returns Promise resolving to an array of gallery items
+	 * Retrieves multiple gallery items
+	 * @param options - Configuration options
+	 * @param options.shuffle - Whether to randomize item order
+	 * @returns Promise of gallery items array
 	 */
 	getGalleryItems(options?: { shuffle?: boolean }): Promise<GalleryItem[]>;
 
 	/**
-	 * Retrieves a single gallery item by its ID
-	 * @param id - The unique identifier of the gallery item
-	 * @returns Promise resolving to the gallery item or null if not found
+	 * Retrieves a single gallery item
+	 * @param id - Unique item identifier
+	 * @returns Promise of gallery item or null if not found
 	 */
 	getGalleryItem(id: string): Promise<GalleryItem | null>;
 
 	/**
-	 * Optional method to search gallery items by a query string
-	 * @param query - The search term to filter gallery items
-	 * @returns Promise resolving to an array of matching gallery items
+	 * Searches gallery items by text
+	 * @param query - Search term
+	 * @returns Promise of matching gallery items array
 	 */
 	searchGallery?(query: string): Promise<GalleryItem[]>;
 }

@@ -3,9 +3,21 @@
 // This hook uses useState and useEffect, must be a client component hook
 import { useEffect, useState } from 'react';
 
+/**
+ * Represents the dimensions of the browser window.
+ */
 type WindowSize = {
 	width: number | undefined;
 	height: number | undefined;
+};
+
+/**
+ * Initial window size state with undefined dimensions.
+ * Used before client-side measurement is available.
+ */
+const initialSize: WindowSize = {
+	width: undefined,
+	height: undefined,
 };
 
 /**
@@ -15,13 +27,12 @@ type WindowSize = {
  *          or before the initial client-side mount.
  */
 export function useWindowSize(): WindowSize {
-	const [windowSize, setWindowSize] = useState<WindowSize>({
-		width: undefined,
-		height: undefined,
-	});
+	// State to store window dimensions
+	const [windowSize, setWindowSize] = useState<WindowSize>(initialSize);
 
+	// Effect to measure and track window size
 	useEffect(() => {
-		// Handler to call on window resize
+		// Update window size in state
 		function handleResize() {
 			setWindowSize({
 				width: window.innerWidth,
@@ -29,15 +40,17 @@ export function useWindowSize(): WindowSize {
 			});
 		}
 
-		// Add event listener
+		// Register resize event listener
 		window.addEventListener('resize', handleResize);
 
-		// Call handler right away so state gets updated with initial window size
+		// Initialize with current window size
 		handleResize();
 
-		// Remove event listener on cleanup
-		return () => window.removeEventListener('resize', handleResize);
-	}, []); // Empty array ensures effect is only run on mount and unmount
+		// Cleanup function
+		return () => {
+			window.removeEventListener('resize', handleResize);
+		};
+	}, []);
 
 	return windowSize;
 }

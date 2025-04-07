@@ -7,8 +7,8 @@ import FilmGrain from '@/components/shared/FilmGrain';
 import MetadataTemplate from '@/components/shared/Metadata';
 import Preload from '@/components/shared/Preload';
 
-import { CursorProvider } from '@/app/context/CursorContext';
-import { FilmGrainProvider } from '@/app/context/FilmGrainContext';
+import { CursorProvider } from '@/hooks/useCursor';
+import { FilmGrainProvider } from '@/hooks/useFilmGrain';
 
 import './styles/global.css';
 
@@ -16,14 +16,15 @@ export const metadata = MetadataTemplate;
 
 /**
  * Root layout component for the application.
- * Sets up HTML structure, global styles, providers, and essential scripts.
+ * Configures HTML structure, global styles, context providers, and essential elements.
+ * Wraps all pages with consistent visual elements and interaction behaviors.
  *
- * @param {object} props - Component props.
- * @param {React.ReactNode} props.children - Page content to render within the layout.
- * @returns {JSX.Element} The root layout structure.
+ * @param {object} props - Component props
+ * @param {React.ReactNode} props.children - Page content to render within the layout
+ * @returns {Promise<JSX.Element>} The configured root layout
  */
 export default async function RootLayout({ children }: { children: React.ReactNode }): Promise<JSX.Element> {
-	// Get nonce for CSP from headers injected by middleware
+	// Get nonce for Content Security Policy from headers injected by middleware
 	const nonce = (await headers()).get('x-nonce');
 
 	return (
@@ -32,20 +33,25 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				<Preload />
 			</head>
 			<body className="bg-white-x1 text-black-x1 dark:bg-black-x2 dark:text-white-x1 min-h-screen uppercase">
+				{/* Main Content Area */}
 				<main id="main-content" className="relative h-full w-full">
 					{children}
 				</main>
 
+				{/* Visual Effects */}
 				<FilmGrainProvider initialSettings={{ intensity: 0.5, scale: 0.5, speed: 0.15 }}>
 					<FilmGrain />
 				</FilmGrainProvider>
 
+				{/* Interactive Elements */}
 				<CursorProvider>
 					<Cursor />
 				</CursorProvider>
 
+				{/* Interaction Behaviors */}
 				<ContextMenuDisabler />
 
+				{/* Analytics (CSP Protected) */}
 				{nonce && <Script src="https://www.googletagmanager.com/gtag/js" strategy="afterInteractive" nonce={nonce} />}
 			</body>
 		</html>

@@ -19,9 +19,8 @@ function log(level: LogLevel, message: string, data?: unknown) {
 
 		// Format data for better readability
 		const formattedData = data ? ` ${JSON.stringify(data, null, 2)}` : '';
-		/* eslint-disable no-console */
+
 		console[level](`[${level.toUpperCase()}] ${message}${formattedData}`);
-		/* eslint-enable no-console */
 	}
 
 	// In production, you might want to send logs to a service

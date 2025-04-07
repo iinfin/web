@@ -31,25 +31,21 @@ type AnimatedTextFadeInProps = {
  * <AnimatedTextFadeIn text="Hello World" el="h1" className="text-4xl font-bold" />
  * <AnimatedTextFadeIn text={["Multiple", "Lines", "Example"]} el="p" />
  */
-export const AnimatedTextFadeIn: React.FC<AnimatedTextFadeInProps> = ({
-	text,
-	el: Wrapper = 'div', // Default to 'div' if el is not provided
-	className,
-	staggerChildren = 0.05,
-	duration = 0.6,
-	ease = 'easeInOut',
-}) => {
+export function AnimatedTextFadeIn({ text, el: Wrapper = 'div', className, staggerChildren = 0.05, duration = 0.6, ease = 'easeInOut' }: AnimatedTextFadeInProps): JSX.Element {
+	// Convert single string to array for consistent processing
 	const lines = Array.isArray(text) ? text : [text];
 
+	// Animation variants for container
 	const containerVariants: Variants = {
 		hidden: {},
 		visible: {
 			transition: {
-				staggerChildren: staggerChildren,
+				staggerChildren,
 			},
 		},
 	};
 
+	// Animation variants for each line
 	const lineVariants: Variants = {
 		hidden: {
 			opacity: 0,
@@ -57,39 +53,25 @@ export const AnimatedTextFadeIn: React.FC<AnimatedTextFadeInProps> = ({
 		visible: {
 			opacity: 1,
 			transition: {
-				duration: duration,
-				ease: ease,
+				duration,
+				ease,
 			},
 		},
 	};
 
-	// Ensure Wrapper is a motion component - handle string tags vs components
-	// Cast motion to any to bypass complex type inference issues with dynamic tag names
+	// Handle dynamic element types with motion
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const MotionWrapper = typeof Wrapper === 'string' ? (motion as any)[Wrapper] : motion(Wrapper);
 
 	return (
-		<MotionWrapper
-			className={clsx('font-inherit', className)} // Combine default and provided classes
-			variants={containerVariants}
-			initial="hidden"
-			animate="visible"
-			aria-label={Array.isArray(text) ? text.join(' ') : text} // Accessibility
-		>
+		<MotionWrapper className={clsx('font-inherit', className)} variants={containerVariants} initial="hidden" animate="visible" aria-label={Array.isArray(text) ? text.join(' ') : text}>
 			{lines.map((line, index) => (
-				// Each line is a motion span that fades in
-				<motion.span
-					key={index}
-					className="block" // Ensure block display for proper line separation
-					variants={lineVariants}
-					aria-hidden // Hide decorative spans from screen readers
-				>
-					{/* Use non-breaking space for empty lines to maintain height */}
+				<motion.span key={index} className="block" variants={lineVariants} aria-hidden>
 					{line.trim() === '' ? '\u00A0' : line}
 				</motion.span>
 			))}
 		</MotionWrapper>
 	);
-};
+}
 
 export default AnimatedTextFadeIn;

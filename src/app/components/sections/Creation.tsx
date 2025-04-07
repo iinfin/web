@@ -1,17 +1,19 @@
 import type { FC } from 'react';
 
-import CreationContent from '@/app/components/sections/CreationContent';
-import { getGalleryItems } from '@/app/lib/db';
-import type { GalleryItem } from '@/app/lib/db/types';
+import CreationContent from '@/components/sections/CreationContent';
+
+import { getGalleryItems } from '@/lib/db';
+import type { GalleryItem } from '@/lib/db/types';
 
 /**
  * Creation section component.
- * Fetches gallery items and passes them to the client component.
- * @returns {Promise<JSX.Element>} The rendered creations section.
+ * Loads the client component for the interactive 3D gallery display.
+ * This server component handles data fetching and content preparation.
+ * @returns {Promise<JSX.Element>} The rendered creation section.
  */
 const Creation: FC = async (): Promise<JSX.Element> => {
 	// Fetch gallery items from the database
-	// Use shuffle: true for variety on each load
+	// Use shuffle: true for variety on each page load
 	const galleryItems: GalleryItem[] = await getGalleryItems({ shuffle: true });
 
 	return (

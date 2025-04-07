@@ -1,42 +1,40 @@
 import clsx from 'clsx';
 
-import Creation from '@/app/components/sections/Creation';
-import Foundation from '@/app/components/sections/Foundation';
+import Creation from '@/components/sections/Creation';
+import Foundation from '@/components/sections/Foundation';
 
 /**
- * Home page component that displays the main sections of the site
- * Uses a responsive grid layout that adapts for different screen sizes and orientations.
- * - Mobile Portrait (Smallest): Foundation (Full height overlay), Creation (Bottom 6/10)
- * - Tablet Portrait (md): Foundation (Top 8/10), Creation (Bottom 6/10)
- * - Desktop (lg): Creation (Left 40%), Foundation (Right 60%)
- * - Wider Desktop (xl): Creation (Left 50%), Foundation (Right 50%)
- * - Extra Wide Desktop (2xl): Creation (Left 70%), Foundation (Right 30%)
+ * Home page component that displays the main sections of the site.
+ * Uses a responsive grid layout that adapts for different screen sizes and orientations:
+ * - Mobile Portrait: Creation (full height), Foundation (overlay)
+ * - Tablet Portrait: Creation (full height), Foundation (full height)
+ * - Desktop (lg): Creation (left 40%), Foundation (right 60%)
+ * - Wider Desktop (xl): Creation (left 50%), Foundation (right 50%)
+ * - Extra Wide Desktop (2xl): Creation (left 70%), Foundation (right 30%)
+ *
  * @returns {JSX.Element} The rendered home page
  */
 export default function Home(): JSX.Element {
 	return (
 		<>
-			{/* Grid Container: Adjusts columns based on breakpoints */}
-			{/* Default: Rows, md: Rows, lg+: 10 cols */}
+			{/* Responsive Grid Container */}
 			<div className="grid h-full min-h-screen grid-rows-10 lg:grid-cols-10 lg:grid-rows-1" aria-label="Main page layout">
-				{/* Creation Section Wrapper */}
+				{/* Creation Section */}
 				<div
 					className={clsx(
-						// Static classes applied always
+						// Base layout
 						'relative h-full',
 
-						// Mobile: Bottom 6/10 (rows 5-10)
-						'col-span-1 col-start-1 row-span-6 row-start-5',
-						// Tablet (md): Bottom 6/10 (rows 5-10)
-						'md:row-span-6 md:row-start-5',
+						// Mobile layout (default)
+						'col-span-1 col-start-1 row-span-10 row-start-1',
 
-						// Desktop (lg+): Reset row
+						// Tablet layout
+						'md:row-span-10 md:row-start-1',
+
+						// Desktop layout
 						'lg:row-span-1 lg:row-start-1',
-						// Desktop (lg): Left 4/10 (40%)
 						'lg:col-span-4 lg:col-start-1',
-						// Wider Desktop (xl): Left 5/10 (50%)
 						'xl:col-span-5 xl:col-start-1',
-						// Extra Wide Desktop (2xl): Left 7/10 (70%)
 						'2xl:col-span-7 2xl:col-start-1',
 					)}
 				>
@@ -45,27 +43,24 @@ export default function Home(): JSX.Element {
 					</div>
 				</div>
 
-				{/* Foundation Section Wrapper */}
+				{/* Foundation Section */}
 				<div
 					className={clsx(
-						// Static classes applied always
+						// Base layout
 						'relative h-full',
 
-						// Gradient background
+						// Mobile overlay effect
 						'bg-gradient-to-b from-white via-white/90 to-white/0',
-						// Mobile: Full height (rows 1-10)
 						'col-span-1 col-start-1 row-span-10 row-start-1',
-						// Tablet (md): Top 8/10 (rows 1-8)
-						'md:row-span-8 md:row-start-1',
 
+						// Tablet layout
+						'md:row-span-10 md:row-start-1',
+
+						// Desktop layout
 						'lg:bg-none',
-						// Desktop (lg+): Reset row
 						'lg:row-span-1 lg:row-start-1',
-						// Desktop (lg): Right 6/10 (60%)
 						'lg:col-span-6 lg:col-start-5',
-						// Wider Desktop (xl): Right 5/10 (50%)
 						'xl:col-span-5 xl:col-start-6',
-						// Extra Wide Desktop (2xl): Right 3/10 (30%)
 						'2xl:col-span-3 2xl:col-start-8',
 					)}
 				>

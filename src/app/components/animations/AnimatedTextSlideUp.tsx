@@ -33,26 +33,29 @@ type AnimatedTextSlideUpProps = {
  * <AnimatedTextSlideUp text="Hello World" el="h1" className="text-4xl font-bold" />
  * <AnimatedTextSlideUp text={["Multiple", "Lines", "Example"]} el="p" />
  */
-export const AnimatedTextSlideUp: React.FC<AnimatedTextSlideUpProps> = ({
+export function AnimatedTextSlideUp({
 	text,
-	el: Wrapper = 'div', // Default to 'div' if el is not provided
+	el: Wrapper = 'div',
 	className,
 	delay = 0.04,
 	staggerChildren = 0.05,
 	duration = 0.5,
-	ease = [0.22, 1, 0.36, 1], // Default easeOutCirc easing
-}) => {
+	ease = [0.22, 1, 0.36, 1], // easeOutCirc easing
+}: AnimatedTextSlideUpProps): JSX.Element {
+	// Convert single string to array for consistent processing
 	const lines = Array.isArray(text) ? text : [text];
 
+	// Animation variants for container
 	const containerVariants: Variants = {
 		hidden: {},
 		visible: {
 			transition: {
-				staggerChildren: staggerChildren,
+				staggerChildren,
 			},
 		},
 	};
 
+	// Animation variants for each line
 	const lineVariants: Variants = {
 		hidden: {
 			y: '110%', // Start below the mask
@@ -62,45 +65,28 @@ export const AnimatedTextSlideUp: React.FC<AnimatedTextSlideUpProps> = ({
 			y: '0%', // Animate to original position
 			opacity: 1,
 			transition: {
-				duration: duration,
-				ease: ease, // Use the provided or default ease
-				delay: delay, // Apply initial delay per line if needed
+				duration,
+				ease,
+				delay,
 			},
 		},
 	};
 
-	// Ensure Wrapper is a motion component - handle string tags vs components
-	// Cast motion to any to bypass complex type inference issues with dynamic tag names
+	// Handle dynamic element types with motion
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const MotionWrapper = typeof Wrapper === 'string' ? (motion as any)[Wrapper] : motion(Wrapper);
 
 	return (
-		<MotionWrapper
-			className={clsx('font-inherit', className)} // Combine default and provided classes
-			variants={containerVariants}
-			initial="hidden"
-			animate="visible"
-			aria-label={Array.isArray(text) ? text.join(' ') : text} // Accessibility
-		>
+		<MotionWrapper className={clsx('font-inherit', className)} variants={containerVariants} initial="hidden" animate="visible" aria-label={Array.isArray(text) ? text.join(' ') : text}>
 			{lines.map((line, index) => (
-				// Outer span for masking (overflow hidden)
-				<motion.span
-					key={index}
-					className="block overflow-hidden" // Use Tailwind for masking
-					aria-hidden // Hide decorative spans from screen readers
-				>
-					{/* Inner span for animation */}
-					<motion.span
-						className="block" // Ensure it takes block display
-						variants={lineVariants}
-					>
-						{/* Use non-breaking space for empty lines to maintain height */}
+				<motion.span key={index} className="block overflow-hidden" aria-hidden>
+					<motion.span className="block" variants={lineVariants}>
 						{line.trim() === '' ? '\u00A0' : line}
 					</motion.span>
 				</motion.span>
 			))}
 		</MotionWrapper>
 	);
-};
+}
 
 export default AnimatedTextSlideUp;

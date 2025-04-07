@@ -6,25 +6,36 @@ import clsx from 'clsx';
 import { motion, type SpringOptions, useSpring } from 'framer-motion';
 
 // Use centralized input hook
-import { useCursor } from '@/app/context/CursorContext';
-import { useInputState } from '@/app/hooks/useInputState';
+import { useCursor } from '@/hooks/useCursor';
+import { useInputState } from '@/hooks/useInputState';
 
-// Spring options for the central dot (slightly tighter/faster)
+/**
+ * Animation spring options for the cursor dot.
+ * Slightly tighter and faster than the line settings.
+ */
 const dotSpringOptions: SpringOptions = {
 	stiffness: 1200,
 	damping: 60,
 	mass: 0.1,
 };
 
-// Spring options for the lines (slightly different damping for subtle variation)
+/**
+ * Animation spring options for the horizontal line.
+ * Uses different damping from vertical for subtle desynchronization.
+ */
 const lineSpringOptionsX: SpringOptions = {
 	stiffness: 1000,
-	damping: 55, // Slightly different damping for X
+	damping: 55,
 	mass: 0.1,
 };
+
+/**
+ * Animation spring options for the vertical line.
+ * Uses different damping from horizontal for subtle desynchronization.
+ */
 const lineSpringOptionsY: SpringOptions = {
 	stiffness: 1000,
-	damping: 50, // Original damping for Y
+	damping: 50,
 	mass: 0.1,
 };
 
@@ -32,135 +43,127 @@ const lineSpringOptionsY: SpringOptions = {
  * Custom cursor component that provides a cross-hair style cursor
  * with smooth animations and visibility/style transitions based on context.
  * Lines have slightly desynchronized easing for a more natural feel.
+ *
+ * @returns {JSX.Element | null} The custom cursor or null if on touch device or server.
  */
 export default function Cursor(): JSX.Element | null {
-	const { pixel } = useInputState(); // Get raw pixel data
-	const { cursorType, cursorText } = useCursor(); // Get context data
+	// Raw input state
+	const { pixel } = useInputState();
 
-	// Springs for the central dot
+	// Cursor configuration from context
+	const { cursorType, cursorText } = useCursor();
+
+	// Spring animations for smooth cursor movement
 	const smoothX = useSpring(pixel.x, dotSpringOptions);
 	const smoothY = useSpring(pixel.y, dotSpringOptions);
-
-	// Separate springs for the lines with slightly different options
 	const lineSmoothX = useSpring(pixel.x, lineSpringOptionsX);
 	const lineSmoothY = useSpring(pixel.y, lineSpringOptionsY);
 
+	// Feature detection and state
 	const [isClient, setIsClient] = useState(false);
 	const [isTouchDevice, setIsTouchDevice] = useState(false);
-	const [isMouseInWindow, setIsMouseInWindow] = useState(true); // State to track mouse presence
+	const [isMouseInWindow, setIsMouseInWindow] = useState(true);
 
-	// Detect client-side and touch capabilities
+	// Client detection and event setup
 	useEffect(() => {
+		// Update client-side state
 		setIsClient(true);
+
+		// Detect touch capability
 		const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 		setIsTouchDevice(touchDetected);
 
-		// Only hide system cursor if not on a touch device
+		// Optional: Hide system cursor
 		// if (!touchDetected) {
-		// 	document.body.style.cursor = 'none';
+		//   document.body.style.cursor = 'none';
 		// }
 
-		// --- Event Listeners for Mouse Window Presence ---
+		// Setup mouse presence detection
 		const handleMouseEnter = () => setIsMouseInWindow(true);
 		const handleMouseLeave = () => setIsMouseInWindow(false);
 
+		// Add event listeners
 		document.documentElement.addEventListener('mouseenter', handleMouseEnter);
 		document.documentElement.addEventListener('mouseleave', handleMouseLeave);
-		// -------------------------------------------------
 
-		// Cleanup function to restore cursor on component unmount
+		// Cleanup function
 		return () => {
+			// Restore default cursor
 			document.body.style.cursor = 'auto';
+
+			// Remove event listeners
 			document.documentElement.removeEventListener('mouseenter', handleMouseEnter);
 			document.documentElement.removeEventListener('mouseleave', handleMouseLeave);
 		};
 	}, []);
 
-	// Update ALL spring targets when raw input changes
+	// Update spring animations when position changes
 	useEffect(() => {
+		// Update all spring targets
 		smoothX.set(pixel.x);
 		smoothY.set(pixel.y);
 		lineSmoothX.set(pixel.x);
 		lineSmoothY.set(pixel.y);
-	}, [pixel.x, pixel.y, smoothX, smoothY, lineSmoothX, lineSmoothY]); // Include all springs in dependency array
+	}, [pixel.x, pixel.y, smoothX, smoothY, lineSmoothX, lineSmoothY]);
 
-	// Don't render server-side or on touch devices
+	// Don't render on server or touch devices
 	if (!isClient || isTouchDevice) {
 		return null;
 	}
 
-	// Determine cursor states from context
+	// Cursor state derivation
 	const isHidden = cursorType === 'hidden';
 	const isPointer = cursorType === 'pointer';
 	const isDefault = cursorType === 'default';
 
-	// Base styles for the container
-	const containerClasses = clsx(
-		'pointer-events-none fixed inset-0 z-[9999]', // Ensure cursor is on top
-		'transition-opacity duration-300 ease-in-out', // Fade in/out
-		// Hide the custom cursor if the context demands it OR if the system mouse has left the browser window entirely.
-		!isHidden && isMouseInWindow ? 'opacity-100' : 'opacity-0',
-	);
-
-	// Base styles for cross-hair lines
+	// Style classes
+	const containerClasses = clsx('pointer-events-none fixed inset-0 z-[9999]', 'transition-opacity duration-300 ease-in-out', !isHidden && isMouseInWindow ? 'opacity-100' : 'opacity-0');
 	const lineBaseClasses = 'absolute bg-black/80 dark:bg-white/80 mix-blend-difference';
-
-	// Base styles for the central dot
 	const dotBaseClasses = 'absolute transition-[transform,width,height,background-color] duration-200 ease-out';
 
 	return (
-		<motion.div // Use motion.div for potential future container animations
-			className={containerClasses}
-			aria-hidden="true" // Accessibility: Hide decorative cursor from screen readers
-		>
-			{/* Vertical cursor line - animated with its own spring */}
+		<motion.div className={containerClasses} aria-hidden="true">
+			{/* Vertical cursor line */}
 			<motion.div
 				className={clsx(lineBaseClasses, 'top-0 h-full w-[1px]')}
-				style={{ x: lineSmoothX }} // Use X spring for the vertical line
-				// Lines are only visible (slightly transparent) in the 'default' state
+				style={{ x: lineSmoothX }}
 				animate={{ opacity: isDefault ? 0.2 : 0 }}
 				transition={{ duration: 0.2, ease: 'easeOut' }}
 			/>
 
-			{/* Horizontal cursor line - animated with its own spring */}
+			{/* Horizontal cursor line */}
 			<motion.div
 				className={clsx(lineBaseClasses, 'left-0 h-[1px] w-full')}
-				style={{ y: lineSmoothY }} // Use Y spring for the horizontal line
-				// Lines are only visible (slightly transparent) in the 'default' state
+				style={{ y: lineSmoothY }}
 				animate={{ opacity: isDefault ? 0.2 : 0 }}
 				transition={{ duration: 0.2, ease: 'easeOut' }}
 			/>
 
-			{/* Cursor dot - animated with its own spring and style transitions */}
+			{/* Cursor dot */}
 			<motion.div
-				className={clsx(
-					dotBaseClasses,
-					// Use a lighter background for the dot when in 'pointer' state
-					isPointer ? 'bg-black/20 dark:bg-white/20' : 'bg-black dark:bg-white',
-				)}
+				className={clsx(dotBaseClasses, isPointer ? 'bg-black/20 dark:bg-white/20' : 'bg-black dark:bg-white')}
 				style={{
-					x: smoothX, // Dot uses original springs
+					x: smoothX,
 					y: smoothY,
-					translateX: '-50%', // Center the dot horizontally
-					translateY: '-50%', // Center the dot vertically
+					translateX: '-50%',
+					translateY: '-50%',
 				}}
-				// Animate dot size based on pointer state
 				animate={{
-					width: isPointer ? 24 : 6, // Larger dot for pointer state
+					width: isPointer ? 24 : 6,
 					height: isPointer ? 24 : 6,
 					scale: isPointer ? 1.2 : 1,
 				}}
 			/>
 
-			{/* Optional: Element to display text near the cursor */}
+			{/* Optional text display */}
 			{cursorText && (
 				<motion.div
 					className="absolute text-sm whitespace-nowrap text-black mix-blend-difference dark:text-white"
 					style={{
-						x: smoothX, // Position text based on the dot's position
+						x: smoothX,
 						y: smoothY,
-						translateX: '-50%', // Adjust as needed for text positioning
-						translateY: '15px', // Position below the dot (adjust offset)
+						translateX: '-50%',
+						translateY: '15px',
 					}}
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}

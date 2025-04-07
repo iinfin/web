@@ -9,11 +9,13 @@ import type {
 	TitlePropertyItemObjectResponse,
 } from '@notionhq/client/build/src/api-endpoints';
 
-import { logger } from '@/utils/logger';
+import { logger } from '@/lib/utils/logger';
 
 import { DatabaseProvider, GalleryItem, MediaType } from './types';
 
-// Seeded random number generator for deterministic grid pattern generation
+/**
+ * Random number generator with seed for deterministic results
+ */
 class SeededRandom {
 	private seed: number;
 
@@ -21,14 +23,22 @@ class SeededRandom {
 		this.seed = seed;
 	}
 
-	// Generate a random number based on current seed value, then update seed
+	/**
+	 * Generates next random value in sequence
+	 * @returns Random number between 0-1
+	 */
 	next(): number {
 		this.seed = (this.seed * 9301 + 49297) % 233280;
 		return this.seed / 233280;
 	}
 }
 
-// Fisher-Yates shuffle with seed for deterministic shuffling
+/**
+ * Fisher-Yates shuffle with deterministic seed
+ * @param array - Array to shuffle
+ * @param seed - Random seed for deterministic output
+ * @returns New shuffled array
+ */
 function shuffleArrayWithSeed<T>(array: T[], seed: number): T[] {
 	const rng = new SeededRandom(seed);
 	const shuffledArray = [...array];
@@ -44,94 +54,114 @@ function shuffleArrayWithSeed<T>(array: T[], seed: number): T[] {
 	return shuffledArray;
 }
 
-// Define structure for expected properties in a Notion Gallery database item
+/**
+ * Expected Notion properties structure for gallery items
+ */
 interface NotionGalleryProperties {
 	Name: TitlePropertyItemObjectResponse;
-	Description?: { rich_text: RichTextItemResponse[] }; // Optional Description property
-	Tags?: MultiSelectPropertyItemObjectResponse; // Optional Tags property (multi-select)
-	URL?: FormulaPropertyItemObjectResponse; // Optional URL property
-	Status?: SelectPropertyItemObjectResponse; // <-- Add Status property
-}
-
-// Safely extract title text content
-function extractTextFromTitle(title: unknown): string | undefined {
-	try {
-		if (Array.isArray(title) && title.length > 0 && title[0]?.plain_text) {
-			return title[0].plain_text;
-		}
-		return undefined;
-	} catch (_) {
-		return undefined;
-	}
-}
-
-// Safely extract rich text content
-function extractTextFromRichText(richText: unknown): string | undefined {
-	try {
-		if (Array.isArray(richText) && richText.length > 0 && richText[0]?.plain_text) {
-			return richText[0].plain_text;
-		}
-		return undefined;
-	} catch (_) {
-		return undefined;
-	}
-}
-
-// Safely extract string result from a Notion Formula property
-function extractStringFromFormulaProperty(formulaProperty: unknown): string | undefined {
-	try {
-		// Check if it's the expected FormulaPropertyItemObjectResponse structure
-		const formulaProp = formulaProperty as FormulaPropertyItemObjectResponse | undefined;
-		// Check if the formula result type is string and the string value exists
-		if (formulaProp?.type === 'formula' && formulaProp.formula.type === 'string') {
-			return formulaProp.formula.string ?? undefined; // Return null/undefined as undefined
-		}
-		logger.warn('Formula property did not contain a string result', { formulaProperty });
-		return undefined;
-	} catch (error) {
-		logger.warn('Error extracting string from Formula property', { error, formulaProperty });
-		return undefined;
-	}
-}
-
-// Helper function to determine MediaType from URL
-function determineMediaType(url: string | undefined): MediaType | undefined {
-	if (!url) {
-		return undefined;
-	}
-
-	// Safely extract the file extension
-	const pathPart = url.split('?')[0];
-	// Extra safety check, although url.split should always return string[0]
-	if (!pathPart) return undefined;
-
-	const parts = pathPart.split('.');
-	// Get the last part, only if there's more than one part (i.e., a dot exists)
-	const extension = parts.length > 1 ? parts.pop()?.toLowerCase() : undefined;
-
-	if (['png', 'jpg', 'jpeg', 'webp'].includes(extension ?? '')) {
-		return 'image';
-	} else if (['mp4', 'webm'].includes(extension ?? '')) {
-		return 'video';
-	} else {
-		// Log only if there was something that looked like an extension but wasn't recognized
-		if (extension) {
-			logger.warn(`Unknown media type for URL extension: ${extension} in URL: ${url}`);
-		}
-		return undefined; // Or default to 'image' if preferred
-	}
+	Description?: { rich_text: RichTextItemResponse[] };
+	Tags?: MultiSelectPropertyItemObjectResponse;
+	URL?: FormulaPropertyItemObjectResponse;
+	Status?: SelectPropertyItemObjectResponse;
 }
 
 /**
- * Notion-specific database provider implementation.
- * Fetches gallery data from a configured Notion database.
+ * Notion data extraction utilities
+ */
+const NotionExtractors = {
+	/**
+	 * Extracts plain text from title property
+	 * @param title - Title property value
+	 * @returns Extracted text or undefined
+	 */
+	title(title: unknown): string | undefined {
+		try {
+			if (Array.isArray(title) && title.length > 0 && title[0]?.plain_text) {
+				return title[0].plain_text;
+			}
+			return undefined;
+		} catch (_) {
+			return undefined;
+		}
+	},
+
+	/**
+	 * Extracts plain text from rich text property
+	 * @param richText - Rich text property value
+	 * @returns Extracted text or undefined
+	 */
+	richText(richText: unknown): string | undefined {
+		try {
+			if (Array.isArray(richText) && richText.length > 0 && richText[0]?.plain_text) {
+				return richText[0].plain_text;
+			}
+			return undefined;
+		} catch (_) {
+			return undefined;
+		}
+	},
+
+	/**
+	 * Extracts string value from formula property
+	 * @param formulaProperty - Formula property value
+	 * @returns Extracted string or undefined
+	 */
+	formula(formulaProperty: unknown): string | undefined {
+		try {
+			const formulaProp = formulaProperty as FormulaPropertyItemObjectResponse | undefined;
+			if (formulaProp?.type === 'formula' && formulaProp.formula.type === 'string') {
+				return formulaProp.formula.string ?? undefined;
+			}
+			logger.warn('Formula property did not contain a string result', { formulaProperty });
+			return undefined;
+		} catch (error) {
+			logger.warn('Error extracting string from Formula property', { error, formulaProperty });
+			return undefined;
+		}
+	},
+
+	/**
+	 * Determines media type from URL
+	 * @param url - Media URL
+	 * @returns Media type or undefined
+	 */
+	mediaType(url: string | undefined): MediaType | undefined {
+		if (!url) {
+			return undefined;
+		}
+
+		const pathPart = url.split('?')[0];
+		if (!pathPart) return undefined;
+
+		const parts = pathPart.split('.');
+		const extension = parts.length > 1 ? parts.pop()?.toLowerCase() : undefined;
+
+		if (['png', 'jpg', 'jpeg', 'webp'].includes(extension ?? '')) {
+			return 'image';
+		} else if (['mp4', 'webm'].includes(extension ?? '')) {
+			return 'video';
+		} else {
+			if (extension) {
+				logger.warn(`Unknown media type for URL extension: ${extension} in URL: ${url}`);
+			}
+			return undefined;
+		}
+	},
+};
+
+/**
+ * Notion Database Provider
+ * Implements DatabaseProvider interface for Notion as data source
  */
 export class NotionProvider implements DatabaseProvider {
 	private notion: Client;
 	private galleryDbId: string;
 
+	/**
+	 * Creates Notion provider with API client
+	 * @throws Error if required environment variables are missing
+	 */
 	constructor() {
-		// Validate environment variables only when the provider is actually created
 		if (!process.env['NOTION_API_KEY']) {
 			throw new Error('Missing NOTION_API_KEY environment variable');
 		}
@@ -149,7 +179,11 @@ export class NotionProvider implements DatabaseProvider {
 	}
 
 	/**
-	 * Generic function to query a Notion database.
+	 * Executes query against Notion database
+	 * @param databaseId - Target database ID
+	 * @param filter - Optional filter criteria
+	 * @param sorts - Optional sort criteria
+	 * @returns Array of page objects
 	 */
 	private async queryDatabase(databaseId: string, filter?: QueryDatabaseParameters['filter'], sorts?: QueryDatabaseParameters['sorts']): Promise<PageObjectResponse[]> {
 		try {
@@ -158,44 +192,37 @@ export class NotionProvider implements DatabaseProvider {
 				...(filter && { filter }),
 				...(sorts && { sorts }),
 			});
-			// logger.debug('Raw Notion API Response:', { response: response });
 
-			// Type guard to ensure we only process full PageObjectResponses
 			const isPageObjectResponse = (obj: unknown): obj is PageObjectResponse => {
 				return obj !== null && typeof obj === 'object' && 'properties' in obj;
 			};
 
-			// Filter out any partial responses if necessary, though ListResponse should contain full pages
-			const pages = response.results.filter(isPageObjectResponse);
-
-			// logger.debug(`Filtered ${pages.length} valid page objects.`);
-			return pages;
+			return response.results.filter(isPageObjectResponse);
 		} catch (error) {
 			logger.error(`Error querying database ${databaseId}:`, { error: error });
-			return []; // Return empty array on error
+			return [];
 		}
 	}
 
 	/**
-	 * Maps a Notion PageObjectResponse to a GalleryItem.
+	 * Converts Notion page to gallery item model
+	 * @param page - Notion page object
+	 * @returns Formatted gallery item
 	 */
 	private mapPageToGalleryItem(page: PageObjectResponse): GalleryItem {
 		const properties = page.properties as unknown as NotionGalleryProperties;
 
-		// Safely extract and structure data from Notion properties
-		const title = extractTextFromTitle(properties.Name?.title) ?? 'Untitled';
-		const description = extractTextFromRichText(properties.Description?.rich_text);
+		const title = NotionExtractors.title(properties.Name?.title) ?? 'Untitled';
+		const description = NotionExtractors.richText(properties.Description?.rich_text);
 		const tags = properties.Tags?.multi_select?.map((tag) => tag.name) ?? [];
-		const url = extractStringFromFormulaProperty(properties.URL);
-		const mediaType = determineMediaType(url); // Determine type from URL
+		const url = NotionExtractors.formula(properties.URL);
+		const mediaType = NotionExtractors.mediaType(url);
 
-		// Construct the simplified GalleryItem
 		const item: GalleryItem = {
 			id: page.id,
 			title,
 		};
 
-		// Conditionally add optional properties if they exist
 		if (description) item.description = description;
 		if (tags.length > 0) item.tags = tags;
 		if (url) item.url = url;
@@ -205,24 +232,22 @@ export class NotionProvider implements DatabaseProvider {
 	}
 
 	/**
-	 * Get all gallery items from the configured Notion database.
+	 * Fetches all published gallery items
+	 * @param options - Retrieval options
+	 * @param options.shuffle - Whether to randomize results
+	 * @returns Promise of gallery items array
 	 */
 	async getGalleryItems(options?: { shuffle?: boolean }): Promise<GalleryItem[]> {
-		// Define the filter for published items
 		const filter: QueryDatabaseParameters['filter'] = {
-			property: 'Status', // Case-sensitive name of the Status property in Notion
+			property: 'Status',
 			select: {
-				equals: 'Published', // Case-sensitive value
+				equals: 'Published',
 			},
 		};
 
-		// Pass the filter to the queryDatabase method
 		const pages = await this.queryDatabase(this.galleryDbId, filter);
-
-		// Map Notion page objects using the dedicated mapper function.
 		const items = pages.map(this.mapPageToGalleryItem);
 
-		// If shuffle is enabled, shuffle the items with a deterministic seed
 		if (options?.shuffle) {
 			const seed = Math.floor(Math.random() * 10000);
 			return shuffleArrayWithSeed(items, seed);
@@ -232,30 +257,27 @@ export class NotionProvider implements DatabaseProvider {
 	}
 
 	/**
-	 * Search gallery items based on title or description.
-	 * Note: This performs a client-side filter on all items.
-	 * Consider implementing Notion API filtering for better performance with large databases.
+	 * Searches gallery items by text
+	 * @param query - Search term
+	 * @returns Promise of matching gallery items array
 	 */
 	async searchGallery(query: string): Promise<GalleryItem[]> {
-		// Fetch all items first
 		const allItems = await this.getGalleryItems();
 		const lowerQuery = query.toLowerCase();
 
-		// Filter based on title and description (case-insensitive)
 		return allItems.filter((item) => item.title.toLowerCase().includes(lowerQuery) || (item.description?.toLowerCase().includes(lowerQuery) ?? false));
 	}
 
 	/**
-	 * Get a specific gallery item by ID.
+	 * Fetches single gallery item by ID
+	 * @param id - Unique item identifier
+	 * @returns Promise of gallery item or null if not found
 	 */
 	async getGalleryItem(id: string): Promise<GalleryItem | null> {
 		try {
-			// Fetch the page by ID from Notion
 			const page = await this.notion.pages.retrieve({ page_id: id });
 
-			// Type guard to ensure we have a full PageObjectResponse
 			if ('properties' in page) {
-				// Map the page to a GalleryItem
 				return this.mapPageToGalleryItem(page as PageObjectResponse);
 			}
 

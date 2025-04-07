@@ -58,7 +58,6 @@
 			"@/*": ["./src/*"],
 			"@/components/*": ["./src/app/components/*"],
 			"@/lib/*": ["./src/app/lib/*"],
-			"@/utils/*": ["./src/app/utils/*"],
 			"@/hooks/*": ["./src/app/hooks/*"],
 			"@/providers/*": ["./src/app/providers/*"],
 			"@/styles/*": ["./src/app/styles/*"]

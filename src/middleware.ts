@@ -19,10 +19,7 @@ export function generateCsp(): { cspHeader: string; nonce: string } {
 
 	const cspDirectives: CspDirective[] = [
 		{ name: 'base-uri', values: ["'self'"] },
-		{
-			name: 'connect-src',
-			values: ["'self'", 'https://*.vercel.app', 'https://storage.u29dc.com', ...(process.env.NODE_ENV === 'development' ? ['ws://*', 'wss://*'] : []), 'https://*'].flat().filter(Boolean),
-		},
+		{ name: 'connect-src', values: ["'self'", 'https://*.vercel.app', 'https://storage.u29dc.com', 'https://*'].flat().filter(Boolean) },
 		{ name: 'default-src', values: ["'self'"] },
 		{ name: 'font-src', values: ["'self'", 'https:', 'data:'] },
 		{ name: 'form-action', values: ["'self'"] },
