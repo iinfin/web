@@ -5,6 +5,9 @@ import React, { useEffect, useRef } from 'react';
 import { useFilmGrain } from '@/app/context/FilmGrainContext';
 import { logger } from '@/app/utils/logger';
 
+/**
+ * Props for the FilmGrain component.
+ */
 interface FilmGrainProps {
 	/** Optional override for the grain intensity (0-1). Defaults to context value. */
 	intensity?: number;
@@ -28,6 +31,7 @@ interface FilmGrainProps {
  * @returns {JSX.Element | null} The canvas element or null.
  */
 export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, speed: speedProp, className = '' }: FilmGrainProps): JSX.Element | null {
+	// Get settings from context
 	const { enabled, intensity: contextIntensity, scale: contextScale, speed: contextSpeed } = useFilmGrain();
 
 	// Use prop values if provided, otherwise use context values
@@ -35,31 +39,32 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 	const scale = scaleProp ?? contextScale;
 	const speed = speedProp ?? contextSpeed;
 
+	// Component refs
 	const canvasRef = useRef<HTMLCanvasElement>(null);
 	const requestRef = useRef<number>(0);
 	const shaderProgramRef = useRef<WebGLProgram | null>(null);
 	const timeRef = useRef<number>(0);
 
-	// Effect for WebGL setup, animation loop, and cleanup
+	// WebGL setup and animation effect
 	useEffect(() => {
 		// Skip effect entirely if the grain is disabled via context
 		if (!enabled) return;
 
+		// --- Canvas and WebGL Setup ---
 		const canvas = canvasRef.current;
 		if (!canvas) {
 			logger.error('FilmGrain: Canvas element not found.');
 			return;
 		}
 
-		// --- 1. Get WebGL Context ---
-		// Request a WebGL context with specific performance-oriented attributes.
+		// Get WebGL context with performance options
 		const gl = canvas.getContext('webgl', {
-			antialias: false, // No anti-aliasing needed for this effect
-			alpha: true, // Need alpha channel for blending
-			premultipliedAlpha: false, // Shader outputs non-premultiplied alpha
-			depth: false, // No depth buffer needed
-			stencil: false, // No stencil buffer needed
-			preserveDrawingBuffer: false, // Allows browser optimizations
+			antialias: false,
+			alpha: true,
+			premultipliedAlpha: false,
+			depth: false,
+			stencil: false,
+			preserveDrawingBuffer: false,
 		});
 
 		if (!gl) {
@@ -67,19 +72,18 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 			return;
 		}
 
-		// --- 2. Canvas Size and Viewport --- (Handles Resize)
+		// --- Canvas Size Handler ---
 		const updateCanvasSize = () => {
 			canvas.width = window.innerWidth;
 			canvas.height = window.innerHeight;
-			// Update the WebGL viewport to match the new canvas dimensions
 			gl.viewport(0, 0, canvas.width, canvas.height);
 		};
 
-		updateCanvasSize(); // Set initial size
-		window.addEventListener('resize', updateCanvasSize); // Update on resize
+		updateCanvasSize();
+		window.addEventListener('resize', updateCanvasSize);
 
-		// --- 3. Define Shaders --- (GLSL Source Code)
-		// Vertex shader: Positions a full-screen quad and passes texture coordinates.
+		// --- Shader Sources ---
+		// Vertex shader for positioning
 		const vertexShaderSource = `
       attribute vec2 a_position;
       attribute vec2 a_texCoord;
@@ -91,7 +95,7 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
       }
     `;
 
-		// Fragment shader: Generates procedural film grain based on time and UVs.
+		// Fragment shader for grain generation
 		const fragmentShaderSource = `
       precision mediump float;
       varying vec2 v_texCoord;
@@ -145,7 +149,7 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
       }
     `;
 
-		// --- 4. Compile Shaders --- Helper function
+		// --- Shader Compilation ---
 		const compileShader = (source: string, type: number): WebGLShader | null => {
 			const shader = gl.createShader(type);
 			if (!shader) {
@@ -165,9 +169,9 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 		const vertexShader = compileShader(vertexShaderSource, gl.VERTEX_SHADER);
 		const fragmentShader = compileShader(fragmentShaderSource, gl.FRAGMENT_SHADER);
 
-		if (!vertexShader || !fragmentShader) return; // Abort if compilation failed
+		if (!vertexShader || !fragmentShader) return;
 
-		// --- 5. Create and Link Shader Program ---
+		// --- Program Setup ---
 		const shaderProgram = gl.createProgram();
 		if (!shaderProgram) {
 			logger.error('FilmGrain: Failed to create shader program.');
@@ -176,105 +180,101 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 		gl.attachShader(shaderProgram, vertexShader);
 		gl.attachShader(shaderProgram, fragmentShader);
 		gl.linkProgram(shaderProgram);
-		shaderProgramRef.current = shaderProgram; // Store reference for cleanup
+		shaderProgramRef.current = shaderProgram;
 
-		// Check for linking errors
+		// Verify program linked successfully
 		if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
 			logger.error('FilmGrain: Shader program failed to link:', gl.getProgramInfoLog(shaderProgram));
-			gl.deleteProgram(shaderProgram); // Clean up failed program
+			gl.deleteProgram(shaderProgram);
 			shaderProgramRef.current = null;
 			return;
 		}
 
-		// Shaders are linked, no longer needed individually
+		// Cleanup linked shaders
 		gl.deleteShader(vertexShader);
 		gl.deleteShader(fragmentShader);
 
-		// --- 6. Setup Buffers for Fullscreen Quad ---
-		// Buffer for vertex positions (-1 to 1 range)
+		// --- Buffer Setup ---
+		// Position buffer (for full-screen quad)
 		const positionBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-		const positions = [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0]; // Triangle strip vertices
+		const positions = [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0];
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
 
-		// Buffer for texture coordinates (0 to 1 range)
+		// Texture coordinates buffer
 		const texCoordBuffer = gl.createBuffer();
 		gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
-		const texCoords = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0]; // Corresponding UVs
+		const texCoords = [0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 1.0, 1.0];
 		gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texCoords), gl.STATIC_DRAW);
 
-		// --- 7. Get Attribute and Uniform Locations ---
-		// Locations for vertex attributes
+		// --- Get Shader Locations ---
 		const positionAttributeLocation = gl.getAttribLocation(shaderProgram, 'a_position');
 		const texCoordAttributeLocation = gl.getAttribLocation(shaderProgram, 'a_texCoord');
-		// Locations for fragment shader uniforms
 		const timeUniformLocation = gl.getUniformLocation(shaderProgram, 'u_time');
 		const intensityUniformLocation = gl.getUniformLocation(shaderProgram, 'u_intensity');
 		const scaleUniformLocation = gl.getUniformLocation(shaderProgram, 'u_scale');
 		const speedUniformLocation = gl.getUniformLocation(shaderProgram, 'u_speed');
 		const resolutionUniformLocation = gl.getUniformLocation(shaderProgram, 'u_resolution');
 
-		// --- 8. WebGL State Setup ---
-		// Enable alpha blending for transparency
+		// --- WebGL State Configuration ---
 		gl.enable(gl.BLEND);
-		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Standard alpha blending
+		gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
-		// --- 9. Animation Loop ---
+		// --- Animation Loop ---
 		const animate = (time: number) => {
-			timeRef.current = time * 0.001; // Convert DOMHighResTimeStamp (ms) to seconds for shader
+			timeRef.current = time * 0.001; // Convert to seconds
 
-			// Use the compiled shader program
+			// Use shader program
 			gl.useProgram(shaderProgram);
 
-			// Bind and configure vertex attributes
+			// Setup position attribute
 			gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 			gl.enableVertexAttribArray(positionAttributeLocation);
 			gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
+			// Setup texCoord attribute
 			gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer);
 			gl.enableVertexAttribArray(texCoordAttributeLocation);
 			gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-			// Update shader uniforms with current values
+			// Update uniforms
 			gl.uniform1f(timeUniformLocation, timeRef.current);
-			gl.uniform1f(intensityUniformLocation, intensity); // Use context/prop value
-			gl.uniform1f(scaleUniformLocation, scale); // Use context/prop value
-			gl.uniform1f(speedUniformLocation, speed); // Use context/prop value
+			gl.uniform1f(intensityUniformLocation, intensity);
+			gl.uniform1f(scaleUniformLocation, scale);
+			gl.uniform1f(speedUniformLocation, speed);
 			gl.uniform2f(resolutionUniformLocation, canvas.width, canvas.height);
 
-			// Draw the full-screen quad (triangle strip)
+			// Draw the quad
 			gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
 
-			// Request the next animation frame
+			// Request next frame
 			requestRef.current = requestAnimationFrame(animate);
 		};
 
-		// Start the animation loop
+		// Start animation
 		requestRef.current = requestAnimationFrame(animate);
 
-		// --- 10. Cleanup --- (Runs when component unmounts or dependencies change)
+		// --- Cleanup ---
 		return () => {
-			// Stop the animation loop
+			// Stop animation
 			if (requestRef.current) {
 				cancelAnimationFrame(requestRef.current);
 			}
-			// Remove the resize listener
+
+			// Remove resize handler
 			window.removeEventListener('resize', updateCanvasSize);
 
-			// Clean up WebGL resources (buffers are implicitly cleaned, but program needs explicit deletion)
+			// Clean up WebGL resources
 			if (gl && shaderProgramRef.current) {
 				gl.deleteProgram(shaderProgramRef.current);
-				shaderProgramRef.current = null; // Clear the ref
+				shaderProgramRef.current = null;
 			}
 		};
-		// Rerun effect if configuration props change or if effect is enabled/disabled
 	}, [intensity, scale, speed, enabled]);
 
-	// If effect is disabled via context, render nothing.
+	// Don't render if disabled
 	if (!enabled) return null;
 
-	// Render the canvas element, positioned fixed to cover viewport.
-	// pointer-events-none allows interactions with elements underneath.
-	// mix-blend-difference creates the overlay effect.
+	// Render canvas with appropriate properties
 	return <canvas ref={canvasRef} className={`pointer-events-none fixed inset-0 z-50 mix-blend-difference ${className}`} aria-hidden="true" />;
 }

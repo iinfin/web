@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 
-// Define specific image types to replace 'any'
+/**
+ * Strongly typed definition for Open Graph image metadata.
+ */
 type OpenGraphImage = {
 	url: string;
 	alt?: string;
@@ -9,6 +11,9 @@ type OpenGraphImage = {
 	type?: string;
 };
 
+/**
+ * Strongly typed definition for Twitter image metadata.
+ */
 type TwitterImage = {
 	url: string;
 	alt?: string;
@@ -18,7 +23,8 @@ type TwitterImage = {
 };
 
 /**
- * Site metadata constants
+ * Core site metadata constants.
+ * Contains essential information used throughout the metadata configuration.
  */
 const SITE = {
 	title: 'Incomplete Infinity (@U29DC)',
@@ -33,7 +39,8 @@ const SITE = {
 } as const;
 
 /**
- * Shared image metadata used across OG and Twitter
+ * Shared image metadata used across OG and Twitter.
+ * Defined as a constant array of image specifications.
  */
 const sharedImages = [
 	{
@@ -46,7 +53,8 @@ const sharedImages = [
 ] as const;
 
 /**
- * Viewport configuration
+ * Viewport configuration for the application.
+ * Controls the visual viewport behavior on various devices.
  */
 export const viewport: Viewport = {
 	themeColor: SITE.themeColor,
@@ -58,7 +66,8 @@ export const viewport: Viewport = {
 };
 
 /**
- * Primary metadata configuration for Next.js
+ * Primary metadata configuration for Next.js.
+ * Includes comprehensive metadata for SEO, social sharing, and device integration.
  */
 const MetadataTemplate: Metadata = {
 	metadataBase: new URL(SITE.url),
