@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/iinfin/web/compare/v1.1.1...v1.1.2) (2025-04-08)
+
+### Bug Fixes
+
+- **components:** enhance mobile experience with viewport fix and responsive gallery ([4f7999d](https://github.com/iinfin/web/commit/4f7999dfc0abe1de76303282e78eed90f305793e))
+- **layout:** implement mobile viewport height fix ([9ca1e4c](https://github.com/iinfin/web/commit/9ca1e4c66d5391fcf5f0f372861ae03adb0928e1))
+
 ## [1.1.1](https://github.com/iinfin/web/compare/v1.1.0...v1.1.1) (2025-04-07)
 
 ### Bug Fixes
