@@ -43,7 +43,7 @@ const SCENE = {
 	columns: 1, // Columns in layout (kept for context)
 	planeHeight: 1, // Base height for scaling calculations
 	verticalGap: 1.05, // Spacing between items (larger than planeHeight)
-	scrollMultiplier: 0.075, // Scroll sensitivity factor
+	scrollMultiplier: 0.1, // Scroll sensitivity factor
 	recycleBuffer: 2, // Viewport buffer (multiple of planeHeight) for recycling items
 	leftPadding: 0.0, // Distance from left edge of canvas
 	autoScrollSpeed: 15, // Speed for automatic scrolling on touch devices
@@ -648,8 +648,8 @@ const ScrollingPlanes: FC<ScrollingPlanesProps> = ({ galleryItems, disableMedia,
 
 	// State and Refs
 	const scrollSpring = useSpring(0, {
-		stiffness: 150,
-		damping: 25, // Adjusted damping for a slightly less bouncy feel
+		stiffness: 100,
+		damping: 50, // Adjusted damping for a slightly less bouncy feel
 		mass: 1,
 	});
 

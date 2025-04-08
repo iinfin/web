@@ -5,12 +5,6 @@ import Foundation from '@/components/sections/Foundation';
 
 /**
  * Home page component that displays the main sections of the site.
- * Uses a responsive grid layout that adapts for different screen sizes and orientations:
- * - Mobile Portrait: Creation (full height), Foundation (overlay)
- * - Tablet Portrait: Creation (full height), Foundation (full height)
- * - Desktop (lg): Creation (left 40%), Foundation (right 60%)
- * - Wider Desktop (xl): Creation (left 50%), Foundation (right 50%)
- * - Extra Wide Desktop (2xl): Creation (left 70%), Foundation (right 30%)
  *
  * @returns {JSX.Element} The rendered home page
  */
@@ -18,24 +12,12 @@ export default function Home(): JSX.Element {
 	return (
 		<>
 			{/* Responsive Grid Container */}
-			<div className="grid h-full min-h-screen grid-rows-10 lg:grid-cols-10 lg:grid-rows-1" aria-label="Main page layout">
+			<div className="grid h-full min-h-screen grid-cols-10 grid-rows-10" aria-label="Main page layout">
 				{/* Creation Section */}
 				<div
 					className={clsx(
 						// Base layout
-						'relative h-full',
-
-						// Mobile layout (default)
-						'col-span-1 col-start-1 row-span-10 row-start-1',
-
-						// Tablet layout
-						'md:row-span-10 md:row-start-1',
-
-						// Desktop layout
-						'lg:row-span-1 lg:row-start-1',
-						'lg:col-span-4 lg:col-start-1',
-						'xl:col-span-5 xl:col-start-1',
-						'2xl:col-span-7 2xl:col-start-1',
+						'relative col-span-5 col-start-1 row-span-full row-start-1 h-full',
 					)}
 				>
 					<div className="absolute inset-0 h-full w-full">
@@ -47,21 +29,20 @@ export default function Home(): JSX.Element {
 				<div
 					className={clsx(
 						// Base layout
-						'relative h-full',
+						'relative col-span-full col-start-1 row-span-full row-start-1 h-full',
 
 						// Mobile overlay effect
 						'bg-gradient-to-b from-white via-white/90 to-white/0',
-						'col-span-1 col-start-1 row-span-10 row-start-1',
 
 						// Tablet layout
-						'md:row-span-10 md:row-start-1',
+						'sm:row-span-full sm:row-start-1',
 
 						// Desktop layout
 						'lg:bg-none',
-						'lg:row-span-1 lg:row-start-1',
+
 						'lg:col-span-6 lg:col-start-5',
-						'xl:col-span-5 xl:col-start-6',
-						'2xl:col-span-3 2xl:col-start-8',
+						'xl:col-span-5 xl:col-start-5',
+						'2xl:col-span-3 2xl:col-start-5',
 					)}
 				>
 					<div className="absolute inset-0 h-full w-full">
