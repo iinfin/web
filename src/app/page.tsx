@@ -17,7 +17,13 @@ export default function Home(): JSX.Element {
 				<div
 					className={clsx(
 						// Base layout
-						'relative col-span-5 col-start-1 row-span-full row-start-1 h-full',
+						'relative h-full',
+
+						// Mobile layout
+						'col-span-full col-start-1 row-span-5 row-start-6',
+
+						// Desktop layout
+						'lg:col-span-5 lg:col-start-1 lg:row-span-full lg:row-start-1',
 					)}
 				>
 					<div className="absolute inset-0 h-full w-full">
@@ -29,7 +35,8 @@ export default function Home(): JSX.Element {
 				<div
 					className={clsx(
 						// Base layout
-						'relative col-span-full col-start-1 row-span-full row-start-1 h-full',
+						'relative h-full',
+						'col-span-full col-start-1 row-span-full row-start-1',
 
 						// Mobile overlay effect
 						'bg-gradient-to-b from-white via-white/90 to-white/0',
