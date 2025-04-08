@@ -6,8 +6,8 @@ import Cursor from '@/components/shared/Cursor';
 import FilmGrain from '@/components/shared/FilmGrain';
 import MetadataTemplate from '@/components/shared/Metadata';
 import Preload from '@/components/shared/Preload';
+import ViewportHeightFix from '@/components/shared/ViewportHeightFix';
 
-import ViewportHeightFix from '@/app/components/shared/ViewportHeightFix';
 import { CursorProvider } from '@/hooks/useCursor';
 import { FilmGrainProvider } from '@/hooks/useFilmGrain';
 
