@@ -39,6 +39,9 @@
 	--breakpoint-sm: 640px; /* Standard SM */
 	--breakpoint-xs: 480px; /* Custom XS */
 	--breakpoint-xxs: 480px; /* Keeping original xxs, though xs covers it now */
+
+	/* Dynamic viewport height for mobile Safari */
+	--vh: 1vh;
 }
 
 @layer base {
@@ -68,6 +71,11 @@
 		font-family: var(--font-sans);
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
+		margin: 0;
+		padding: 0;
+		min-height: 100vh; /* Fallback */
+		min-height: calc(var(--vh, 1vh) * 100);
+		overflow: hidden;
 	}
 
 	h1,
@@ -210,6 +218,17 @@
 	/* Animation utilities */
 	.animated {
 		opacity: 0;
+	}
+
+	/* Real viewport height utility */
+	.h-real-screen {
+		height: 100vh; /* Fallback */
+		height: calc(var(--vh, 1vh) * 100);
+	}
+
+	.min-h-real-screen {
+		min-height: 100vh; /* Fallback */
+		min-height: calc(var(--vh, 1vh) * 100);
 	}
 }
 

@@ -7,6 +7,7 @@ import FilmGrain from '@/components/shared/FilmGrain';
 import MetadataTemplate from '@/components/shared/Metadata';
 import Preload from '@/components/shared/Preload';
 
+import ViewportHeightFix from '@/app/components/shared/ViewportHeightFix';
 import { CursorProvider } from '@/hooks/useCursor';
 import { FilmGrainProvider } from '@/hooks/useFilmGrain';
 
@@ -32,7 +33,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 			<head>
 				<Preload />
 			</head>
-			<body className="bg-white-x1 text-black-x1 dark:bg-black-x2 dark:text-white-x1 min-h-screen uppercase">
+			<body className="bg-white-x1 text-black-x1 dark:bg-black-x2 dark:text-white-x1 min-h-real-screen uppercase">
+				{/* Mobile Viewport Height Fix */}
+				<ViewportHeightFix />
+
 				{/* Main Content Area */}
 				<main id="main-content" className="relative h-full w-full">
 					{children}

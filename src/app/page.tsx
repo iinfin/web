@@ -12,7 +12,7 @@ export default function Home(): JSX.Element {
 	return (
 		<>
 			{/* Responsive Grid Container */}
-			<div className="grid h-full min-h-screen grid-cols-10 grid-rows-10" aria-label="Main page layout">
+			<div className="min-h-real-screen grid h-full grid-cols-10 grid-rows-10" aria-label="Main page layout">
 				{/* Creation Section */}
 				<div
 					className={clsx(
