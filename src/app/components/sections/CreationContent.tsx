@@ -727,6 +727,9 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 					};
 				}
 			}
+
+			// Return empty cleanup function for paths where no event listeners were added
+			return () => {};
 		}, [texture, url, onAssetLoaded]);
 
 		// Safety timeout: force animate after a delay to prevent permanent invisibility
@@ -783,6 +786,9 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 
 				return () => clearTimeout(playbackRetryTimeout);
 			}
+
+			// Return empty cleanup function for paths where no event listeners were added
+			return () => {};
 		}, [texture, url]);
 
 		return texture ? (
