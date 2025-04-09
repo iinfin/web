@@ -150,6 +150,7 @@ interface AnimatedMaterialUniforms {
 	u_grainIntensity: number; // Controls the intensity of the film grain
 	u_grainScale: number; // Controls the scale/size of grain particles
 	u_grainSpeed: number;
+	u_assetLoaded: number; // 0.0 to 1.0 for asset loaded animation
 }
 
 // Extend shaderMaterial
@@ -169,12 +170,14 @@ const AnimatedShaderMaterial = shaderMaterial(
 		u_grainIntensity: MATERIAL.grain.intensity,
 		u_grainScale: MATERIAL.grain.scale,
 		u_grainSpeed: MATERIAL.grain.speed,
+		u_assetLoaded: 0, // Default to not loaded
 	},
 	// Vertex Shader
 	/*glsl*/ `
 		varying vec2 vUv;
 		varying float v_visibility; // Pass visibility to fragment shader
 		varying float v_initialAnimProgress; // Pass progress to fragment shader
+		varying float v_assetLoaded; // Pass asset loaded progress to fragment shader
 
 		uniform float u_planeScrollAxisPos;
 		uniform float u_viewportScrollAxisLength;
@@ -183,12 +186,14 @@ const AnimatedShaderMaterial = shaderMaterial(
 		uniform int u_layoutMode; // 0: vertical, 1: horizontal
 		uniform float u_initialAnimProgress;
 		uniform float u_visibilityFade; // Smaller = sharper fade edge
+		uniform float u_assetLoaded; // Asset loaded animation progress
 
 		const float FADE_DISTANCE_FACTOR = 0.2; // Portion of viewport length used for fade edge
 
 		void main() {
 			vUv = uv;
 			v_initialAnimProgress = u_initialAnimProgress;
+			v_assetLoaded = u_assetLoaded;
 
 			// Calculate visibility based on plane's position relative to viewport edges along the scroll axis
 			float halfViewportScroll = u_viewportScrollAxisLength / 2.0;
@@ -207,8 +212,14 @@ const AnimatedShaderMaterial = shaderMaterial(
 			// Simple initial scale animation - no other transformations
 			float initialScale = mix(0.95, 1.0, smoothstep(0.0, 1.0, u_initialAnimProgress));
 
+			// Apply additional scale when asset is loaded
+			float assetLoadedScale = mix(0.95, 1.0, smoothstep(0.0, 1.0, u_assetLoaded));
+
+			// Combine scale factors
+			float finalScale = initialScale * assetLoadedScale;
+
 			// Apply the scaling
-			vec3 scaledPosition = position * initialScale;
+			vec3 scaledPosition = position * finalScale;
 
 			gl_Position = projectionMatrix * modelViewMatrix * vec4(scaledPosition, 1.0);
 		}
@@ -218,6 +229,7 @@ const AnimatedShaderMaterial = shaderMaterial(
 		varying vec2 vUv;
 		varying float v_visibility;
 		varying float v_initialAnimProgress;
+		varying float v_assetLoaded;
 
 		uniform sampler2D map;
 		uniform float u_aspect; // Use aspect ratio to correct UVs if needed
@@ -266,9 +278,9 @@ const AnimatedShaderMaterial = shaderMaterial(
 			vec2 correctedUv = vUv;
 			vec4 textureColor = texture2D(map, correctedUv);
 
-			// Combine visibility factors: base alpha * initial animation progress * edge fade visibility.
+			// Combine visibility factors: base alpha * initial animation progress * edge fade visibility * asset loaded progress
 			// Uses varyings passed from vertex shader.
-			float alpha = textureColor.a * v_initialAnimProgress * v_visibility;
+			float alpha = textureColor.a * v_initialAnimProgress * v_visibility * v_assetLoaded;
 
 			// Discard transparent pixels early to save computation
 			if (alpha < 0.01) discard;
@@ -309,6 +321,7 @@ interface AnimatedMaterialProps extends Partial<AnimatedMaterialUniforms> {
 	viewportFixedAxisLength: number;
 	layoutMode: number;
 	initialAnimProgress: number;
+	assetLoaded: number; // New prop for asset loaded animation
 	aspect: number;
 	grainIntensity?: number;
 	grainScale?: number;
@@ -343,6 +356,8 @@ interface PlaneContentProps {
 	grainScale: number;
 	/** Film grain animation speed uniform value */
 	grainSpeed: number;
+	/** Callback when the asset has loaded */
+	onAssetLoaded: () => void;
 }
 
 /**
@@ -443,6 +458,7 @@ const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 	viewportFixedAxisLength,
 	layoutMode,
 	initialAnimProgress,
+	assetLoaded,
 	aspect,
 	u_visibilityFade = MATERIAL.visibility.fade,
 	grainIntensity = MATERIAL.grain.intensity,
@@ -469,6 +485,8 @@ const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 			materialRef.current.uniforms.u_layoutMode.value = layoutMode;
 			// @ts-expect-error - ShaderMaterial uniforms not properly typed
 			materialRef.current.uniforms.u_initialAnimProgress.value = initialAnimProgress;
+			// @ts-expect-error - ShaderMaterial uniforms not properly typed
+			materialRef.current.uniforms.u_assetLoaded.value = assetLoaded;
 			// @ts-expect-error - ShaderMaterial uniforms not properly typed
 			materialRef.current.uniforms.u_aspect.value = aspect;
 			// @ts-expect-error - ShaderMaterial uniforms not properly typed
@@ -502,6 +520,7 @@ const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
 			u_viewportFixedAxisLength={viewportFixedAxisLength}
 			u_layoutMode={layoutMode}
 			u_initialAnimProgress={initialAnimProgress}
+			u_assetLoaded={assetLoaded}
 			u_aspect={aspect}
 			u_visibilityFade={u_visibilityFade}
 			u_grainIntensity={grainIntensity}
@@ -536,8 +555,52 @@ const ImagePlaneContent: FC<PlaneContentProps> = React.memo(
 		grainIntensity,
 		grainScale,
 		grainSpeed,
+		onAssetLoaded,
 	}) => {
-		const texture = useTexture(url); // Loads image texture
+		const [assetLoaded, setAssetLoaded] = useState(0);
+		const startTimeRef = useRef<number | null>(null);
+		const loadSuccessRef = useRef<boolean>(false);
+
+		// Load the texture and set up success and error handling
+		const texture = useTexture(url);
+
+		// Set up texture loading success handling
+		useEffect(() => {
+			if (texture) {
+				logger.info(`Image loaded successfully: ${url}`);
+				loadSuccessRef.current = true;
+				startTimeRef.current = 0;
+				onAssetLoaded();
+			}
+		}, [texture, url, onAssetLoaded]);
+
+		// Safety check: Force animate after a timeout to prevent permanent invisibility
+		useEffect(() => {
+			const safetyTimeout = setTimeout(() => {
+				if (!loadSuccessRef.current) {
+					logger.warn(`Image load safety timeout triggered: ${url}`);
+					loadSuccessRef.current = true;
+					startTimeRef.current = 0;
+					onAssetLoaded();
+				}
+			}, 5000); // 5 second timeout
+
+			return () => clearTimeout(safetyTimeout);
+		}, [url, onAssetLoaded]);
+
+		// Animate the asset loaded state
+		useFrame((state) => {
+			if (startTimeRef.current !== null && assetLoaded < 1) {
+				if (startTimeRef.current === 0) {
+					startTimeRef.current = state.clock.elapsedTime;
+				}
+				const elapsed = state.clock.elapsedTime - startTimeRef.current;
+				const ASSET_FADE_DURATION = 1.0; // 1 second fade-in
+				let progress = Math.min(elapsed / ASSET_FADE_DURATION, 1);
+				progress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+				setAssetLoaded(progress);
+			}
+		});
 
 		return texture ? (
 			<AnimatedMaterial
@@ -548,6 +611,7 @@ const ImagePlaneContent: FC<PlaneContentProps> = React.memo(
 				viewportFixedAxisLength={viewportFixedAxisLength}
 				layoutMode={layoutMode}
 				initialAnimProgress={initialAnimProgress}
+				assetLoaded={assetLoaded}
 				aspect={aspect}
 				grainIntensity={grainIntensity}
 				grainScale={grainScale}
@@ -577,7 +641,14 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 		grainIntensity,
 		grainScale,
 		grainSpeed,
+		onAssetLoaded,
 	}) => {
+		const [assetLoaded, setAssetLoaded] = useState(0);
+		const startTimeRef = useRef<number | null>(null);
+		const canPlayRef = useRef(false);
+		const loadAttemptedRef = useRef(false);
+
+		// Create the texture with improved error handling
 		const texture = useVideoTexture(url, {
 			muted: true,
 			loop: true,
@@ -585,31 +656,132 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 			crossOrigin: 'anonymous',
 			start: true,
 			autoplay: true,
-			// Add options to prevent power-saving errors
-			unsuspend: 'canplay', // Start playing when 'canplay' event fires
-			preload: 'auto', // Preload the video
-			// Use the correct event handler type
+			unsuspend: 'canplay',
+			preload: 'auto',
 			onerror: (event: Event | string) => {
 				const errorMessage = typeof event === 'string' ? event : 'Video loading error';
-				logger.warn(`Video texture playback issue: ${errorMessage}`, { url });
-				// Don't throw error as we'll fall back to the fallback material
+				logger.error(`Video texture loading failed: ${errorMessage}`, { url });
+
+				// Even on error, we should trigger animation to prevent invisible items
+				if (!canPlayRef.current) {
+					canPlayRef.current = true;
+					startTimeRef.current = 0;
+					onAssetLoaded();
+				}
 			},
 		});
 
+		// More robust video readiness detection
 		useEffect(() => {
-			// Safety check - if texture.source.data is a video element, ensure playback
+			// Mark this load attempt even if we don't have texture yet
+			loadAttemptedRef.current = true;
+
 			if (texture && texture.source && texture.source.data) {
 				const videoElement = texture.source.data as HTMLVideoElement;
-				if (videoElement.paused) {
-					// Attempt to restart playback if paused
-					const playPromise = videoElement.play();
-					if (playPromise !== undefined) {
-						playPromise.catch((error) => {
-							logger.warn('Video autoplay prevented by browser:', { error: error.message, url });
-							// Don't throw error as user interaction may enable playback later
+
+				// Debug log the video element state
+				logger.info(`Video element state for ${url}:`, {
+					readyState: videoElement.readyState,
+					paused: videoElement.paused,
+					error: videoElement.error,
+					networkState: videoElement.networkState,
+				});
+
+				const handleCanPlay = () => {
+					logger.info(`Video can play: ${url}`);
+					canPlayRef.current = true;
+					startTimeRef.current = 0;
+					onAssetLoaded();
+				};
+
+				// Video already has enough data
+				if (videoElement.readyState >= 3) {
+					// HAVE_FUTURE_DATA or higher
+					handleCanPlay();
+				} else {
+					// Add both 'canplay' and 'loadeddata' events for better coverage
+					videoElement.addEventListener('canplay', handleCanPlay);
+					videoElement.addEventListener('loadeddata', handleCanPlay);
+
+					// Also handle errors at this level
+					const handleError = () => {
+						logger.error(`Video element error: ${url}`, {
+							errorCode: videoElement.error?.code,
+							errorMessage: videoElement.error?.message,
 						});
-					}
+
+						// Trigger animation even on error
+						if (!canPlayRef.current) {
+							canPlayRef.current = true;
+							startTimeRef.current = 0;
+							onAssetLoaded();
+						}
+					};
+
+					videoElement.addEventListener('error', handleError);
+
+					return () => {
+						videoElement.removeEventListener('canplay', handleCanPlay);
+						videoElement.removeEventListener('loadeddata', handleCanPlay);
+						videoElement.removeEventListener('error', handleError);
+					};
 				}
+			}
+		}, [texture, url, onAssetLoaded]);
+
+		// Safety timeout: force animate after a delay to prevent permanent invisibility
+		useEffect(() => {
+			const safetyTimeout = setTimeout(() => {
+				if (loadAttemptedRef.current && !canPlayRef.current) {
+					logger.warn(`Video load safety timeout triggered: ${url}`);
+					canPlayRef.current = true;
+					startTimeRef.current = 0;
+					onAssetLoaded();
+				}
+			}, 5000); // 5 second timeout
+
+			return () => clearTimeout(safetyTimeout);
+		}, [url, onAssetLoaded]);
+
+		// Animate the asset loaded state
+		useFrame((state) => {
+			if (startTimeRef.current !== null && assetLoaded < 1) {
+				if (startTimeRef.current === 0) {
+					startTimeRef.current = state.clock.elapsedTime;
+				}
+				const elapsed = state.clock.elapsedTime - startTimeRef.current;
+				const ASSET_FADE_DURATION = 1.0; // 1 second fade-in
+				let progress = Math.min(elapsed / ASSET_FADE_DURATION, 1);
+				progress = 1 - Math.pow(1 - progress, 3); // Cubic ease out
+				setAssetLoaded(progress);
+			}
+		});
+
+		// Try to ensure video playback
+		useEffect(() => {
+			if (texture && texture.source && texture.source.data) {
+				const videoElement = texture.source.data as HTMLVideoElement;
+
+				// Function to retry playback
+				const tryPlay = () => {
+					if (videoElement.paused) {
+						logger.info(`Attempting to play video: ${url}`);
+						const playPromise = videoElement.play();
+						if (playPromise !== undefined) {
+							playPromise.catch((error) => {
+								logger.warn(`Video playback prevented: ${error.message}`, { url });
+							});
+						}
+					}
+				};
+
+				// Try to play immediately
+				tryPlay();
+
+				// And retry after a short delay in case of temporary blocking
+				const playbackRetryTimeout = setTimeout(tryPlay, 1000);
+
+				return () => clearTimeout(playbackRetryTimeout);
 			}
 		}, [texture, url]);
 
@@ -622,6 +794,7 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 				viewportFixedAxisLength={viewportFixedAxisLength}
 				layoutMode={layoutMode}
 				initialAnimProgress={initialAnimProgress}
+				assetLoaded={assetLoaded}
 				aspect={aspect}
 				grainIntensity={grainIntensity}
 				grainScale={grainScale}
@@ -661,6 +834,11 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		const [initialAnimProgress, setInitialAnimProgress] = useState(0); // 0 to 1
 		const [isMounted, setIsMounted] = useState(false);
 		const startTimeRef = useRef<number | null>(null);
+
+		// Add a handler for asset loading events
+		const handleAssetLoaded = useCallback(() => {
+			logger.info(`Asset loaded: ${item.title ?? 'unnamed'} (${item.mediaType})`);
+		}, [item.title, item.mediaType]);
 
 		// --- Event Handlers ---
 		const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
@@ -717,6 +895,7 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 				grainIntensity: grainIntensity,
 				grainScale: grainScale,
 				grainSpeed: grainSpeed,
+				onAssetLoaded: handleAssetLoaded,
 			};
 
 			if (item.mediaType === 'video') {
