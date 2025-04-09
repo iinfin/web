@@ -116,7 +116,7 @@ const CONTENT = {
 	// Lists for section content
 	lists: {
 		// Services list for services column
-		services: ['Creative Strategy', 'Reseach', 'Direction', '', 'Production', '', '& Art Exhibitions'],
+		services: ['Creative Strategy', '', 'Reseach', 'Direction', '', 'Production'],
 
 		// Clients list for clients column
 		clients: [
@@ -125,10 +125,12 @@ const CONTENT = {
 			{ text: 'Coca-Cola' },
 			{ text: 'Calvin-Klein' },
 			{ text: 'Meta' },
+			{ text: '' },
 			{ text: 'Nohlab' },
 			{ text: 'Salon Architects' },
-			{ text: 'Taiwan Nat. Museum of Fine Arts' },
 			{ text: 'Outernet London' },
+			{ text: '' },
+			{ text: 'Taiwan Nat. Museum of Fine Arts' },
 			{ text: 'Saasfee Pavillon' },
 			{ text: 'Atelier Des Lumieres' },
 			{ text: 'Sonar Istanbul' },
@@ -138,9 +140,11 @@ const CONTENT = {
 		// Contact links for contact column
 		contacts: [
 			{ href: 'mailto:hey@u29dc.com', text: 'hey@u29dc.com' },
+			{ href: '', text: '' },
 			{ href: 'https://cal.com/u29dc', text: 'cal.com/u29dc' },
 			{ href: 'https://instagram.com/u29dc/', text: 'Instagram@u29dc' },
 			{ href: 'https://linkedin.com/in/u29dc/', text: 'LinkedIn@u29dc' },
+			{ href: '', text: '' },
 		],
 	},
 };
@@ -316,8 +320,8 @@ const DetailsSection: FC<DetailsSectionProps> = ({ durationPrimary, durationSeco
 			>
 				{/* Contact Links */}
 				<motion.div className="flex flex-col" variants={VARIANTS.listStagger}>
-					{CONTENT.lists.contacts.map((link) => (
-						<motion.div key={link.href} variants={VARIANTS.item}>
+					{CONTENT.lists.contacts.map((link, index) => (
+						<motion.div key={index} variants={VARIANTS.item}>
 							<ContactLink href={link.href}>
 								<AnimatedTextSlideUp text={link.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
 							</ContactLink>
