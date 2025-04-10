@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/iinfin/web/compare/v1.1.2...v1.1.3) (2025-04-10)
+
+### Bug Fixes
+
+- **content:** add missing useeffect return paths ([b1864c2](https://github.com/iinfin/web/commit/b1864c27f56e567fc35ef973a7c42cfe75425793))
+- **content:** improve asset loading and visibility transitions ([65843b6](https://github.com/iinfin/web/commit/65843b64d29a6154d71721329c8a5236346315b9))
+
 ## [1.1.2](https://github.com/iinfin/web/compare/v1.1.1...v1.1.2) (2025-04-08)
 
 ### Bug Fixes
