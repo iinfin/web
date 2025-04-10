@@ -9,7 +9,6 @@ permissions:
   contents: write # Needed to push release commits and tags
   issues: write # Needed to comment on released issues/PRs
   pull-requests: write # Needed to comment on released PRs
-  # id-token: write # Uncomment if using OIDC for npm provenance
 
 jobs:
   release:
@@ -19,36 +18,34 @@ jobs:
       NOTION_API_KEY: ${{ secrets.NOTION_API_KEY }}
       NOTION_DB_ID_GALLERY: ${{ secrets.NOTION_DB_ID_GALLERY }}
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      # NPM_TOKEN: ${{ secrets.NPM_TOKEN }} # Uncomment if publishing to npm
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           persist-credentials: false # Avoid potential conflicts with GH_TOKEN
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
         with:
-          node-version: '20' # Or your project's node version
-          cache: 'npm'
+          bun-version: latest # Or your project's bun version
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install --frozen-lockfile
 
       - name: Format code
-        run: npm run format
+        run: bun run util:format
 
       - name: Lint code
-        run: npm run lint
+        run: bun run util:lint
 
       - name: Build
-        run: npm run build
+        run: bun run build
 
       - name: Test
-        run: npm test
+        run: bun run test
 
       - name: Release
-        run: npx semantic-release
+        run: bunx semantic-release
 
   merge-back:
     name: Merge main back to dev

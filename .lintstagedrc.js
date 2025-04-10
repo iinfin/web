@@ -1,4 +1,4 @@
 export default {
-	'**/*.{js,jsx,ts,tsx}': ['eslint --fix', 'prettier --write'],
-	'**/*.{json,css,scss,md,html,yml,yaml}': 'prettier --write',
+	'**/*.{js,jsx,ts,tsx}': ['bun run util:lint:fix', 'bun run util:format'],
+	'**/*.{json,css,scss,md,html,yml,yaml}': 'bun run util:format',
 };
