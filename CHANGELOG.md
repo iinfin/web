@@ -1,3 +1,9 @@
+## [1.1.4](https://github.com/iinfin/web/compare/v1.1.3...v1.1.4) (2025-04-11)
+
+### Performance Improvements
+
+- **ui:** simplify foundation section by removing animations ([f6dd3fb](https://github.com/iinfin/web/commit/f6dd3fb1e049771f8f2dedf96415ce019240de14))
+
 ## [1.1.3](https://github.com/iinfin/web/compare/v1.1.2...v1.1.3) (2025-04-10)
 
 ### Bug Fixes
