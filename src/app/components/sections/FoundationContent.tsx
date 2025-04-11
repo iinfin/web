@@ -9,8 +9,8 @@ import Link from 'next/link';
 import clsx from 'clsx';
 import { motion, type Variants } from 'framer-motion';
 
-import AnimatedTextFadeIn from '@/app/components/animations/AnimatedTextFadeIn';
-import AnimatedTextSlideUp from '@/app/components/animations/AnimatedTextSlideUp';
+import AnimatedTextFadeIn from '@/components/animations/AnimatedTextFadeIn';
+import AnimatedTextSlideUp from '@/components/animations/AnimatedTextSlideUp';
 
 // =============================================
 // CONFIGURATION AND CONSTANTS

@@ -9,10 +9,11 @@ import { Canvas, extend, useFrame, useThree } from '@react-three/fiber';
 import { type ThreeEvent } from '@react-three/fiber';
 import { useSpring } from 'framer-motion';
 
-import { useInputState } from '@/app/hooks/useInputState';
-import { useWindowSize } from '@/app/hooks/useWindowSize';
-import type { GalleryItem } from '@/app/lib/db/types';
-import { logger } from '@/app/lib/utils/logger';
+import type { GalleryItem } from '@/lib/db/types';
+import { logger } from '@/lib/utils/logger';
+
+import { useInputState } from '@/hooks/useInputState';
+import { useWindowSize } from '@/hooks/useWindowSize';
 
 // =============================================
 // CONFIGURATION AND CONSTANTS

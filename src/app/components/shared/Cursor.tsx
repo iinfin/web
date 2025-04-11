@@ -119,7 +119,7 @@ export default function Cursor(): JSX.Element | null {
 	// Style classes
 	const containerClasses = clsx('pointer-events-none fixed inset-0 z-[9999]', 'transition-opacity duration-300 ease-in-out', !isHidden && isMouseInWindow ? 'opacity-100' : 'opacity-0');
 	const lineBaseClasses = 'absolute bg-black/80 dark:bg-white/80 mix-blend-difference';
-	const dotBaseClasses = 'absolute transition-[transform,width,height,background-color] duration-200 ease-out';
+	const dotBaseClasses = 'absolute w-[6px] h-[6px] transition-[transform,background-color] duration-200 ease-out';
 
 	return (
 		<motion.div className={containerClasses} aria-hidden="true">
@@ -149,9 +149,7 @@ export default function Cursor(): JSX.Element | null {
 					translateY: '-50%',
 				}}
 				animate={{
-					width: isPointer ? 24 : 6,
-					height: isPointer ? 24 : 6,
-					scale: isPointer ? 1.2 : 1,
+					scale: isPointer ? 4 : 1,
 				}}
 			/>
 
