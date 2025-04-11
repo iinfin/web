@@ -1,97 +1,15 @@
 'use client';
 
 import type { FC, ReactNode } from 'react';
-import { useCallback, useEffect, useState } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
 
 import clsx from 'clsx';
-import { motion, type Variants } from 'framer-motion';
-
-import AnimatedTextFadeIn from '@/components/animations/AnimatedTextFadeIn';
-import AnimatedTextSlideUp from '@/components/animations/AnimatedTextSlideUp';
 
 // =============================================
 // CONFIGURATION AND CONSTANTS
 // =============================================
-
-/**
- * Animation timing constants for consistent motion patterns.
- */
-const ANIMATION = {
-	duration: {
-		primary: 1.0, // Duration for main description and titles
-		secondary: 0.5, // Duration for list items and links
-	},
-	stagger: {
-		fast: 0.1, // Stagger delay for items within lists
-		middle: 0.2, // Stagger delay for lists within columns or link groups
-		slow: 0.5, // Stagger delay for main columns/sections
-	},
-	ease: {
-		outCirc: [0.22, 1, 0.36, 1], // easeOutCirc equivalent
-	},
-};
-
-/**
- * Animation variants for component motion patterns.
- */
-const VARIANTS = {
-	// Stagger variants for the details section container
-	detailsContainer: {
-		hidden: {},
-		visible: {
-			transition: {
-				staggerChildren: ANIMATION.stagger.slow,
-			},
-		},
-	} as Variants,
-
-	// Variants for individual columns within sections
-	column: {
-		hidden: { opacity: 0 },
-		visible: {
-			opacity: 1,
-			transition: {
-				staggerChildren: ANIMATION.stagger.slow,
-			},
-		},
-	} as Variants,
-
-	// Variants for individual items within columns
-	item: {
-		hidden: { opacity: 0, y: 10 },
-		visible: {
-			opacity: 1,
-			y: 0,
-			transition: {
-				duration: ANIMATION.duration.secondary,
-				ease: ANIMATION.ease.outCirc,
-			},
-		},
-	} as Variants,
-
-	// Variants for staggering lists
-	listStagger: {
-		hidden: {},
-		visible: {
-			transition: {
-				staggerChildren: ANIMATION.stagger.middle,
-			},
-		},
-	} as Variants,
-
-	// Variants for staggering items within a list
-	listItemStagger: {
-		hidden: {},
-		visible: {
-			transition: {
-				staggerChildren: ANIMATION.stagger.fast,
-			},
-		},
-	} as Variants,
-};
 
 /**
  * Content data for foundation section.
@@ -101,7 +19,7 @@ const CONTENT = {
 	introduction:
 		'Incomplete Infinity is an evolving, multifaceted creative practice working with companies and institutions in pursuit of a better future. Embracing an enigmatic style, we create work that is completed by the viewer and lives on in their minds.',
 
-	// Description paragraphs for random selection
+	// Description paragraphs
 	description: [
 		'In the fertile void between disciplines, Incomplete Infinity cultivates living frameworks rather than final artifacts.',
 		'We exist in the deliberate pause between completion and becoming. Incomplete Infinity navigates the territories where technology becomes language, where sustainability becomes conversation, and where creativity transmutes the abstract into the experiential. Our work inhabits the fertile tensions between disorder and pattern, between revelation and concealment, between finite expression and infinite interpretation.',
@@ -150,36 +68,6 @@ const CONTENT = {
 };
 
 // =============================================
-// UTILITY FUNCTIONS
-// =============================================
-
-/**
- * Selects two unique random paragraphs from the source array.
- * @param sourceArray - Array of paragraph strings to select from.
- * @returns A tuple of two distinct paragraphs, or undefined values if array is too small.
- */
-const selectRandomParagraphs = (sourceArray: string[]): [string | undefined, string | undefined] => {
-	// Handle empty array case
-	if (sourceArray.length === 0) return [undefined, undefined];
-
-	// Handle single-item array case
-	if (sourceArray.length === 1) return [sourceArray[0], undefined];
-
-	// Select first random paragraph
-	const index1 = Math.floor(Math.random() * sourceArray.length);
-	const paragraph1 = sourceArray[index1];
-
-	// Select second random paragraph (ensuring it's different from the first)
-	let index2 = Math.floor(Math.random() * sourceArray.length);
-	while (index2 === index1) {
-		index2 = Math.floor(Math.random() * sourceArray.length);
-	}
-	const paragraph2 = sourceArray[index2];
-
-	return [paragraph1, paragraph2];
-};
-
-// =============================================
 // SUB-COMPONENTS
 // =============================================
 
@@ -201,39 +89,15 @@ const ContactLink: FC<ContactLinkProps> = ({ href, children }): JSX.Element => (
 );
 
 /**
- * Props for DescriptionSection component.
+ * Main content description section.
  */
-interface DescriptionSectionProps {
-	durationPrimary: number;
-	staggerSecondary: number;
-}
-
-/**
- * Main content description section with interactive paragraph shuffling.
- */
-const DescriptionSection: FC<DescriptionSectionProps> = ({ durationPrimary, staggerSecondary }): JSX.Element => {
-	// State for randomly selected paragraphs
-	const [selectedParagraphs, setSelectedParagraphs] = useState<[string | undefined, string | undefined]>([undefined, undefined]);
-
-	// Initialize paragraphs after component mount
-	useEffect(() => {
-		setSelectedParagraphs(selectRandomParagraphs(CONTENT.description));
-	}, []);
-
-	// Handler to regenerate paragraphs on click
-	const regenerateParagraphs = useCallback(() => {
-		setSelectedParagraphs(selectRandomParagraphs(CONTENT.description));
-	}, []);
-
-	const [paragraph1, paragraph2] = selectedParagraphs;
-
-	// Construct full description text array with spacers
+const DescriptionSection: FC = (): JSX.Element => {
 	const descriptionText = [
 		CONTENT.introduction,
 		'', // Spacer
-		paragraph1 || '', // First random paragraph
+		CONTENT.description[0] ?? '', // First description paragraph
 		'', // Spacer
-		paragraph2 || '', // Second random paragraph
+		CONTENT.description[1] ?? '', // Second description paragraph
 	];
 
 	return (
@@ -245,128 +109,109 @@ const DescriptionSection: FC<DescriptionSectionProps> = ({ durationPrimary, stag
 		>
 			<div
 				className={clsx(
-					'font-caption-01 h-fit space-y-0 text-sm md:text-base',
+					'font-caption-01 h-fit space-y-4 text-sm md:text-base', // Paragraph spacing
 					'col-span-1 md:col-span-2 md:col-start-2', // Column positioning
-					'cursor-pointer', // Show interactivity
 				)}
-				onClick={regenerateParagraphs}
 			>
-				{/* Animated text content */}
-				<AnimatedTextFadeIn text={descriptionText} el="div" className="space-y-0" duration={durationPrimary} staggerChildren={staggerSecondary} />
+				<div className="space-y-4">
+					{descriptionText.map((paragraph, index) => (
+						<p key={index}>{paragraph.trim() === '' ? '\u00A0' : paragraph}</p>
+					))}
+				</div>
 
 				{/* Logo display */}
-				<motion.div className="mt-12 flex w-full justify-start mix-blend-multiply" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: durationPrimary }}>
+				<div className="mt-12 flex w-full justify-start mix-blend-multiply">
 					<Image src="/assets/meta/u29dc.webp" alt="Incomplete Infinity Logo" width={50} height={25} />
-				</motion.div>
+				</div>
 			</div>
 		</div>
 	);
 };
 
 /**
- * Props for DetailsSection component.
- */
-interface DetailsSectionProps {
-	durationPrimary: number;
-	durationSecondary: number;
-	staggerPrimary: number;
-}
-
-/**
  * Top details section with services, contact and clients information.
  */
-const DetailsSection: FC<DetailsSectionProps> = ({ durationPrimary, durationSecondary, staggerPrimary }): JSX.Element => {
+const DetailsSection: FC = (): JSX.Element => {
 	return (
-		<motion.div
+		<div
 			className={clsx(
 				'row-start-1 self-end', // Position in grid
 				'text-xs md:text-sm', // Typography
 				'grid grid-cols-2 gap-8 md:grid-cols-3 md:gap-4', // Layout grid
 			)}
-			variants={VARIANTS.detailsContainer}
-			initial="hidden"
-			animate="visible"
 		>
 			{/* Services Column */}
-			<motion.div
+			<div
 				className={clsx(
 					'col-span-1 flex flex-col justify-between space-y-4',
 					'order-3 md:order-2', // Responsive order
 				)}
-				variants={VARIANTS.column}
 			>
 				{/* Services Title */}
-				<motion.div className="flex flex-col" variants={VARIANTS.item}>
-					<AnimatedTextSlideUp text="Services" el="span" duration={durationPrimary} />
-				</motion.div>
+				<div className="flex flex-col">
+					<span>Services</span>
+				</div>
 
 				{/* Services List */}
-				<motion.div className="flex flex-col" variants={VARIANTS.listStagger}>
+				<div className="flex flex-col">
 					{CONTENT.lists.services.map((service, index) => (
-						<motion.span key={index} variants={VARIANTS.item}>
-							<AnimatedTextSlideUp text={service} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
-						</motion.span>
+						<span key={index}>{service.trim() === '' ? '\u00A0' : service}</span>
 					))}
-				</motion.div>
-			</motion.div>
+				</div>
+			</div>
 
 			{/* Contact Column */}
-			<motion.div
+			<div
 				className={clsx(
 					'col-span-1 flex flex-col justify-between space-y-4',
 					'order-2 md:order-1', // Responsive order
 				)}
-				variants={VARIANTS.column}
 			>
 				{/* Contact Links */}
-				<motion.div className="flex flex-col" variants={VARIANTS.listStagger}>
+				<div className="flex flex-col">
 					{CONTENT.lists.contacts.map((link, index) => (
-						<motion.div key={index} variants={VARIANTS.item}>
-							<ContactLink href={link.href}>
-								<AnimatedTextSlideUp text={link.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
-							</ContactLink>
-						</motion.div>
+						<div key={index}>
+							{link.href ? <ContactLink href={link.href}>{link.text.trim() === '' ? '\u00A0' : link.text}</ContactLink> : <span>{link.text.trim() === '' ? '\u00A0' : link.text}</span>}
+						</div>
 					))}
 					{/* Link Arrow */}
-					<motion.span className="mt-1" variants={VARIANTS.item}>
-						<AnimatedTextSlideUp text="→" el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
-					</motion.span>
-				</motion.div>
+					<span className="mt-1">→</span>
+				</div>
 
 				{/* Contact Title */}
-				<motion.div className="flex flex-col" variants={VARIANTS.item}>
-					<AnimatedTextSlideUp text="Contact" el="span" duration={durationPrimary} />
-				</motion.div>
-			</motion.div>
+				<div className="flex flex-col">
+					<span>Contact</span>
+				</div>
+			</div>
 
 			{/* Clients Column (Desktop Only) */}
-			<motion.div
+			<div
 				className={clsx(
 					'col-span-1 flex flex-col justify-between space-y-4',
 					'hidden md:order-3 md:flex', // Hidden on mobile
 				)}
-				variants={VARIANTS.column}
 			>
 				{/* Clients Title */}
-				<motion.div className="flex flex-col" variants={VARIANTS.item}>
-					<AnimatedTextSlideUp text={['Brands, Studios', '& Exhibitions']} el="div" staggerChildren={staggerPrimary} duration={durationPrimary} />
-				</motion.div>
+				<div className="flex flex-col">
+					<div>
+						<span>Brands, Studios</span>
+						<br />
+						<span>& Exhibitions</span>
+					</div>
+				</div>
 
 				{/* Clients List */}
-				<motion.div
+				<div
 					className={clsx(
 						'grid grid-cols-1 gap-x-4 gap-y-1', // List layout
 					)}
-					variants={VARIANTS.listItemStagger}
 				>
 					{CONTENT.lists.clients.map((item, index) => (
-						<motion.span key={index} variants={VARIANTS.item}>
-							<AnimatedTextSlideUp text={item.text} el="span" duration={durationSecondary} delay={0} staggerChildren={staggerPrimary} />
-						</motion.span>
+						<span key={index}>{item.text.trim() === '' ? '\u00A0' : item.text}</span>
 					))}
-				</motion.div>
-			</motion.div>
-		</motion.div>
+				</div>
+			</div>
+		</div>
 	);
 };
 
@@ -376,7 +221,7 @@ const DetailsSection: FC<DetailsSectionProps> = ({ durationPrimary, durationSeco
 
 /**
  * Main component for Foundation section content with responsive layout.
- * Orchestrates the layout and animation of different content sections.
+ * Orchestrates the layout of different content sections.
  */
 const FoundationContent: FC = (): JSX.Element => {
 	return (
@@ -388,10 +233,10 @@ const FoundationContent: FC = (): JSX.Element => {
 				)}
 			>
 				{/* Top Details Section */}
-				<DetailsSection durationPrimary={ANIMATION.duration.primary} durationSecondary={ANIMATION.duration.secondary} staggerPrimary={ANIMATION.stagger.fast} />
+				<DetailsSection />
 
 				{/* Main Description Section */}
-				<DescriptionSection durationPrimary={ANIMATION.duration.primary} staggerSecondary={ANIMATION.stagger.middle} />
+				<DescriptionSection />
 			</div>
 		</div>
 	);
