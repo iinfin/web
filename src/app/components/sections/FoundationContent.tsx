@@ -1,6 +1,7 @@
 'use client';
 
 import type { FC, ReactNode } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -68,6 +69,36 @@ const CONTENT = {
 };
 
 // =============================================
+// UTILITY FUNCTIONS
+// =============================================
+
+/**
+ * Selects two unique random paragraphs from the source array.
+ * @param sourceArray - Array of paragraph strings to select from.
+ * @returns A tuple of two distinct paragraphs, or undefined values if array is too small.
+ */
+const selectRandomParagraphs = (sourceArray: string[]): [string | undefined, string | undefined] => {
+	// Handle empty array case
+	if (sourceArray.length === 0) return [undefined, undefined];
+
+	// Handle single-item array case
+	if (sourceArray.length === 1) return [sourceArray[0], undefined];
+
+	// Select first random paragraph
+	const index1 = Math.floor(Math.random() * sourceArray.length);
+	const paragraph1 = sourceArray[index1];
+
+	// Select second random paragraph (ensuring it's different from the first)
+	let index2 = Math.floor(Math.random() * sourceArray.length);
+	while (index2 === index1) {
+		index2 = Math.floor(Math.random() * sourceArray.length);
+	}
+	const paragraph2 = sourceArray[index2];
+
+	return [paragraph1, paragraph2];
+};
+
+// =============================================
 // SUB-COMPONENTS
 // =============================================
 
@@ -92,13 +123,23 @@ const ContactLink: FC<ContactLinkProps> = ({ href, children }): JSX.Element => (
  * Main content description section.
  */
 const DescriptionSection: FC = (): JSX.Element => {
-	const descriptionText = [
-		CONTENT.introduction,
-		'', // Spacer
-		CONTENT.description[0] ?? '', // First description paragraph
-		'', // Spacer
-		CONTENT.description[1] ?? '', // Second description paragraph
-	];
+	// State for randomly selected paragraphs
+	const [selectedParagraphs, setSelectedParagraphs] = useState<[string | undefined, string | undefined]>([undefined, undefined]);
+
+	// Initialize paragraphs after component mount
+	useEffect(() => {
+		setSelectedParagraphs(selectRandomParagraphs(CONTENT.description));
+	}, []);
+
+	// Handler to regenerate paragraphs on click
+	const regenerateParagraphs = useCallback(() => {
+		setSelectedParagraphs(selectRandomParagraphs(CONTENT.description));
+	}, []);
+
+	const [paragraph1, paragraph2] = selectedParagraphs;
+
+	// Construct description text with selected paragraphs
+	const descriptionText = [CONTENT.introduction, paragraph1 || '', paragraph2 || ''];
 
 	return (
 		<div
@@ -111,7 +152,9 @@ const DescriptionSection: FC = (): JSX.Element => {
 				className={clsx(
 					'font-caption-01 h-fit space-y-4 text-sm md:text-base', // Paragraph spacing
 					'col-span-1 md:col-span-2 md:col-start-2', // Column positioning
+					'cursor-pointer', // Show interactivity
 				)}
+				onClick={regenerateParagraphs}
 			>
 				<div className="space-y-4">
 					{descriptionText.map((paragraph, index) => (
