@@ -1,3 +1,9 @@
+# [1.2.0](https://github.com/iinfin/web/compare/v1.1.4...v1.2.0) (2025-04-11)
+
+### Features
+
+- **components:** add interactive random paragraph selector ([b7f6046](https://github.com/iinfin/web/commit/b7f6046b62f618742b6e1d946ea616cc4233fd59))
+
 ## [1.1.4](https://github.com/iinfin/web/compare/v1.1.3...v1.1.4) (2025-04-11)
 
 ### Performance Improvements
