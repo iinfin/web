@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/iinfin/web/compare/v1.2.0...v1.2.1) (2025-04-11)
+
+### Bug Fixes
+
+- **components:** merge dev with hydration fixes into main ([2b6e166](https://github.com/iinfin/web/commit/2b6e16616cd9d024e4e5303304da8a5a2e29e596))
+- **components:** resolve hydration mismatch in foundation component ([7b11157](https://github.com/iinfin/web/commit/7b11157a929667d7a89b506ca7761817923ddec2))
+
 # [1.2.0](https://github.com/iinfin/web/compare/v1.1.4...v1.2.0) (2025-04-11)
 
 ### Features
