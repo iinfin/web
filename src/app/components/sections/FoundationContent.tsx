@@ -126,8 +126,9 @@ const DescriptionSection: FC = (): JSX.Element => {
 	// State for randomly selected paragraphs
 	const [selectedParagraphs, setSelectedParagraphs] = useState<[string | undefined, string | undefined]>([undefined, undefined]);
 
-	// Initialize paragraphs after component mount
+	// Initialize paragraphs only on client-side to avoid hydration mismatch
 	useEffect(() => {
+		// Only run random selection on the client side
 		setSelectedParagraphs(selectRandomParagraphs(CONTENT.description));
 	}, []);
 
@@ -138,7 +139,8 @@ const DescriptionSection: FC = (): JSX.Element => {
 
 	const [paragraph1, paragraph2] = selectedParagraphs;
 
-	// Construct description text with selected paragraphs
+	// Use only the introduction for initial SSR render to avoid hydration mismatch
+	// Then add random paragraphs on client side
 	const descriptionText = [CONTENT.introduction, paragraph1 || '', paragraph2 || ''];
 
 	return (
@@ -150,21 +152,23 @@ const DescriptionSection: FC = (): JSX.Element => {
 		>
 			<div
 				className={clsx(
-					'font-caption-01 h-fit space-y-4 text-sm md:text-base', // Paragraph spacing
+					'font-caption-01 h-fit text-sm md:text-base', // Typography
 					'col-span-1 md:col-span-2 md:col-start-2', // Column positioning
 					'cursor-pointer', // Show interactivity
+					'grid grid-rows-[auto_1fr] gap-12', // Explicit grid for logo and text
 				)}
 				onClick={regenerateParagraphs}
 			>
-				<div className="space-y-4">
-					{descriptionText.map((paragraph, index) => (
-						<p key={index}>{paragraph.trim() === '' ? '\u00A0' : paragraph}</p>
-					))}
+				{/* Logo display - explicit row 1 */}
+				<div className="row-start-1 mix-blend-multiply">
+					<Image src="/assets/meta/u29dc.webp" alt="Incomplete Infinity Logo" width={50} height={25} priority />
 				</div>
 
-				{/* Logo display */}
-				<div className="mt-12 flex w-full justify-start mix-blend-multiply">
-					<Image src="/assets/meta/u29dc.webp" alt="Incomplete Infinity Logo" width={50} height={25} />
+				{/* Text content - explicit row 2 */}
+				<div className="row-start-2 space-y-4">
+					{descriptionText.map((paragraph, index) => (
+						<p key={`p-${index}`}>{paragraph.trim() === '' ? '\u00A0' : paragraph}</p>
+					))}
 				</div>
 			</div>
 		</div>
