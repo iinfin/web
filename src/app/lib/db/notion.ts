@@ -11,7 +11,7 @@ import type {
 
 import { logger } from '@/lib/utils/logger';
 
-import { GalleryItem, MediaType } from './types';
+import { DatabaseProvider, GalleryItem, MediaType } from './types';
 
 /**
  * Random number generator with seed for deterministic results
@@ -150,194 +150,165 @@ export const NotionExtractors = {
 };
 
 /**
- * Converts Notion page to gallery item model
- * @param page - Notion page object
- * @returns Formatted gallery item
+ * Notion Database Provider
+ * Provides data access functionality using the Notion API
  */
-export function mapPageToGalleryItem(page: PageObjectResponse): GalleryItem {
-	const properties = page.properties as unknown as NotionGalleryProperties;
+export class NotionProvider implements DatabaseProvider {
+	private notionClient: Client;
 
-	const title = NotionExtractors.title(properties.Name?.title) ?? 'Untitled';
-	const description = NotionExtractors.richText(properties.Description?.rich_text);
-	const tags = properties.Tags?.multi_select?.map((tag) => tag.name) ?? [];
-	const url = NotionExtractors.formula(properties.URL);
-	const mediaType = NotionExtractors.mediaType(url);
-
-	const item: GalleryItem = {
-		id: page.id,
-		title,
-	};
-
-	if (description) item.description = description;
-	if (tags.length > 0) item.tags = tags;
-	if (url) item.url = url;
-	if (mediaType) item.mediaType = mediaType;
-
-	return item;
-}
-
-/**
- * Fetches all published gallery items
- * @param options - Retrieval options
- * @param options.shuffle - Whether to randomize results
- * @returns Promise of gallery items array
- */
-export async function getGalleryItems(options?: { shuffle?: boolean }): Promise<GalleryItem[]> {
-	const filter: QueryDatabaseParameters['filter'] = {
-		property: 'Status',
-		select: {
-			equals: 'Published',
-		},
-	};
-
-	const pages = await queryNotionDatabase(getNotionClient(), process.env['NOTION_DB_ID_GALLERY']!, filter);
-	const items = pages.map(mapPageToGalleryItem);
-
-	if (options?.shuffle) {
-		const seed = Math.floor(Math.random() * 10000);
-		return shuffleArrayWithSeed(items, seed);
+	/**
+	 * Initializes Notion database provider
+	 * @throws Error if required environment variables are missing
+	 */
+	constructor() {
+		this.notionClient = this.initializeClient();
 	}
 
-	return items;
-}
-
-/**
- * Searches gallery items by text
- * @param query - Search term
- * @returns Promise of matching gallery items array
- */
-export async function searchGallery(query: string): Promise<GalleryItem[]> {
-	const allItems = await getGalleryItems();
-	const lowerQuery = query.toLowerCase();
-
-	return allItems.filter((item) => item.title.toLowerCase().includes(lowerQuery) || (item.description?.toLowerCase().includes(lowerQuery) ?? false));
-}
-
-/**
- * Fetches single gallery item by ID
- * @param id - Unique item identifier
- * @returns Promise of gallery item or null if not found
- */
-export async function getGalleryItem(id: string): Promise<GalleryItem | null> {
-	try {
-		const page = await getNotionClient().pages.retrieve({ page_id: id });
-
-		if ('properties' in page) {
-			return mapPageToGalleryItem(page as PageObjectResponse);
+	/**
+	 * Creates and configures Notion client
+	 * @returns Configured client instance
+	 * @throws Error if required environment variables are missing
+	 */
+	private initializeClient(): Client {
+		if (!process.env['NOTION_API_KEY']) {
+			throw new Error('Missing NOTION_API_KEY environment variable');
 		}
-
-		logger.warn(`Retrieved page ${id} does not have the expected structure`, { page });
-		return null;
-	} catch (error) {
-		if (error instanceof APIResponseError && error.code === APIErrorCode.ObjectNotFound) {
-			logger.warn(`Gallery item with ID ${id} not found in Notion.`);
-			return null;
+		try {
+			return new Client({ auth: process.env['NOTION_API_KEY']! });
+		} catch (error) {
+			logger.error('Failed to initialize Notion client', { error: error });
+			throw new Error('Failed to initialize Notion client');
 		}
-		logger.error(`Error retrieving gallery item with ID ${id}:`, { error });
-		return null;
 	}
-}
 
-/**
- * Export function to initialize client
- * @returns Initialized Notion client
- * @throws Error if required environment variables are missing
- */
-export function getNotionClient(): Client {
-	if (!process.env['NOTION_API_KEY']) {
-		throw new Error('Missing NOTION_API_KEY environment variable');
-	}
-	try {
-		return new Client({ auth: process.env['NOTION_API_KEY']! });
-	} catch (error) {
-		logger.error('Failed to initialize Notion client', { error: error });
-		throw new Error('Failed to initialize Notion client');
-	}
-}
-
-/**
- * Export function to query database
- * @param notion - Notion client
- * @param databaseId - Target database ID
- * @param filter - Optional filter criteria
- * @param sorts - Optional sort criteria
- * @returns Array of page objects
- */
-export async function queryNotionDatabase(notion: Client, databaseId: string, filter?: QueryDatabaseParameters['filter'], sorts?: QueryDatabaseParameters['sorts']): Promise<PageObjectResponse[]> {
-	try {
-		const response = await notion.databases.query({
-			database_id: databaseId,
-			...(filter && { filter }),
-			...(sorts && { sorts }),
-		});
-
-		const isPageObjectResponse = (obj: unknown): obj is PageObjectResponse => {
-			return obj !== null && typeof obj === 'object' && 'properties' in obj;
+	/**
+	 * Fetches all published gallery items
+	 * @param options - Retrieval options
+	 * @param options.shuffle - Whether to randomize results
+	 * @returns Promise of gallery items array
+	 */
+	async getGalleryItems(options?: { shuffle?: boolean }): Promise<GalleryItem[]> {
+		const filter: QueryDatabaseParameters['filter'] = {
+			property: 'Status',
+			select: {
+				equals: 'Published',
+			},
 		};
 
-		return response.results.filter(isPageObjectResponse);
-	} catch (error) {
-		logger.error(`Error querying database ${databaseId}:`, { error: error });
-		throw new Error(`Failed to query Notion database ${databaseId}`);
+		const galleryDbId = process.env['NOTION_DB_ID_GALLERY'];
+		if (!galleryDbId) {
+			throw new Error('Missing NOTION_DB_ID_GALLERY environment variable');
+		}
+
+		try {
+			const pages = await this.queryDatabase(galleryDbId, filter);
+			const items = pages.map(this.mapPageToGalleryItem);
+
+			if (options?.shuffle) {
+				const seed = Math.floor(Math.random() * 10000);
+				return shuffleArrayWithSeed(items, seed);
+			}
+
+			return items;
+		} catch (error) {
+			logger.error('Error fetching gallery items from Notion:', { error });
+			return [];
+		}
 	}
-}
 
-/**
- * Export function to fetch published gallery items from Notion
- * @returns Array of published gallery items
- */
-export async function fetchPublishedGalleryItemsFromNotion(): Promise<GalleryItem[]> {
-	const notion = getNotionClient();
-	const galleryDbId = process.env['NOTION_DB_ID_GALLERY'];
+	/**
+	 * Fetches single gallery item by ID
+	 * @param id - Unique item identifier
+	 * @returns Promise of gallery item or null if not found
+	 */
+	async getGalleryItem(id: string): Promise<GalleryItem | null> {
+		try {
+			const page = await this.notionClient.pages.retrieve({ page_id: id });
 
-	if (!galleryDbId) {
-		throw new Error('Missing NOTION_DB_ID_GALLERY environment variable');
-	}
+			if ('properties' in page) {
+				const properties = page.properties as unknown as NotionGalleryProperties;
+				if (properties.Status?.select?.name === 'Published') {
+					return this.mapPageToGalleryItem(page as PageObjectResponse);
+				} else {
+					logger.warn(`Retrieved page ${id} is not published.`);
+					return null;
+				}
+			}
 
-	const filter: QueryDatabaseParameters['filter'] = {
-		property: 'Status',
-		select: {
-			equals: 'Published',
-		},
-	};
-
-	try {
-		const pages = await queryNotionDatabase(notion, galleryDbId, filter);
-		return pages.map(mapPageToGalleryItem);
-	} catch (error) {
-		logger.error('Error fetching published gallery items from Notion:', { error });
-		return [];
-	}
-}
-
-/**
- * Export function to get a single item from Notion
- * @param id - Unique item identifier
- * @returns Promise of gallery item or null if not found
- */
-export async function getGalleryItemFromNotion(id: string): Promise<GalleryItem | null> {
-	const notion = getNotionClient();
-	try {
-		const page = await notion.pages.retrieve({ page_id: id });
-
-		if ('properties' in page) {
-			const properties = page.properties as unknown as NotionGalleryProperties;
-			if (properties.Status?.select?.name === 'Published') {
-				return mapPageToGalleryItem(page as PageObjectResponse);
-			} else {
-				logger.warn(`Retrieved page ${id} is not published.`);
+			logger.warn(`Retrieved page ${id} does not have the expected structure`, { page });
+			return null;
+		} catch (error) {
+			if (error instanceof APIResponseError && error.code === APIErrorCode.ObjectNotFound) {
+				logger.warn(`Gallery item with ID ${id} not found in Notion.`);
 				return null;
 			}
-		}
-
-		logger.warn(`Retrieved page ${id} does not have the expected structure`, { page });
-		return null;
-	} catch (error) {
-		if (error instanceof APIResponseError && error.code === APIErrorCode.ObjectNotFound) {
-			logger.warn(`Gallery item with ID ${id} not found in Notion.`);
+			logger.error(`Error retrieving gallery item with ID ${id}:`, { error });
 			return null;
 		}
-		logger.error(`Error retrieving gallery item with ID ${id}:`, { error });
-		return null;
+	}
+
+	/**
+	 * Searches gallery items by text
+	 * @param query - Search term
+	 * @returns Promise of matching gallery items array
+	 */
+	async searchGallery(query: string): Promise<GalleryItem[]> {
+		const allItems = await this.getGalleryItems();
+		const lowerQuery = query.toLowerCase();
+
+		return allItems.filter((item) => item.title.toLowerCase().includes(lowerQuery) || (item.description?.toLowerCase().includes(lowerQuery) ?? false));
+	}
+
+	/**
+	 * Queries Notion database
+	 * @param databaseId - Target database ID
+	 * @param filter - Optional filter criteria
+	 * @param sorts - Optional sort criteria
+	 * @returns Array of page objects
+	 */
+	private async queryDatabase(databaseId: string, filter?: QueryDatabaseParameters['filter'], sorts?: QueryDatabaseParameters['sorts']): Promise<PageObjectResponse[]> {
+		try {
+			const response = await this.notionClient.databases.query({
+				database_id: databaseId,
+				...(filter && { filter }),
+				...(sorts && { sorts }),
+			});
+
+			const isPageObjectResponse = (obj: unknown): obj is PageObjectResponse => {
+				return obj !== null && typeof obj === 'object' && 'properties' in obj;
+			};
+
+			return response.results.filter(isPageObjectResponse);
+		} catch (error) {
+			logger.error(`Error querying database ${databaseId}:`, { error: error });
+			throw new Error(`Failed to query Notion database ${databaseId}`);
+		}
+	}
+
+	/**
+	 * Converts Notion page to gallery item model
+	 * @param page - Notion page object
+	 * @returns Formatted gallery item
+	 */
+	private mapPageToGalleryItem(page: PageObjectResponse): GalleryItem {
+		const properties = page.properties as unknown as NotionGalleryProperties;
+
+		const title = NotionExtractors.title(properties.Name?.title) ?? 'Untitled';
+		const description = NotionExtractors.richText(properties.Description?.rich_text);
+		const tags = properties.Tags?.multi_select?.map((tag) => tag.name) ?? [];
+		const url = NotionExtractors.formula(properties.URL);
+		const mediaType = NotionExtractors.mediaType(url);
+
+		const item: GalleryItem = {
+			id: page.id,
+			title,
+		};
+
+		if (description) item.description = description;
+		if (tags.length > 0) item.tags = tags;
+		if (url) item.url = url;
+		if (mediaType) item.mediaType = mediaType;
+
+		return item;
 	}
 }
