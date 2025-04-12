@@ -26,9 +26,7 @@ export default function Home(): JSX.Element {
 						'lg:col-span-5 lg:col-start-1 lg:row-span-full lg:row-start-1',
 					)}
 				>
-					<div className="absolute inset-0 h-full w-full">
-						<Creation />
-					</div>
+					<Creation />
 				</div>
 
 				{/* Foundation Section */}
@@ -52,9 +50,7 @@ export default function Home(): JSX.Element {
 						'2xl:col-span-3 2xl:col-start-5',
 					)}
 				>
-					<div className="absolute inset-0 h-full w-full">
-						<Foundation />
-					</div>
+					<Foundation />
 				</div>
 			</div>
 		</>

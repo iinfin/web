@@ -272,19 +272,18 @@ const DetailsSection: FC = (): JSX.Element => {
  */
 const FoundationContent: FC = (): JSX.Element => {
 	return (
-		<div className={clsx('h-full w-full p-4')}>
-			<div
-				className={clsx(
-					'grid h-full w-full grid-rows-[auto_1fr_auto_auto]', // Grid layout
-					'gap-20 md:gap-12 lg:gap-16', // Responsive spacing
-				)}
-			>
-				{/* Top Details Section */}
-				<DetailsSection />
+		<div
+			className={clsx(
+				'p-4',
+				'grid h-full w-full grid-rows-[auto_1fr_auto_auto]', // Grid layout
+				'gap-20 md:gap-12 lg:gap-16', // Responsive spacing
+			)}
+		>
+			{/* Top Details Section */}
+			<DetailsSection />
 
-				{/* Main Description Section */}
-				<DescriptionSection />
-			</div>
+			{/* Main Description Section */}
+			<DescriptionSection />
 		</div>
 	);
 };
