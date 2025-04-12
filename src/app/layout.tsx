@@ -56,8 +56,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				{/* Interaction Behaviors */}
 				<ContextMenuDisabler />
 
-				{/* Analytics (CSP Protected) */}
-				{nonce && <Script src="https://www.googletagmanager.com/gtag/js" strategy="afterInteractive" nonce={nonce} />}
+				{/* Dummy Script to get CSP nonce working */}
+				{nonce && <Script src="/assets/scripts/empty.js" strategy="afterInteractive" nonce={nonce} />}
 			</body>
 		</html>
 	);

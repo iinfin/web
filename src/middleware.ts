@@ -19,21 +19,21 @@ export function generateCsp(): { cspHeader: string; nonce: string } {
 
 	const cspDirectives: CspDirective[] = [
 		{ name: 'base-uri', values: ["'self'"] },
-		{ name: 'connect-src', values: ["'self'", 'https://*.vercel.app', 'https://storage.u29dc.com', 'https://*'].flat().filter(Boolean) },
+		{ name: 'connect-src', values: ["'self'", 'https://*.vercel.app', 'https://storage.u29dc.com'].flat().filter(Boolean) },
 		{ name: 'default-src', values: ["'self'"] },
-		{ name: 'font-src', values: ["'self'", 'https:', 'data:'] },
+		{ name: 'font-src', values: ["'self'"] },
 		{ name: 'form-action', values: ["'self'"] },
 		{ name: 'frame-ancestors', values: ["'none'"] },
 		{ name: 'frame-src', values: ["'self'"] },
-		{ name: 'img-src', values: ["'self'", 'data:', 'blob:', 'https:', 'cdn.u29dc.com', 'storage.u29dc.com'] },
+		{ name: 'img-src', values: ["'self'", 'storage.u29dc.com'] },
 		{ name: 'manifest-src', values: ["'self'"] },
-		{ name: 'media-src', values: ["'self'", 'https:', 'cdn.u29dc.com', 'storage.u29dc.com'] },
+		{ name: 'media-src', values: ["'self'", 'storage.u29dc.com'] },
 		{ name: 'object-src', values: ["'none'"] },
 		{ name: 'report-to', values: ['csp-endpoint'] },
 		{ name: 'report-uri', values: ['https://csp-reporting.cloudflare.com/cdn-cgi/script_monitor/report'] },
-		{ name: 'script-src', values: ["'self'", `'nonce-${nonce}'`, ...(process.env.NODE_ENV === 'development' ? ["'unsafe-eval'", "'unsafe-inline'"] : []), 'https:'] },
+		{ name: 'script-src', values: ["'self'", `'nonce-${nonce}'`, ...(process.env.NODE_ENV === 'development' ? ["'unsafe-eval'", "'unsafe-inline'"] : [])] },
 		{ name: 'style-src', values: ["'self'", "'unsafe-inline'" /*`'nonce-${nonce}'`*/] },
-		{ name: 'worker-src', values: ["'self'", 'blob:'] },
+		{ name: 'worker-src', values: ["'self'"] },
 	];
 
 	const cspHeader = cspDirectives
