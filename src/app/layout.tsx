@@ -1,3 +1,4 @@
+import { type Viewport } from 'next';
 import { headers } from 'next/headers';
 import Script from 'next/script';
 
@@ -16,6 +17,16 @@ import './styles/global.css';
 
 export const metadata = MetadataTemplate;
 
+// Tell browsers to preconnect to essential domains
+export function generateViewport(): Viewport {
+	return {
+		themeColor: '#ffffff',
+		width: 'device-width',
+		initialScale: 1,
+		viewportFit: 'cover',
+	};
+}
+
 /**
  * Root layout component for the application.
  * Configures HTML structure, global styles, context providers, and essential elements.
@@ -32,6 +43,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 	return (
 		<html lang="en" className="scroll-smooth">
 			<head>
+				<link rel="dns-prefetch" href="https://storage.u29dc.com" />
+				<link rel="preconnect" href="https://storage.u29dc.com" crossOrigin="anonymous" />
 				<Preload />
 			</head>
 			<body className="bg-white-x1 text-black-x1 dark:bg-black-x2 dark:text-white-x1 min-h-real-screen uppercase">
@@ -56,7 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 				{/* Interaction Behaviors */}
 				<ContextMenuDisabler />
 
-				{/* Dummy Script to get CSP nonce working */}
+				{/* Dummy Script to get CSP nonce working - use afterInteractive to avoid blocking */}
 				{nonce && <Script src="/assets/scripts/empty.js" strategy="afterInteractive" nonce={nonce} />}
 			</body>
 		</html>

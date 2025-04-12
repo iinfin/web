@@ -236,10 +236,7 @@
 @font-face {
 	font-style: normal;
 	font-weight: 500;
-	src:
-		url('/assets/fonts/PPNeueMontreal/PPNeueMontreal-Medium.woff2') format('woff2'),
-		url('/assets/fonts/PPNeueMontreal/PPNeueMontreal-Medium.woff') format('woff'),
-		url('/assets/fonts/PPNeueMontreal/PPNeueMontreal-Medium.otf') format('opentype');
+	src: url('/assets/fonts/PPNeueMontreal/PPNeueMontreal-Medium.woff2') format('woff2');
 	font-family: 'PPNeueMontreal';
 	font-display: swap;
 }

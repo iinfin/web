@@ -8,6 +8,8 @@ const bundleAnalyzer = withBundleAnalyzer({
 
 const nextConfig: NextConfig = {
 	reactStrictMode: true,
+	compress: true,
+	poweredByHeader: false,
 	images: {
 		remotePatterns: [
 			{
@@ -16,13 +18,45 @@ const nextConfig: NextConfig = {
 				port: '',
 				pathname: '/**',
 			},
-			{
-				protocol: 'https',
-				hostname: 'u29dc.b-cdn.net',
-				port: '',
-				pathname: '/**',
-			},
 		],
+		formats: ['image/avif', 'image/webp'],
+		minimumCacheTTL: 60 * 60 * 24 * 7,
+	},
+	staticPageGenerationTimeout: 120,
+	experimental: {
+		optimizeCss: true,
+		optimizePackageImports: ['framer-motion', '@react-three/drei', '@react-three/fiber', 'three'],
+	},
+	async headers() {
+		return [
+			{
+				source: '/:path*',
+				headers: [
+					{
+						key: 'Cache-Control',
+						value: 'public, max-age=3600, must-revalidate',
+					},
+				],
+			},
+			{
+				source: '/assets/:path*',
+				headers: [
+					{
+						key: 'Cache-Control',
+						value: 'public, max-age=31536000, immutable',
+					},
+				],
+			},
+			{
+				source: '/_next/static/:path*',
+				headers: [
+					{
+						key: 'Cache-Control',
+						value: 'public, max-age=31536000, immutable',
+					},
+				],
+			},
+		];
 	},
 };
 
