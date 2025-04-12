@@ -1,3 +1,9 @@
+## [1.2.2](https://github.com/iinfin/web/compare/v1.2.1...v1.2.2) (2025-04-12)
+
+### Bug Fixes
+
+- **config:** tighten content security policy ([4514840](https://github.com/iinfin/web/commit/4514840c158d4908a6cf0e0dd18164253822c3cb))
+
 ## [1.2.1](https://github.com/iinfin/web/compare/v1.2.0...v1.2.1) (2025-04-11)
 
 ### Bug Fixes
