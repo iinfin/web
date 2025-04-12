@@ -24,14 +24,6 @@ const nextConfig: NextConfig = {
 	},
 	staticPageGenerationTimeout: 120,
 	experimental: {
-		optimizeCss: {
-			beasties: {
-				preload: 'swap',
-				inlineFonts: false,
-				preloadFonts: true,
-				pruneSource: true,
-			},
-		},
 		optimizePackageImports: ['framer-motion', '@react-three/drei', '@react-three/fiber', 'three'],
 	},
 	async headers() {

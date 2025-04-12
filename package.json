@@ -26,7 +26,6 @@
 		"@notionhq/client": "^2.3.0",
 		"@react-three/drei": "^10.0.6",
 		"@react-three/fiber": "^9.1.2",
-		"beasties": "^0.3.2",
 		"clsx": "^2.1.1",
 		"framer-motion": "^12.6.5",
 		"next": "^15.3.0",
