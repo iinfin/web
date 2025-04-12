@@ -1,3 +1,13 @@
+## [1.2.3](https://github.com/iinfin/web/compare/v1.2.2...v1.2.3) (2025-04-12)
+
+### Bug Fixes
+
+- **pages:** add minimal error and not-found pages ([7604834](https://github.com/iinfin/web/commit/76048340b3a5c0f326fc4e7d2bb74657b7fc69a9))
+
+### Reverts
+
+- **db:** revert notion data fetching to lib instead of api ([67b59bd](https://github.com/iinfin/web/commit/67b59bd82b26879fa5347191263aa2e57d3b826e))
+
 ## [1.2.2](https://github.com/iinfin/web/compare/v1.2.1...v1.2.2) (2025-04-12)
 
 ### Bug Fixes
