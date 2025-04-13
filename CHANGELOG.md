@@ -1,3 +1,9 @@
+# [1.3.0](https://github.com/iinfin/web/compare/v1.2.3...v1.3.0) (2025-04-13)
+
+### Features
+
+- **components:** add vercel analytics and speed insights ([19ac579](https://github.com/iinfin/web/commit/19ac5795ae37dd53afd73877634842a5f224b5ee))
+
 ## [1.2.3](https://github.com/iinfin/web/compare/v1.2.2...v1.2.3) (2025-04-12)
 
 ### Bug Fixes
