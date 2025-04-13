@@ -9,6 +9,7 @@ import MetadataTemplate from '@/components/shared/Metadata';
 import Preload from '@/components/shared/Preload';
 import ViewportHeightFix from '@/components/shared/ViewportHeightFix';
 
+import Analytics from '@/app/components/shared/Analytics';
 import { CursorProvider } from '@/hooks/useCursor';
 
 // import { FilmGrainProvider } from '@/hooks/useFilmGrain';
@@ -68,6 +69,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
 				{/* Interaction Behaviors */}
 				<ContextMenuDisabler />
+
+				{/* Analytics and Performance Tracking */}
+				<Analytics />
 
 				{/* Dummy Script to get CSP nonce working - use afterInteractive to avoid blocking */}
 				{nonce && <Script src="/assets/scripts/empty.js" strategy="afterInteractive" nonce={nonce} />}
