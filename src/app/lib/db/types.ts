@@ -20,6 +20,9 @@ export interface GalleryItem {
 	tags?: string[]; // Optional categorization tags
 	url?: string; // Optional media resource URL
 	mediaType?: MediaType; // Type of media (derived from URL)
+	width?: number; // Optional: Original width of the media in pixels
+	height?: number; // Optional: Original height of the media in pixels
+	aspectRatio?: number; // Optional: Calculated aspect ratio (width / height)
 }
 
 /**
