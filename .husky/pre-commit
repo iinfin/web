@@ -1,5 +1,5 @@
 #!/usr/bin/env sh
 
 # Run lint-staged to format files and fix linting issues
-bun run util:format
-bunx lint-staged
+npm run util:format
+npx lint-staged
