@@ -45,8 +45,10 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 	const requestRef = useRef<number>(0);
 	const shaderProgramRef = useRef<WebGLProgram | null>(null);
 	const timeRef = useRef<number>(0);
+	const glRef = useRef<WebGLRenderingContext | null>(null);
 
 	// WebGL setup and animation effect
+
 	useEffect(() => {
 		// Skip effect entirely if the grain is disabled via context
 		if (!enabled) return;
@@ -225,6 +227,16 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 		const animate = (time: number) => {
 			timeRef.current = time * 0.001; // Convert to seconds
 
+			// Get current GL context - retrieve inside loop if needed, or ensure stable ref
+			const gl = glRef.current;
+			const canvas = canvasRef.current;
+			const shaderProgram = shaderProgramRef.current;
+
+			// Guard against missing context/program/canvas during cleanup or initial render
+			if (!gl || !canvas || !shaderProgram) {
+				return;
+			}
+
 			// Use shader program
 			gl.useProgram(shaderProgram);
 
@@ -238,7 +250,7 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 			gl.enableVertexAttribArray(texCoordAttributeLocation);
 			gl.vertexAttribPointer(texCoordAttributeLocation, 2, gl.FLOAT, false, 0, 0);
 
-			// Update uniforms
+			// Update uniforms - access dependency values directly
 			gl.uniform1f(timeUniformLocation, timeRef.current);
 			gl.uniform1f(intensityUniformLocation, intensity);
 			gl.uniform1f(scaleUniformLocation, scale);

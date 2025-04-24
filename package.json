@@ -13,7 +13,6 @@
 		"build": "next build",
 		"build:analyze": "ANALYZE=true next build",
 		"start": "next start",
-		"postbuild": "npm run util:clean",
 		"utils------------------------------": "",
 		"util:clean": "npx rimraf .next out dist build",
 		"util:lint": "next lint",

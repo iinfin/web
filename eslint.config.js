@@ -8,6 +8,19 @@ import reactRecommended from 'eslint-plugin-react/configs/recommended.js';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+// Helper function to filter globals with whitespace issues
+const filterGlobals = (globalSet) => {
+	const filtered = {};
+	for (const key in globalSet) {
+		if (key.trim() === key) {
+			filtered[key] = globalSet[key];
+		} else {
+			console.warn(`ESLint Config: Filtering out global '${key}' due to leading/trailing whitespace.`);
+		}
+	}
+	return filtered;
+};
+
 // Create a compatibility layer for traditional config format
 const compat = new FlatCompat({
 	baseDirectory: import.meta.dirname,
@@ -43,9 +56,8 @@ export default tseslint.config(
 	// If you were using stricter XO rules, consider tseslint.configs.strict instead or add specific rules
 
 	// Load Next.js config using FlatCompat
-	// ...compat.config({
-	//   // extends: ['next/core-web-vitals'],
-	// }),
+	// Note: `eslint-config-next` needs to be installed
+	...compat.extends('next/core-web-vitals'), // Use FlatCompat to extend
 
 	{
 		languageOptions: {
@@ -54,8 +66,8 @@ export default tseslint.config(
 				tsconfigRootDir: import.meta.dirname, // Set root for tsconfig lookup
 			},
 			globals: {
-				...globals.browser, // Add browser globals
-				...globals.node, // Add Node.js globals (for config files, etc. if not ignored)
+				...filterGlobals(globals.browser), // Add filtered browser globals
+				...filterGlobals(globals.node), // Add filtered Node.js globals
 				// React: 'readonly', // Usually not needed anymore
 			},
 		},
@@ -89,30 +101,15 @@ export default tseslint.config(
 		},
 	},
 
-	// Next.js Plugin Configuration (Reverted to standard structure)
-	// tseslint.plugin(nextPlugin, {
-	// 	name: '@next/next',
-	// 	configs: {
-	// 		recommended: nextPlugin.configs.recommended,
-	// 		'core-web-vitals': nextPlugin.configs['core-web-vitals'],
-	// 	},
-	// }),
+	// Next.js Plugin Configuration - REMOVED MANUAL CONFIGURATION
+	// (Handled by `compat.extends` above)
+
+	// Explicit Next.js rule override (if necessary, `compat.extends` might cover this)
 	{
+		// Apply overrides specifically to TS/TSX files where Next.js rules are relevant
 		files: ['**/*.{ts,tsx}'],
-		plugins: {
-			'@next/next': nextPlugin,
-		},
 		rules: {
-			// Apply Next.js rules directly from plugin object
-			...nextPlugin.rules, // Spread all available rules (if structured this way)
-			// Or, enable specific rules if the above spread doesn't work:
-			// '@next/next/no-html-link-for-pages': 'error',
-			// '@next/next/no-sync-scripts': 'error',
-			// '@next/next/google-font-display': 'warn',
-			// ... add other desired core-web-vitals and recommended rules ...
-			// Fallback: Apply recommended rules if spread works
-			// ...nextPlugin.configs.recommended.rules, // This caused errors
-			// ...nextPlugin.configs['core-web-vitals'].rules, // This caused errors
+			'@next/next/google-font-display': 'warn', // Correct severity
 		},
 	},
 
