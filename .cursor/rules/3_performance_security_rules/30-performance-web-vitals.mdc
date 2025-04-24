@@ -3,96 +3,174 @@ description: Web Performance Optimization and Core Web Vitals Rule
 globs: ["**/*.ts", "**/*.tsx", "next.config.ts"]
 alwaysApply: true
 ---
-## Description
-Ensures code and configuration adhere to best practices for web performance, focusing on Core Web Vitals (LCP, FID/INP, CLS) and bundle size.
+<rule>
 
-## Rule
+<id>3_performance_security_rules/30-performance-web-vitals</id>
+<title>Performance Optimization (Core Web Vitals & Bundle Size)</title>
+
+<description>
+Ensures code, configuration, and architecture adhere to best practices for optimal web performance, focusing explicitly on improving Core Web Vitals (LCP, FID/INP, CLS) and minimizing client-side bundle size within the Next.js framework.
+</description>
+
+<context>
+Excellent web performance is critical for user experience, engagement, and SEO. Core Web Vitals provide standardized metrics to measure this. Optimizing LCP, FID/INP, and CLS, along with reducing JavaScript bundle size, directly leads to faster loading times, smoother interactions, and a more stable layout.
+</context>
+
+<guidelines>
 1.  **Largest Contentful Paint (LCP)**:
-    *   Prioritize loading critical above-the-fold content quickly.
-    *   Optimize images (use modern formats like AVIF/WebP, correct sizing, lazy loading for below-the-fold images using `next/image`).
-    *   Ensure server response times (Time to First Byte - TTFB) are fast. Leverage Next.js caching mechanisms.
-    *   Minimize render-blocking resources (CSS, JavaScript). Use critical CSS and defer non-essential scripts.
+    *   Optimize critical above-the-fold images using `next/image` with the `priority` prop. Use modern formats (AVIF/WebP) and correct sizing.
+    *   Ensure fast server response times (TTFB) by leveraging Next.js data caching (`cache`, `revalidate`) and fetch caching (`force-cache`).
+    *   Minimize render-blocking resources: Use `next/font` for efficient font loading, defer non-critical scripts (`strategy="lazyOnload"` or `"afterInteractive"`), and consider critical CSS extraction patterns if needed.
+    *   Avoid complex Server Component data fetching that significantly delays initial HTML generation.
 2.  **First Input Delay (FID) / Interaction to Next Paint (INP)**:
-    *   Minimize main thread blocking time. Break down long JavaScript tasks.
-    *   Optimize event handlers; keep them lightweight. Defer non-critical work.
-    *   Reduce the amount of client-side JavaScript. Prefer Server Components.
-    *   Optimize third-party scripts; load them asynchronously or deferred.
+    *   Minimize main thread blocking. Break down long JavaScript tasks using techniques like web workers or scheduling (`requestIdleCallback`).
+    *   Reduce the amount and complexity of client-side JavaScript. Strongly prefer Server Components over Client Components wherever possible.
+    *   Optimize event handlers in Client Components; keep them lightweight and debounce/throttle frequent events.
+    *   Analyze and optimize third-party scripts. Load them asynchronously (`async`/`defer`) or using `next/script` strategies. Evaluate their performance impact.
+    *   Use React performance patterns like `useMemo`, `useCallback` judiciously after profiling (see <id>1_technical_stack_rules/11-react-patterns</id>).
 3.  **Cumulative Layout Shift (CLS)**:
-    *   Specify dimensions (width/height) for images, videos, and ads to reserve space. Use `next/image` correctly.
-    *   Avoid inserting content dynamically above existing content unless triggered by user interaction.
-    *   Preload necessary fonts (`next/font`) to prevent layout shifts during font loading.
-    *   Ensure animations primarily use `transform` and `opacity`, which don't typically cause layout shifts.
+    *   Always provide explicit `width` and `height` attributes for images, videos, ads, and iframes to allow the browser to reserve space. Use `next/image` which enforces this for images.
+    *   Avoid dynamically inserting content above existing content unless it's a direct response to user interaction.
+    *   Ensure web fonts load without causing significant layout shifts by using `next/font` which handles font fallback configuration and preloading.
+    *   Ensure animations primarily use `transform` and `opacity` (via CSS or Framer Motion) which do not trigger layout changes (see <id>1_technical_stack_rules/14-framer-motion-animations</id>).
 4.  **Bundle Size**:
-    *   Keep the client-side JavaScript bundle size small. Analyze bundles using `@next/bundle-analyzer`.
-    *   Use dynamic imports (`next/dynamic`) for components or libraries not needed on initial load, especially for Client Components.
-    *   Prefer Server Components to reduce client-side JavaScript.
-    *   Choose third-party libraries carefully, considering their bundle size impact. Use tools like `bundlephobia.com`.
-    *   Implement code splitting effectively (Next.js handles much of this automatically with the App Router).
-5.  **Caching**: Utilize Next.js data caching (`cache`, `revalidate`), fetch caching (`force-cache`, `no-store`), and Full Route Cache effectively to minimize server load and improve response times.
-6.  **React Performance**: Follow React performance best practices (memoization, minimizing re-renders - see `11-react-patterns.mdc`).
+    *   Actively monitor client-side JavaScript bundle size using `@next/bundle-analyzer`.
+    *   Utilize dynamic imports (`next/dynamic`) for large Client Components or libraries that are not needed for the initial page load (e.g., modals, complex charts, below-the-fold sections).
+    *   Prefer Server Components to eliminate unnecessary client-side JavaScript.
+    *   Carefully evaluate third-party libraries for their bundle size impact using tools like `bundlephobia.com` before adding them.
+    *   Ensure efficient code splitting (largely handled by Next.js App Router, but dynamic imports offer manual control).
+5.  **Caching Strategies**: Implement appropriate caching for data fetching (`fetch` options like `cache: 'force-cache'`, `next: { revalidate: number }`), Route Handlers, and leverage the Next.js Full Route Cache where applicable.
+</guidelines>
 
-## Actions
-- **Suggest**: Using `next/image` for image optimization.
-- **Reject**: Images/iframes without explicit width/height attributes that could cause CLS.
-- **Suggest**: Using `next/font` for font optimization.
-- **Suggest**: Analyzing bundle size with `@next/bundle-analyzer` if bundle size seems large.
-- **Suggest**: Using dynamic imports (`next/dynamic`) for heavy Client Components or libraries.
-- **Suggest**: Reviewing data fetching strategies for optimal caching (`cache`, `no-store`, `revalidate`).
-- **Suggest**: Converting Client Components to Server Components where appropriate to reduce bundle size and improve LCP/FID/INP.
+<implementation>
+-   **Tooling**: `@next/bundle-analyzer`, Browser DevTools (Performance, Network tabs), Lighthouse, WebPageTest, `bundlephobia.com`.
+-   **Components**: `next/image`, `next/font`, `next/script`, `next/dynamic`.
+-   **Configuration**: Next.js caching options in `fetch` calls.
+-   **Code Review**: Focus on image handling, font loading, Client vs. Server Component usage, dynamic imports, and caching strategies.
+-   **AI Actions**:
+    *   **Reject**: Use of standard `<img>` tags without `width`/`height`; strongly suggest `next/image`.
+    *   **Suggest**: Adding `priority` prop to `next/image` for LCP elements.
+    *   **Reject**: Direct font loading (e.g., `<link rel="stylesheet">` in `layout.tsx`) without using `next/font`.
+    *   **Suggest**: Analyzing bundle size and using `next/dynamic` for potentially large Client Components or libraries.
+    *   **Suggest**: Reviewing data fetching for caching opportunities (`fetch` options, React `cache`).
+    *   **Suggest**: Identifying Client Components that could potentially be Server Components to reduce bundle size.
+    *   **Warn**: About potentially blocking long tasks or heavy computations on the main thread in Client Components.
+</implementation>
 
-## Examples
-✅ Correct (Image Optimization):
+<examples>
+<positive title="✅ Correct: Optimized Image & Font Loading">
 ```typescript
+// src/app/layout.tsx
+import { Inter } from 'next/font/google';
+
+// Configure font loading via next/font
+const inter = Inter({ subsets: ['latin'], display: 'swap' });
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en" className={inter.className}> {/* Apply font class */}
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+
+// src/app/page.tsx
 import Image from 'next/image';
 
-function MyImageComponent() {
+export default function HomePage() {
   return (
-    <Image
-      src="/images/hero.webp" // Use modern format
-      alt="Hero Image"
-      width={1200} // Specify dimensions
-      height={600}
-      priority // Prioritize LCP image
-    />
+    <main>
+      <Image
+        src="/images/hero-banner.avif"
+        alt="Hero Banner"
+        width={1600}
+        height={800}
+        priority
+        className="w-full h-auto"
+      />
+    </main>
   );
 }
 ```
+</positive>
 
-✅ Correct (Dynamic Import):
+<positive title="✅ Correct: Dynamic Import for Large Client Component">
 ```typescript
+// src/app/dashboard/page.tsx
 import dynamic from 'next/dynamic';
 
-// Dynamically import a heavy client component
-const HeavyChartComponent = dynamic(() => import('@/app/components/HeavyChart'), {
-  ssr: false, // Disable SSR if it's purely client-side
-  loading: () => <p>Loading chart...</p>,
+// Dynamically import a heavy client-side charting library/component
+const AnalyticsChart = dynamic(() => import('@/components/AnalyticsChart'), {
+  ssr: false,
+  loading: () => <div className="h-64 flex items-center justify-center">Loading Chart...</div>,
 });
 
-function DashboardPage() {
+export default function DashboardPage() {
   return (
     <div>
       <h1>Dashboard</h1>
-      <HeavyChartComponent />
+      <AnalyticsChart />
     </div>
   );
 }
 ```
+</positive>
 
-❌ Incorrect:
+<negative title="❌ Incorrect: Performance Anti-Patterns">
 ```typescript
-function BadImageComponent() {
+// Bad: Using standard <img> without dimensions, causing CLS
+function BadImage() {
+  return <img src="/images/logo.png" alt="Logo" />;
+}
+
+// Bad: Loading fonts via external CSS link in layout - potential FOUT/CLS
+function Layout({ children }) {
   return (
-    // Bad: Standard img tag without dimensions, potential CLS
-    // Bad: Not using next/image for optimization
-    <img src="/images/large-image.jpg" alt="Large Image" />
+    <html>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet" />
+      </head>
+      <body>{children}</body>
+    </html>
   );
 }
 
-// Bad: Importing large library directly in a frequently loaded component
-import _ from 'lodash'; // Large library
+// Bad: Directly importing a large library in a component rendered high up the tree
+// (assuming it's not needed immediately)
+import confetti from 'canvas-confetti';
 
-function NeedsOptimization() {
-  // ... uses lodash ...
-  return <div>...</div>;
+function SomeClientComponent() {
+  return <button>Click Me</button>;
 }
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Improves user experience through faster loading and smoother interactions.
+-   Positively impacts SEO rankings due to better Core Web Vitals scores.
+-   Reduces bounce rates and increases user engagement.
+-   Optimizes resource usage (bandwidth, CPU).
+-   Leads to a more professional and polished application feel.
+</benefits>
+
+<scope>
+Applies to all code and configuration related to front-end performance, including component implementation (`.tsx`), image handling, font loading, script loading, data fetching strategies, and Next.js configuration.
+</scope>
+
+<references>
+-   [Google web.dev: Core Web Vitals](https://web.dev/vitals/)
+-   [Next.js Documentation: Optimizing](https://nextjs.org/docs/app/building-your-application/optimizing)
+-   [Next.js `next/image` Component](https://nextjs.org/docs/app/api-reference/components/image)
+-   [Next.js `next/font` Component](https://nextjs.org/docs/app/api-reference/components/font)
+-   [Next.js `next/dynamic` Component](https://nextjs.org/docs/app/api-reference/components/dynamic)
+-   [Next.js Caching](https://nextjs.org/docs/app/building-your-application/caching)
+-   [`@next/bundle-analyzer`](https://github.com/vercel/next.js/tree/canary/packages/next-bundle-analyzer)
+-   <id>1_technical_stack_rules/11-react-patterns</id>
+-   <id>1_technical_stack_rules/14-framer-motion-animations</id>
+</references>
+
+</rule>

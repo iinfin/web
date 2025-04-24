@@ -3,42 +3,65 @@ description: React 19 and Modern Patterns Rule
 globs: ["**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Enforces the use of modern React 19 patterns, hooks, and best practices within the Next.js App Router context.
+<rule>
 
-## Rule
-1. **Component Types**:
-   - Default to React Server Components (RSCs) for data fetching and non-interactive UI.
-   - Use Client Components (`'use client'`) *only* when necessary (event handlers, state hooks like `useState`/`useEffect`, browser APIs, specific libraries). Clearly justify the need for `'use client'`.
-2. **Hooks**:
-   - Utilize React 19 hooks where appropriate: `useOptimistic` for optimistic UI updates, `useFormStatus` for form pending states, `useActionState` for form actions with state updates.
-   - Use standard hooks (`useState`, `useEffect`, `useContext`, `useReducer`, `useCallback`, `useMemo`, `useRef`) correctly. Minimize `useEffect` usage; prefer derived state or server-driven updates where possible.
-3. **Composition**: Favor component composition over inheritance. Build complex UI by combining smaller, reusable components.
-4. **Props**: Define clear and strictly typed prop interfaces (using TypeScript rule `10-typescript-strict.mdc`). Use destructuring for props. Avoid prop drilling; use Context or state management solutions for deeply nested data.
-5. **Keys**: Always provide stable and unique `key` props when rendering lists of components. Avoid using array indices as keys if the list can change order or items can be inserted/deleted.
-6. **Performance**:
-   - Use `React.memo` judiciously for components that render often with the same props.
-   - Use `useCallback` and `useMemo` to optimize expensive calculations or prevent unnecessary re-renders caused by function/object identity changes, but only when profiling shows a benefit.
-   - Avoid anonymous functions directly in props (e.g., `onClick={() => ...}`) inside loops or frequently re-rendering components; use `useCallback` or define stable functions outside the render path.
-7. **Server Actions**: Utilize Next.js Server Actions for form submissions and mutations, leveraging hooks like `useFormStatus` and `useActionState`.
-8. **Suspense**: Use `Suspense` boundaries effectively for handling loading states, especially with Server Components and asynchronous operations.
+<id>1_technical_stack_rules/11-react-patterns</id>
+<title>React Patterns and Best Practices</title>
 
-## Actions
-- **Reject**: Using Client Components without clear justification (e.g., just for simple static rendering).
-- **Suggest**: Converting Client Components to Server Components if no client-side interactivity or hooks are needed.
-- **Suggest**: Using React 19 hooks (`useOptimistic`, `useFormStatus`, `useActionState`) where applicable, especially with forms and mutations.
-- **Reject**: Missing `key` props in lists or using array indices inappropriately.
-- **Suggest**: Using `React.memo`, `useCallback`, `useMemo` for specific performance optimizations, but caution against premature optimization.
-- **Suggest**: Using Server Actions for form handling.
+<description>
+Enforces the use of modern React 19 patterns, hooks, and best practices within the Next.js App Router context to promote maintainable, performant, and idiomatic React code.
+</description>
 
-## Examples
-✅ Correct (Server Component):
+<context>
+Following established React patterns improves code readability, component reusability, performance, and simplifies state management and data flow within the application.
+</context>
+
+<guidelines>
+1.  **Component Types**:
+    *   Default to React Server Components (RSCs) for data fetching, server-side logic, and non-interactive UI elements to minimize client-side JavaScript.
+    *   Use Client Components (`'use client'`) *only* when necessary for features requiring browser APIs, state (`useState`, `useReducer`), lifecycle effects (`useEffect`), or event listeners. Provide a clear justification comment if the need isn't immediately obvious.
+2.  **Hooks**:
+    *   Utilize React 19 hooks where appropriate: `useOptimistic` for UI updates that reflect an expected outcome immediately, `useFormStatus` for displaying pending states in forms, `useActionState` (formerly `useFormState`) for handling form actions with responses and pending states.
+    *   Use standard hooks (`useState`, `useEffect`, `useContext`, `useReducer`, `useCallback`, `useMemo`, `useRef`) correctly and judiciously.
+    *   Minimize `useEffect` usage. Prefer deriving state from props or using server-driven data fetching/updates (RSCs, Server Actions) when possible.
+3.  **Composition**: Strongly favor component composition over inheritance. Build complex UIs by assembling smaller, focused, and reusable components.
+4.  **Props**:
+    *   Define clear, explicit, and strictly typed prop interfaces using TypeScript (adhering to <id>1_technical_stack_rules/10-typescript-strict</id>). Use `Readonly<T>` for props where applicable.
+    *   Use prop destructuring for clarity.
+    *   Avoid prop drilling. Use React Context, Zustand (if applicable), or component composition strategies for sharing state across deep component trees.
+5.  **Keys**: Always provide stable and unique `key` props when rendering lists of components dynamically. Avoid using array indices as keys if the list's order can change or items can be added/removed, as this can lead to state and rendering issues.
+6.  **Performance Optimization**:
+    *   Use `React.memo` strategically for components that render frequently with unchanged props, but verify the performance benefit.
+    *   Apply `useCallback` to memoize functions passed as props to optimized child components (those wrapped in `React.memo`) to prevent unnecessary re-renders.
+    *   Apply `useMemo` to memoize expensive calculations or complex object/array computations.
+    *   Avoid creating functions inline within JSX props (e.g., `onClick={() => ...}`) inside loops or frequently re-rendering components, especially if passed to memoized children. Define stable functions or use `useCallback`.
+    *   Profile components using React DevTools before applying heavy memoization; premature optimization can sometimes add unnecessary complexity.
+7.  **Server Actions**: Utilize Next.js Server Actions for handling form submissions and data mutations directly from components, leveraging hooks like `useFormStatus` and `useActionState` for better UX.
+8.  **Suspense**: Use `<Suspense>` boundaries effectively to handle loading states gracefully, especially when dealing with asynchronous operations like code splitting (with `next/dynamic`) or data fetching in RSCs.
+</guidelines>
+
+<implementation>
+-   **Linting**: ESLint rules might partially enforce some patterns (e.g., hook rules).
+-   **Code Review**: Component design, hook usage, and pattern adherence should be primary focus points during code reviews.
+-   **AI Actions**:
+    *   **Reject**: Using Client Components (`'use client'`) without clear justification (e.g., for static rendering without client hooks/APIs).
+    *   **Suggest**: Converting Client Components to Server Components if no client-side interactivity or specific browser APIs/hooks are necessary.
+    *   **Suggest**: Utilizing React 19 hooks (`useOptimistic`, `useFormStatus`, `useActionState`) where applicable, particularly with forms and mutations.
+    *   **Reject**: Missing or inappropriate `key` props in dynamically rendered lists.
+    *   **Suggest**: Exploring `React.memo`, `useCallback`, or `useMemo` for specific, identified performance bottlenecks, but caution against over-optimization.
+    *   **Suggest**: Implementing form submissions and mutations using Server Actions.
+    *   **Suggest**: Using `<Suspense>` for better loading state handling.
+</implementation>
+
+<examples>
+<positive title="✅ Correct Server Component Usage">
 ```typescript
 // src/app/components/UserProfile.tsx
 import { getUserData } from '@/app/lib/db';
 
+// No 'use client' needed - defaults to RSC
 async function UserProfile({ userId }: { userId: string }) {
-  const user = await getUserData(userId); // Data fetching in RSC
+  const user = await getUserData(userId); // Data fetching directly in RSC
 
   if (!user) {
     return <div>User not found</div>;
@@ -47,45 +70,77 @@ async function UserProfile({ userId }: { userId: string }) {
   return (
     <div>
       <h1>{user.name}</h1>
-      {/* ... other user details */}
+      {/* Display other user details */}
     </div>
   );
 }
 export default UserProfile;
 ```
+</positive>
 
-✅ Correct (Client Component with Justification):
+<positive title="✅ Correct Client Component with Justification">
 ```typescript
-// src/app/components/InteractiveButton.tsx
-'use client'; // Justification: Uses useState and onClick
+// src/app/components/InteractiveCounter.tsx
+'use client'; // Justification: Uses useState and onClick handler
 
 import { useState } from 'react';
 
-export function InteractiveButton() {
+export function InteractiveCounter() {
   const [count, setCount] = useState(0);
+
   return (
-    <button onClick={() => setCount(count + 1)}>
-      Clicked {count} times
+    <button onClick={() => setCount(prev => prev + 1)}>
+      Count: {count}
     </button>
   );
 }
 ```
+</positive>
 
-❌ Incorrect:
+<negative title="❌ Incorrect: Unnecessary Client Component">
 ```typescript
-'use client'; // Unnecessary client component
+'use client'; // Bad: No client-side hooks, state, or browser APIs used
 
-function StaticHeader({ title }: { title: string }) {
-  // No client hooks or interactivity used here
-  return <h1>{title}</h1>;
+function StaticFooter({ copyrightYear }: { copyrightYear: number }) {
+  return <footer>© {copyrightYear} Your Company</footer>;
 }
+```
+</negative>
 
-function UserList({ users }: { users: User[] }) {
+<negative title="❌ Incorrect: Missing Key Prop">
+```typescript
+function UserList({ users }: { users: Array<{ id: string; name: string }> }) {
   return (
     <ul>
-      {/* Missing key prop */}
+      {/* Bad: Missing unique key prop */}
       {users.map(user => <li>{user.name}</li>)}
+
+      {/* Bad: Using array index as key when list can change */}
+      {users.map((user, index) => <li key={index}>{user.name}</li>)}
     </ul>
   );
 }
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Promotes clean, readable, and maintainable component code.
+-   Leverages modern React features for better performance and developer experience.
+-   Ensures efficient state management and data flow.
+-   Reduces client-side bundle size by favoring Server Components.
+-   Facilitates easier debugging and testing.
+</benefits>
+
+<scope>
+Applies to all React components (`.tsx` files) within the project, particularly within the Next.js App Router context.
+</scope>
+
+<references>
+-   [React Docs](https://react.dev/)
+-   [Next.js App Router Documentation](https://nextjs.org/docs/app)
+-   <id>1_technical_stack_rules/10-typescript-strict</id>
+-   <id>1_technical_stack_rules/12-nextjs-app-router</id>
+</references>
+
+</rule>

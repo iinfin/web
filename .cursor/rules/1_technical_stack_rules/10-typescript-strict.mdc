@@ -3,56 +3,146 @@ description: TypeScript Strictness and Best Practices Rule
 globs: ["**/*.ts", "**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Enforces strict TypeScript usage and best practices for type safety and clarity across the project.
+<rule>
 
-## Rule
-1. **Strict Mode**: All TypeScript files MUST operate under strict mode (`"strict": true` in `tsconfig.json`).
-2. **Explicit Types**: Use explicit types for function parameters, return values, and variable declarations where type inference is not obvious or could lead to ambiguity. Avoid relying solely on inference for public APIs.
-3. **Avoid `any`**: The `any` type MUST NOT be used. Use `unknown` for unknown types and perform type checks/assertions, or define specific types/interfaces. Use `eslint-disable-next-line @typescript-eslint/no-explicit-any` with justification ONLY as a last resort for unavoidable cases (e.g., integrating with untyped JS libraries).
-4. **Interfaces vs Types**: Prefer `type` aliases for simple types, unions, intersections, and function signatures. Prefer `interface` for defining object shapes, especially those intended for implementation or extension (classes, complex component props).
-5. **Utility Types**: Leverage TypeScript's utility types (`Partial`, `Required`, `Readonly`, `Pick`, `Omit`, etc.) to create precise types without redundancy.
-6. **Generics**: Use generics effectively for creating reusable components and functions that work with various types while maintaining type safety. Document generic constraints clearly.
-7. **Null/Undefined Handling**: Explicitly handle `null` and `undefined` checks. Avoid non-null assertion operator (`!`) unless absolutely necessary and justified with a comment. Prefer optional chaining (`?.`) and nullish coalescing (`??`).
-8. **Enums**: Prefer string literal unions (`type Status = 'pending' | 'completed'`) over numeric or string enums unless there's a specific reason (like needing iteration over keys/values).
-9. **Type Safety**: Ensure type safety across module and component boundaries. Props and function arguments must be accurately typed.
+<id>1_technical_stack_rules/10-typescript-strict</id>
+<title>TypeScript Strict Usage</title>
 
-## Actions
-- **Reject**: Use of `any` without explicit eslint disable comment.
-- **Reject**: Use of non-null assertion (`!`) without justification comment.
-- **Suggest**: Using `unknown` instead of `any`.
-- **Suggest**: Using specific types over broad types like `object` or `{}`.
-- **Suggest**: Adding explicit return types to functions, especially exported ones.
-- **Suggest**: Using utility types where applicable.
+<description>
+Enforces the adoption of strict TypeScript configurations and coding practices to maximize type safety, code clarity, and maintainability throughout the project.
+</description>
 
-## Examples
-✅ Correct:
+<context>
+Strict TypeScript helps catch potential runtime errors during development, improves code comprehension through explicit typing, and enables better tooling and refactoring capabilities. This leads to more robust and reliable applications.
+</context>
+
+<guidelines>
+1.  **Strict Mode Configuration**: The TypeScript configuration (`tsconfig.json`) MUST enable all strict type-checking options (implicitly enabled via `"strict": true`).
+    *   Includes `noImplicitAny`, `strictNullChecks`, `strictFunctionTypes`, `strictBindCallApply`, `strictPropertyInitialization`, `noImplicitThis`, `useUnknownInCatchVariables`, `alwaysStrict`.
+2.  **Explicit Types**: Use explicit type annotations for:
+    *   Function parameters.
+    *   Function return values (especially for exported functions/methods).
+    *   Variable declarations where the inferred type is not immediately obvious or overly broad.
+    *   Avoid relying solely on inference for public APIs or complex types.
+3.  **Avoid `any`**: The `any` type is strictly forbidden as it bypasses type checking.
+    *   Use `unknown` for values with truly unknown types and perform necessary type checks or assertions before use.
+    *   Define specific `type` aliases or `interface` definitions for complex object shapes.
+    *   As an absolute last resort for unavoidable cases (e.g., integrating with untyped legacy JavaScript), use `any` but ONLY with an `eslint-disable-next-line @typescript-eslint/no-explicit-any` comment providing a clear justification.
+4.  **`type` vs `interface`**: Choose appropriately:
+    *   **Prefer `type`** for: Defining aliases for primitives, unions, intersections, tuples, function signatures, and simple object shapes.
+    *   **Prefer `interface`** for: Defining object shapes that are intended to be implemented by classes or extended by other interfaces (especially for complex component props or public API contracts).
+5.  **Utility Types**: Effectively utilize TypeScript's built-in utility types (`Partial<T>`, `Required<T>`, `Readonly<T>`, `Pick<T, K>`, `Omit<T, K>`, `Record<K, T>`, etc.) to create derived types precisely and avoid redundancy.
+6.  **Generics**: Employ generics (`<T>`) to create reusable components, functions, and types that operate on various data types while preserving type safety. Clearly document generic type parameters and constraints.
+7.  **Null/Undefined Handling**: Leverage `strictNullChecks`:
+    *   Explicitly handle potential `null` or `undefined` values using type guards, optional chaining (`?.`), and nullish coalescing (`??`).
+    *   Avoid the non-null assertion operator (`!`) unless you are absolutely certain the value cannot be `null` or `undefined` at that point, and include a comment explaining why if the reason isn't obvious.
+8.  **Enums**: Prefer using string literal union types (`type Status = 'pending' | 'completed';`) over TypeScript `enum`s for defining sets of named constants, as they are generally safer and provide better type checking. Use `enum` only when needing reverse mapping or features specifically provided by enums.
+9.  **Type Safety Boundaries**: Ensure strong type safety across module, component, and function boundaries. Props, arguments, and return values must be accurately and explicitly typed.
+</guidelines>
+
+<implementation>
+-   **Configuration**: `tsconfig.json` MUST have `"strict": true`.
+-   **Linting**: ESLint rules (via `xo-typescript` or `@typescript-eslint/recommended-strict`) should be configured to enforce these practices (e.g., `no-explicit-any`, `explicit-function-return-type`). See <id>2_quality_and_architecture_rules/20-code-quality-eslint-xo</id>.
+-   **Code Review**: Strict typing practices should be enforced during code reviews.
+-   **AI Actions**:
+    *   **Reject**: Code using `any` without a justified `eslint-disable` comment.
+    *   **Reject**: Code using the non-null assertion operator (`!`) without justification or where optional chaining (`?.`) / nullish coalescing (`??`) is more appropriate.
+    *   **Suggest**: Replacing `any` with `unknown` and adding necessary type checks.
+    *   **Suggest**: Using specific types/interfaces instead of broad types like `object` or `{}`.
+    *   **Suggest**: Adding explicit return types to functions, especially exported ones.
+    *   **Suggest**: Utilizing utility types where applicable to simplify type definitions.
+</implementation>
+
+<examples>
+<positive title="✅ Correct Strict Usage">
 ```typescript
-type UserProfileProps = {
+import { type FC } from 'react';
+
+// Using interface for component props
+interface UserProfileProps {
   readonly userId: string;
   name: string;
-  avatarUrl?: string;
+  avatarUrl?: string; // Optional property handled by strictNullChecks
+}
+
+// Explicit return type (Promise<UserProfileProps | null>)
+async function fetchUserData(id: string): Promise<UserProfileProps | null> {
+  const response = await fetch(`/api/users/${id}`);
+  if (!response.ok) {
+    return null;
+  }
+  // Type assertion after check (or use Zod/validation)
+  const data = await response.json() as unknown;
+  // Perform runtime check if 'as unknown' is used
+  if (typeof data === 'object' && data !== null && 'name' in data) {
+      // Assuming data structure matches UserProfileProps after validation
+     return data as UserProfileProps;
+  }
+  return null;
+
+}
+
+// Using optional chaining and nullish coalescing
+const UserDisplay: FC<{ userId: string }> = ({ userId }) => {
+  // Assume userData is fetched and is UserProfileProps | null
+  const userName = userData?.name ?? 'Anonymous';
+  return <div>{userName}</div>;
 };
 
-function getUserData(id: string): Promise<UserProfileProps | null> {
-  // ... implementation
-}
-
-async function displayUser(id: string) {
-  const user = await getUserData(id);
-  console.log(user?.name ?? 'Anonymous');
-}
+// String literal union type
+type LoadingStatus = 'idle' | 'loading' | 'success' | 'error';
+let currentStatus: LoadingStatus = 'idle';
 ```
+</positive>
 
-❌ Incorrect:
+<negative title="❌ Incorrect Usage (Violates Strictness)">
 ```typescript
-function getUserData(id: any): any { // Avoid 'any'
+// Implicit any for parameter 'config'
+function initialize(config) { // Violates noImplicitAny
   // ...
-  return data!; // Avoid '!'
 }
 
-function displayUser(id: string) {
-  const user: object = getUserData(id); // Avoid 'object'
-  console.log(user.name); // Potential runtime error
+// Using 'any' type explicitly
+let userData: any;
+userData.profile.name; // No type safety
+
+// Missing explicit return type where needed
+function processData(data) { // Return type is implicitly any
+  if (data.value > 10) {
+    return { status: 'high' };
+  }
+  // Implicitly returns undefined if condition is false
+}
+
+// Unnecessary non-null assertion
+const element = document.getElementById('my-element');
+const value = element!.getAttribute('data-value'); // Unsafe if element is null
+
+// Using broad 'object' type
+function printKeys(data: object) {
+  // Object is not specific enough
+  // console.log(Object.keys(data)); // This works, but type safety is minimal
 }
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Significantly reduces runtime errors by catching type issues at compile time.
+-   Improves code clarity and self-documentation.
+-   Enhances developer productivity through better autocompletion and refactoring.
+-   Increases application stability and robustness.
+-   Facilitates easier code maintenance and collaboration.
+</benefits>
+
+<scope>
+Applies to all TypeScript files (`.ts`, `.tsx`) within the project.
+</scope>
+
+<references>
+-   [TypeScript `strict` flag documentation](https://www.typescriptlang.org/tsconfig#strict)
+-   [TypeScript Utility Types](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+-   <id>2_quality_and_architecture_rules/20-code-quality-eslint-xo</id>
+</references>
+
+</rule>

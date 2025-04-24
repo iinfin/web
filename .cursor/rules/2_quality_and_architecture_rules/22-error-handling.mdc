@@ -3,86 +3,252 @@ description: Robust Error Handling Rule
 globs: ["**/*.ts", "**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Ensures implementation of robust error handling strategies throughout the application.
+<rule>
 
-## Rule
-1.  **Use `Result` Type**: For functions that can fail recoverably (e.g., data fetching, parsing), return `Result<T, E>` where `E` is a specific, typed error. Avoid returning `null` or `undefined` to indicate errors.
-2.  **Custom Error Types**: Define custom error enums or structs (potentially using libraries like `neverthrow` or simple unions/structs) to represent specific failure modes. This aids in exhaustive error handling. Avoid throwing generic `Error` objects or strings.
-3.  **Error Propagation**: Use the `?` operator or explicit `match` statements for propagating errors up the call stack in functions returning `Result`.
-4.  **Error Boundaries**: In React (Client Components), use Error Boundaries (`componentDidCatch` or libraries like `react-error-boundary`) to catch rendering errors in component subtrees and display fallback UI.
-5.  **`.tsx` Error Handling**:
-    *   Handle promise rejections from data fetching or Server Actions using `try...catch` in async components/functions or `.catch()` on promises.
-    *   Provide user-friendly error messages or fallback UI states when operations fail (e.g., form submission errors, data loading errors). Don't expose raw error details directly to the user unless intended.
-    *   Use `error.tsx` files in the App Router for handling errors bubbling up from child segments.
-6.  **Logging**: Log errors with sufficient context (e.g., operation name, parameters, stack trace if available) using the project's logger (`src/app/utils/logger.ts`). Avoid simple `console.error` without context.
-7.  **Server Action Errors**: Server Actions should return structured error information (e.g., `{ success: false, error: 'message' }`) that can be handled by Client Components using `useActionState` or `useFormState`.
+<id>2_quality_and_architecture_rules/22-error-handling</id>
+<title>Error Handling Strategies</title>
 
-## Actions
-- **Reject**: Functions returning `null`/`undefined` or `any` to signify errors; suggest using `Result<T, E>`.
-- **Suggest**: Defining custom error types/enums instead of throwing generic `Error` or strings.
-- **Reject**: Unhandled promise rejections.
-- **Suggest**: Wrapping component sections prone to errors in Error Boundaries (Client Components).
-- **Suggest**: Implementing `error.tsx` files for App Router segments.
-- **Suggest**: Logging errors with context using the project logger.
+<description>
+Defines comprehensive strategies for handling, propagating, logging, and displaying errors gracefully throughout the application, covering both server-side and client-side contexts.
+</description>
 
-## Examples
-✅ Correct (Custom Error Type and Result):
+<context>
+Robust error handling is critical for application stability, user experience, and debugging. Clear strategies for different error types (recoverable vs. critical, server vs. client) prevent crashes, provide useful feedback, and aid in diagnostics.
+</context>
+
+<guidelines>
+1.  **Recoverable Errors (Result Type)**:
+    *   For operations that can predictably fail but allow the program to continue (e.g., API calls, data parsing, optional lookups), functions SHOULD return a `Result<T, E>` type (e.g., from `neverthrow` library or a custom discriminated union like `{ success: true, data: T } | { success: false, error: E }`).
+    *   `E` MUST represent a specific, typed error (see guideline #2) rather than a generic `Error` or string.
+    *   Avoid returning `null` or `undefined` solely to indicate failure; use the `Result` type for explicitness.
+2.  **Custom Error Types**:
+    *   Define specific custom error types (e.g., TypeScript enums, classes extending `Error`, discriminated unions) to represent distinct failure modes (e.g., `NetworkError`, `ValidationError`, `DatabaseError`, `NotFoundError`, `AuthenticationError`).
+    *   This allows for exhaustive error handling using `switch` statements, `match` (from `neverthrow`), or type guards.
+    *   Avoid throwing generic `new Error("Something failed")` or raw strings.
+3.  **Error Propagation**:
+    *   When using `Result` types, propagate errors up the call stack explicitly using `match`, `mapErr`, or dedicated checks (`if (!result.success) return result;`). Avoid discarding error information.
+    *   For unrecoverable/unexpected errors, allow exceptions to bubble up naturally to be caught by higher-level handlers (Error Boundaries, global handlers, `error.tsx`).
+4.  **React Error Boundaries (Client Components)**:
+    *   Wrap logical sections of the UI (especially those prone to rendering errors or using external data) in Error Boundary components.
+    *   Use libraries like `react-error-boundary` for a convenient hook-based API (`useErrorBoundary`).
+    *   Error Boundaries MUST be Client Components (`'use client'`).
+    *   Display a user-friendly fallback UI within the boundary, potentially offering a retry mechanism.
+5.  **Next.js App Router Error Handling**:
+    *   Implement `error.tsx` files within route segments to handle errors originating from that segment and its children during rendering or data fetching in Server Components.
+    *   `error.tsx` MUST be a Client Component.
+    *   It receives the `error` object and a `reset` function prop to attempt re-rendering the segment.
+    *   Use `error.tsx` for segment-level errors; use Error Boundaries for more granular control within a page or layout.
+6.  **Async/Await & Promise Error Handling**:
+    *   Handle promise rejections consistently using `try...catch` blocks within `async` functions.
+    *   Alternatively, use `.catch()` on promise chains, ensuring the error is handled appropriately (logged, converted to a `Result`, or re-thrown if necessary).
+    *   Never ignore promise rejections (`floating promises`). Use `void promise.catch(...)` only if the error is truly insignificant and intentionally ignored (rare).
+7.  **Server Action Error Handling**:
+    *   Server Actions SHOULD return structured data indicating success or failure, including specific error codes or messages.
+        ```typescript
+        // Example return type
+        Promise<{ success: boolean; error?: string; validationErrors?: Record<string, string> }>
+        ```
+    *   Client Components using Server Actions SHOULD utilize hooks like `useActionState` (React 19) or `useFormState` (React <19) to handle pending states and display errors returned by the action.
+8.  **User-Facing Errors**:
+    *   Provide clear, user-friendly error messages in the UI when operations fail (form submissions, data loading).
+    *   Avoid exposing raw error details, stack traces, or sensitive information directly to the end-user.
+    *   Translate internal error types into user-understandable messages.
+9.  **Logging**:
+    *   Log errors comprehensively on the server-side (Server Components, Route Handlers, Server Actions, Middleware).
+    *   Include sufficient context in logs: operation being performed, relevant parameters (masking sensitive data), user ID (if applicable), error type, error message, and stack trace.
+    *   Use a structured logging library/service for easier analysis and monitoring.
+    *   Avoid excessive or uninformative client-side logging (`console.error`) for operational errors; focus logging efforts server-side.
+</guidelines>
+
+<implementation>
+-   **Libraries**: Consider `neverthrow` for `Result` types, `react-error-boundary` for client-side boundaries.
+-   **Configuration**: Setup of logging infrastructure.
+-   **Code Structure**: Consistent use of `try...catch`, `Result` types, Error Boundaries, and `error.tsx` files.
+-   **AI Actions**:
+    *   **Reject**: Functions returning `null`/`undefined` or `any` to signify recoverable errors; suggest using `Result<T, E>` with specific error types.
+    *   **Suggest**: Defining custom error types/enums instead of throwing/returning generic `Error` or strings.
+    *   **Reject**: Unhandled promise rejections or ignored errors in `.catch()` blocks.
+    *   **Suggest**: Wrapping UI sections in Error Boundaries (Client Components), especially around data fetching or complex rendering.
+    *   **Suggest**: Implementing `error.tsx` files for App Router segments.
+    *   **Suggest**: Logging errors server-side with context.
+    *   **Reject**: Exposing raw error details to the user in the UI.
+    *   **Suggest**: Using `useActionState` / `useFormState` for handling Server Action responses/errors.
+</implementation>
+
+<examples>
+<positive title="✅ Correct: Using Result Type, Custom Errors, and Error Boundary">
 ```typescript
-// src/app/lib/db/types.ts
-export type DbError =
-  | { type: 'NotFound'; resource: string }
-  | { type: 'ConnectionError'; message: string }
-  | { type: 'QueryError'; query: string; message: string };
+// src/lib/errors.ts
+export type ApiError =
+  | { type: 'NotFound'; message: string }
+  | { type: 'NetworkError'; cause?: Error }
+  | { type: 'ValidationError'; field: string; message: string }
+  | { type: 'Unauthorized' };
 
-// src/app/lib/db/index.ts
-import { type DbError } from './types';
+// Custom Result type (or use neverthrow)
+type Result<T, E> = { success: true; data: T } | { success: false; error: E };
 
-export async function getUser(id: string): Promise<Result<User, DbError>> {
+// src/lib/apiClient.ts
+import { type ApiError, type Result } from './errors';
+
+export async function fetchUserProfile(userId: string): Promise<Result<UserProfile, ApiError>> {
   try {
-    const user = await dbClient.query('...'); // Assume this can throw
-    if (!user) {
-      return { success: false, error: { type: 'NotFound', resource: `User ${id}` } };
+    const response = await fetch(`/api/users/${userId}`);
+    if (response.status === 404) {
+      return { success: false, error: { type: 'NotFound', message: `User ${userId} not found` } };
     }
-    return { success: true, data: user };
+    if (!response.ok) {
+      throw new Error(`API Error: ${response.status}`); // Throw for unexpected errors
+    }
+    const data = await response.json() as UserProfile; // Assume validation happens
+    return { success: true, data };
   } catch (error) {
-    return { success: false, error: { type: 'QueryError', query: '...', message: error.message } };
+    // Log the unexpected error server-side if this runs there
+    console.error("fetchUserProfile failed:", error);
+    return { success: false, error: { type: 'NetworkError', cause: error instanceof Error ? error : undefined } };
   }
 }
 
-// src/app/components/UserDisplay.tsx
+// src/app/components/UserProfileDisplay.tsx
 'use client';
-import { getUser, type DbError } from '@/app/lib/db';
+import { useEffect, useState } from 'react';
+import { fetchUserProfile, type ApiError, type Result } from '@/lib/apiClient';
+import { useErrorBoundary } from 'react-error-boundary';
+
+interface UserProfileDisplayProps { userId: string }
+
+function UserProfileDisplay({ userId }: Readonly<UserProfileDisplayProps>) {
+  const [result, setResult] = useState<Result<UserProfile, ApiError> | null>(null);
+  const { showBoundary } = useErrorBoundary(); // For critical rendering errors
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadUser() {
+      const fetchResult = await fetchUserProfile(userId);
+      if (isMounted) {
+         // Potentially trigger boundary for critical load errors if needed
+         // if (!fetchResult.success && fetchResult.error.type === 'NetworkError') {
+         //    showBoundary(new Error("Critical network failure"));
+         // }
+        setResult(fetchResult);
+      }
+    }
+    void loadUser();
+    return () => { isMounted = false; };
+  }, [userId, showBoundary]);
+
+  if (!result) {
+    return <div>Loading profile...</div>; // Initial loading state
+  }
+
+  if (!result.success) {
+    // Handle specific recoverable errors gracefully
+    switch (result.error.type) {
+      case 'NotFound':
+        return <div className="text-yellow-600">User not found.</div>;
+      case 'Unauthorized':
+        return <div className="text-red-600">You are not authorized to view this profile.</div>;
+      default:
+         // For other errors (like NetworkError), show a generic message
+        return <div className="text-red-500">Failed to load profile. Please try again later.</div>;
+    }
+  }
+
+  // Success case: Display user data
+  const user = result.data;
+  return (
+    <div>
+      <h1>{user.name}</h1>
+      {/* ... display rest of profile ... */}
+    </div>
+  );
+}
+
+// src/app/users/[id]/page.tsx
+// (Wrapping the client component in ErrorBoundary)
+import UserProfileDisplay from '@/app/components/UserProfileDisplay';
 import { ErrorBoundary } from 'react-error-boundary';
 
-function UserComponent({ userId }: { userId: string }) {
-  // ... fetch user data using getUser ...
-  // ... handle Result<User, DbError> ...
-  if (result.success === false) {
-     // Display user-friendly error based on result.error.type
-     return <div>Error loading user: Could not find user.</div>;
-  }
-  // ... display user ...
+function ErrorFallback({ error, resetErrorBoundary }: { error: Error, resetErrorBoundary: () => void }) {
+  return (
+    <div role="alert">
+      <p>Something went wrong loading the user profile:</p>
+      <pre>{error.message}</pre>
+      <button onClick={resetErrorBoundary}>Try again</button>
+    </div>
+  )
 }
 
-function UserPage({ userId }: { userId: string }) {
+export default function UserPage({ params }: { params: { id: string } }) {
   return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <UserComponent userId={userId} />
-    </ErrorBoundary>
+     <ErrorBoundary FallbackComponent={ErrorFallback}>
+        <UserProfileDisplay userId={params.id} />
+     </ErrorBoundary>
   );
 }
 ```
+</positive>
 
-❌ Incorrect:
+<negative title="❌ Incorrect: Poor Error Handling">
 ```typescript
-async function getUser(id: string) { // Missing Result return type
+// Bad: Returning null/undefined for errors
+async function getUser(id: string): Promise<User | null> {
   try {
-    const user = await dbClient.query('...');
-    return user; // Returns null/undefined on error implicitly?
+    const response = await fetch(`/api/users/${id}`);
+    if (!response.ok) return null; // Ambiguous failure reason
+    return await response.json();
   } catch (error) {
-    console.error('DB Error:', error); // Raw console log, throws or returns undefined?
-    throw new Error("Database failed"); // Generic error
+    console.error(error); // Logs potentially sensitive info, doesn't inform user
+    return null; // Hides the error type
   }
 }
+
+// Bad: Throwing generic errors
+async function updateUser(data: any) {
+  if (!data.name) {
+    throw new Error('Name missing'); // Generic, hard to handle specifically
+  }
+  // ... api call ...
+}
+
+// Bad: Ignoring promise rejection
+function fireAndForget() {
+  fetch('/api/log-event', { method: 'POST' }); // Error is ignored!
+}
+
+// Bad: Exposing raw errors to user
+'use client'
+function SomeComponent() {
+  const [error, setError] = useState<Error | null>(null);
+  // ... fetch data and set error on failure ...
+  if (error) {
+    return <div>Failed: {error.message} Stack: {error.stack}</div> // Exposes implementation details
+  }
+  // ...
+}
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Improves application stability and prevents unexpected crashes.
+-   Provides better user experience by handling failures gracefully.
+-   Simplifies debugging through specific error types and contextual logging.
+-   Creates more predictable and maintainable code.
+-   Enhances security by preventing exposure of sensitive error details.
+</benefits>
+
+<scope>
+Applies to all code involving potentially failing operations, including data fetching (client and server), API interactions, form submissions, data processing, and React component rendering.
+</scope>
+
+<references>
+-   [React Docs: Error Boundaries](https://react.dev/reference/react/Component#catching-rendering-errors-with-an-error-boundary)
+-   [Next.js Docs: Error Handling](https://nextjs.org/docs/app/building-your-application/routing/error-handling)
+-   [`react-error-boundary` library](https://github.com/bvaughn/react-error-boundary)
+-   [`neverthrow` library (for Result type)](https://github.com/supermacro/neverthrow)
+-   [MDN: `try...catch`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/try...catch)
+-   [MDN: Promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_promises)
+</references>
+
+</rule>

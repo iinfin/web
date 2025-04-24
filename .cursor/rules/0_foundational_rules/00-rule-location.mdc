@@ -3,41 +3,70 @@ description: Cursor Rules Location Rule
 globs: *.mdc
 alwaysApply: true
 ---
-## Description
-This rule ensures that all new MDC (Model-Driven Code) rules are created in the `.cursor/rules` directory, maintaining a consistent and organized structure for rule management within this project.
+<rule>
 
-## Rule
-When creating new MDC rules:
-1. All new MDC rules MUST be created in the `.cursor/rules` directory.
-2. Each rule MUST be in a separate file.
-3. Rule files MUST use the `.mdc` extension.
-4. Rule files MUST follow the naming convention: `[category]-[topic].mdc` (e.g., `typescript-strict-types.mdc`, `react-component-patterns.mdc`).
-5. Rule files MUST contain proper markdown formatting and rule structure.
+<id>0_foundational_rules/00-rule-location</id>
+<title>MDC Rule File Location and Naming</title>
 
-## Implementation
-- Cursor IDE should be instructed to place new rules here.
-- Reject any attempt to create `.mdc` files outside `.cursor/rules/`.
+<description>
+Ensures all Model-Driven Code (MDC) rules are consistently created and named within the designated `.cursor/rules` directory, promoting organization and maintainability.
+</description>
 
-## Benefits
-- Centralized rule management.
-- Consistent project structure.
-- Easier discovery and version control of rules.
+<context>
+A standardized location and naming convention for MDC rules is crucial for easy discovery, management, version control, and automated processing within the project.
+</context>
 
-## Examples
-✅ Correct Location:
+<guidelines>
+1.  **Directory**: All new MDC rule files MUST be created exclusively within the `.cursor/rules` directory at the project root.
+2.  **File Separation**: Each distinct rule MUST reside in its own separate file.
+3.  **Extension**: All rule files MUST use the `.mdc` file extension.
+4.  **Naming Convention**: Rule files MUST follow the format `[category]/[numeric_prefix]-[topic].mdc`.
+    *   `[category]`: A directory representing the rule's category (e.g., `0_foundational_rules`, `1_technical_stack_rules`).
+    *   `[numeric_prefix]`: A two-digit number for ordering within the category (e.g., `00`, `10`, `21`).
+    *   `[topic]`: A short, descriptive kebab-case name for the rule's subject (e.g., `rule-location`, `typescript-strict`).
+    *   Example: `1_technical_stack_rules/10-typescript-strict.mdc`
+5.  **Content**: Rule files MUST contain well-structured Markdown content, adhering to the standard rule format (like this one).
+</guidelines>
+
+<implementation>
+-   **Automation**: The Cursor IDE should be configured or instructed to automatically place new rules in `.cursor/rules/[category]/`.
+-   **Validation**: Any attempt (manual or automated) to create `.mdc` files outside the designated `.cursor/rules` directory structure should be prevented or flagged as an error.
+</implementation>
+
+<examples>
+<positive title="✅ Correct Location and Naming">
 ```
 PROJECT_ROOT/
-├── .cursor/
-│   └── rules/
-│       ├── 00-rule-location.mdc
-│       ├── 10-typescript-strict.mdc
-│       └── ...
-└── ...
+└── .cursor/
+    └── rules/
+        ├── 0_foundational_rules/
+        │   ├── 00-rule-location.mdc
+        │   └── 01-git-conventional-commits.mdc
+        ├── 1_technical_stack_rules/
+        │   └── 10-typescript-strict.mdc
+        └── ...
 ```
-
-❌ Incorrect Location:
+</positive>
+<negative title="❌ Incorrect Locations or Naming">
 ```
 PROJECT_ROOT/
-├── rules/my-rule.mdc
-├── my-rule.mdc
+├── rules/my-rule.mdc             # Incorrect directory
+├── my-rule.mdc                   # Incorrect location (root)
+└── .cursor/rules/my-rule.md      # Incorrect extension
+└── .cursor/rules/general/Rule1.mdc # Incorrect naming convention
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Centralized and organized rule management.
+-   Consistent and predictable project structure.
+-   Simplified rule discovery, maintenance, and version control.
+-   Facilitates automation and tooling related to rules.
+</benefits>
+
+<scope>
+Applies to the creation and management of all `.mdc` rule files within this project.
+</scope>
+
+</rule>

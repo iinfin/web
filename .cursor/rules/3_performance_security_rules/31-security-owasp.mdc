@@ -3,117 +3,198 @@ description: Web Application Security Best Practices (OWASP Inspired)
 globs: ["**/*.ts", "**/*.tsx", "src/app/**/route.ts", "src/middleware.ts"]
 alwaysApply: true
 ---
-## Description
-Enforces security best practices inspired by OWASP guidelines within the Next.js/React/TypeScript context.
+<rule>
 
-## Rule
-1.  **Input Validation**:
-    *   Validate ALL inputs from users, APIs, or external sources on the server-side (Route Handlers, Server Actions, Server Components accessing data).
-    *   Use robust validation libraries (e.g., Zod, Yup) with strict schemas.
-    *   Validate data types, formats, lengths, ranges, and allowed characters.
-    *   Do not rely solely on client-side validation.
-2.  **Output Encoding**:
-    *   React automatically encodes content rendered in JSX, preventing most XSS. Be cautious when using `dangerouslySetInnerHTML`. Sanitize any HTML content passed to it using libraries like `dompurify`.
-    *   Encode data properly when inserting into different contexts (e.g., HTML attributes, JavaScript contexts, CSS).
-3.  **Cross-Site Scripting (XSS) Prevention**:
-    *   Avoid `dangerouslySetInnerHTML` unless absolutely necessary and with proper sanitization.
-    *   Set appropriate `Content-Security-Policy` (CSP) headers (via `next.config.ts` or middleware) to restrict script sources, styles, etc.
-    *   Validate and sanitize user-generated content before display.
-4.  **Authentication & Session Management**:
-    *   Use established, secure authentication libraries/providers (e.g., NextAuth.js, Clerk, Lucia Auth). Avoid rolling your own authentication.
-    *   Use secure session management techniques (e.g., HttpOnly, Secure cookies for tokens/session IDs).
-    *   Implement rate limiting on login and sensitive endpoints.
-    *   Enforce strong password policies if handling passwords directly (though OAuth/external providers are often better).
-5.  **Authorization (Access Control)**:
-    *   Implement authorization checks on the server-side (Server Components, Route Handlers, Server Actions) for every sensitive operation or data access.
-    *   Do not rely on hiding UI elements on the client-side for security.
-    *   Use role-based or attribute-based access control models.
-6.  **Security Headers**: Configure important security headers in `next.config.ts` or middleware: `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
-7.  **Dependency Management**:
-    *   Keep dependencies up-to-date. Regularly run `npm audit` to check for known vulnerabilities.
-    *   Use a `package-lock.json` file to lock dependency versions.
-8.  **Server-Side Request Forgery (SSRF) Prevention**: If making server-side requests based on user input (e.g., fetching a URL provided by a user), validate the URL strictly, use allowlists for domains/IPs if possible, and configure network policies.
-9.  **Sensitive Data Exposure**:
-    *   Avoid logging sensitive information (passwords, API keys, PII).
-    *   Do not expose sensitive data to the client-side unless necessary. Filter data in Server Components or API routes.
-    *   Store secrets securely (environment variables, secrets management services), not in code or client-side bundles.
+<id>3_performance_security_rules/31-security-owasp</id>
+<title>Web Security Best Practices (OWASP Inspired)</title>
 
-## Actions
-- **Reject**: Use of `dangerouslySetInnerHTML` without clear evidence of input sanitization.
-- **Suggest**: Adding server-side input validation for data received from clients or external sources (Route Handlers, Server Actions).
-- **Suggest**: Implementing authorization checks before accessing protected resources or performing sensitive actions on the server.
-- **Info**: Remind to configure important security headers (`Content-Security-Policy`, etc.) in `next.config.ts` or middleware.
-- **Suggest**: Using established authentication libraries instead of custom implementations.
-- **Warn**: Potential exposure of sensitive data to the client-side; suggest filtering on the server.
+<description>
+Enforces key web security best practices, inspired by OWASP guidelines, tailored for the Next.js, React, and TypeScript environment to mitigate common vulnerabilities.
+</description>
 
-## Examples
-✅ Correct (Server Action with Validation/AuthZ):
+<context>
+Web application security is paramount. Following established guidelines helps prevent common attacks like Cross-Site Scripting (XSS), Injection, Broken Authentication/Authorization, and Sensitive Data Exposure, leading to a more robust and trustworthy application.
+</context>
+
+<guidelines>
+1.  **Input Validation (Server-Side)**:
+    *   Strictly validate ALL data received from untrusted sources (user input, external APIs, query parameters) on the **server-side** (Route Handlers, Server Actions, Server Components processing data).
+    *   Use robust schema validation libraries (e.g., Zod) defining expected types, formats, lengths, ranges, and allowed characters/patterns.
+    *   Treat client-side validation only as a UX enhancement, never as a security measure.
+    *   Specifically sanitize inputs intended for database queries (prevent SQL injection, though ORMs often help) or OS commands.
+2.  **Output Encoding & XSS Prevention**:
+    *   React automatically encodes JSX content, preventing most basic XSS. However, be extremely cautious with `dangerouslySetInnerHTML`.
+    *   If `dangerouslySetInnerHTML` is unavoidable, the input MUST be sanitized using a reliable library like `dompurify` configured appropriately on the server or client (depending on where the content originates and is used).
+    *   Set a strict `Content-Security-Policy` (CSP) HTTP header via `next.config.js` or middleware to restrict sources for scripts, styles, images, fonts, frames, etc., mitigating XSS impact.
+3.  **Authentication & Session Management**:
+    *   Use industry-standard, well-maintained libraries/frameworks for authentication (e.g., NextAuth.js, Lucia Auth, Clerk). Avoid implementing custom authentication logic.
+    *   Employ secure session management: Use HttpOnly, Secure, SameSite=Lax/Strict cookies for session tokens. Regenerate session IDs upon login/privilege change.
+    *   Implement rate limiting on authentication endpoints (login, registration, password reset) to prevent brute-force attacks.
+    *   Store password hashes securely using strong, adaptive algorithms (e.g., Argon2, bcrypt) if handling passwords directly (prefer federated identity/OAuth).
+4.  **Authorization / Access Control**:
+    *   Enforce authorization checks on the **server-side** for every request accessing protected resources or performing sensitive actions. Check user roles, permissions, or ownership.
+    *   Do NOT rely on client-side checks (e.g., hiding buttons in the UI) for security; these are easily bypassed.
+    *   Implement access control logic within Server Components fetching data, Route Handlers, or Server Actions.
+5.  **Security Headers**: Configure essential security headers in `next.config.js` or middleware:
+    *   `Content-Security-Policy`: Define allowed sources for content.
+    *   `Strict-Transport-Security`: Enforce HTTPS.
+    *   `X-Content-Type-Options: nosniff`: Prevent MIME type sniffing.
+    *   `X-Frame-Options: DENY` or `SAMEORIGIN`: Prevent clickjacking.
+    *   `Referrer-Policy`: Control referrer information leakage.
+    *   `Permissions-Policy`: Control browser feature access.
+6.  **Dependency Management**:
+    *   Keep all dependencies up-to-date using `npm update` or similar.
+    *   Regularly run `npm audit` or use automated tools (like GitHub Dependabot) to identify and remediate known vulnerabilities in dependencies.
+    *   Commit `package-lock.json` (or equivalent) to ensure reproducible and secure builds.
+7.  **Sensitive Data Exposure**:
+    *   Avoid logging sensitive information (passwords, API keys, PII, tokens) in server logs or browser console.
+    *   Minimize exposure of sensitive data to the client-side. Filter data in Server Components or API routes before sending it to the browser.
+    *   Store secrets (API keys, database credentials, JWT secrets) securely using environment variables (`.env.local`, platform secrets management), never hardcoded in source code.
+    *   Be mindful of data exposed in error messages.
+8.  **Server-Side Request Forgery (SSRF) Prevention**: If the application makes server-side requests to URLs provided or influenced by user input, validate the URL strictly against an allowlist of expected domains/protocols/ports. Avoid requests to internal network resources.
+</guidelines>
+
+<implementation>
+-   **Libraries**: Zod (validation), DOMPurify (sanitization), NextAuth.js/Lucia/Clerk (auth).
+-   **Configuration**: `next.config.js` (headers), `.env.local` (secrets), CSP directives.
+-   **Code Structure**: Validation in Server Actions/Route Handlers, Authorization checks server-side, secure coding practices.
+-   **Tooling**: `npm audit`, Dependabot, Snyk, ESLint security plugins.
+-   **AI Actions**:
+    *   **Reject**: Use of `dangerouslySetInnerHTML` without strong justification and evidence of server-side sanitization using `dompurify` or equivalent.
+    *   **Require**: Server-side input validation (e.g., using Zod) for data from forms (Server Actions) or API routes.
+    *   **Require**: Server-side authorization checks before accessing protected resources or performing mutations.
+    *   **Suggest**: Configuring essential security headers in `next.config.js` or middleware.
+    *   **Warn**: If potentially sensitive data appears to be passed directly to client components without filtering.
+    *   **Warn**: If authentication/session management seems custom or insecure; suggest standard libraries.
+    *   **Suggest**: Running `npm audit` regularly.
+</implementation>
+
+<examples>
+<positive title="✅ Correct: Server Action with Zod Validation & Server-Side AuthZ">
 ```typescript
 'use server';
 import { z } from 'zod';
-import { auth } from '@/lib/auth'; // Assume this checks session
-import { updateUserProfile } from '@/lib/db';
+import { auth } from '@/lib/auth'; // Assume this retrieves server-side session
+import { updateUserSettings, getUserSettings } from '@/lib/db';
+import { revalidatePath } from 'next/cache';
 
-const profileSchema = z.object({
-  userId: z.string().uuid(),
-  bio: z.string().max(200).optional(),
+const settingsSchema = z.object({
+  userId: z.string().uuid("Invalid user ID format"),
+  emailNotifications: z.enum(['all', 'mentions', 'none']),
+  theme: z.enum(['light', 'dark']).default('light'),
 });
 
-export async function updateProfileAction(formData: FormData) {
+export async function updateSettingsAction(formData: FormData) {
+  // 1. Authentication Check (Server-Side)
   const session = await auth();
   if (!session?.user) {
-    return { success: false, error: 'Unauthorized' };
+    return { success: false, error: 'Authentication required.' };
   }
 
   const rawData = Object.fromEntries(formData.entries());
-  const parseResult = profileSchema.safeParse(rawData);
+
+  // Ensure userId matches authenticated user (prevent manipulation)
+  rawData.userId = session.user.id;
+
+  // 2. Input Validation (Server-Side)
+  const parseResult = settingsSchema.safeParse(rawData);
 
   if (!parseResult.success) {
-    return { success: false, error: 'Invalid input', issues: parseResult.error.issues };
+    // Return validation errors for user feedback
+    return { success: false, error: 'Invalid settings.', issues: parseResult.error.flatten().fieldErrors };
   }
 
-  const { userId, bio } = parseResult.data;
+  const validatedSettings = parseResult.data;
 
-  // Authorization check
-  if (session.user.id !== userId) {
-    return { success: false, error: 'Forbidden' };
+  // 3. Authorization Check (Server-Side - can user update these settings?)
+  // Example: Check if user ID matches session ID again, or other logic
+  if (validatedSettings.userId !== session.user.id) {
+    // Log security attempt potentially
+    return { success: false, error: 'Authorization failed.' };
   }
 
   try {
-    await updateUserProfile(userId, { bio });
-    return { success: true };
-  } catch (error) {
-    // Log error securely
-    return { success: false, error: 'Failed to update profile' };
+    // 4. Perform action
+    await updateUserSettings(validatedSettings.userId, {
+      receive_email_notifications: validatedSettings.emailNotifications,
+      ui_theme: validatedSettings.theme
+    });
+    revalidatePath('/settings'); // Revalidate cache
+    return { success: true, message: 'Settings updated successfully.' };
+  } catch (dbError) {
+    // Log the error securely on the server
+    console.error("Database error updating settings:", dbError);
+    return { success: false, error: 'Failed to update settings due to a server error.' };
   }
 }
 ```
+</positive>
 
-❌ Incorrect (Client-side AuthZ, No Server Validation):
+<negative title="❌ Incorrect: Client-Side AuthZ, Missing Server Validation, XSS Risk">
 ```typescript
 'use client';
 import { useSession } from 'next-auth/react';
+import { useState } from 'react';
 
-function EditProfileForm({ userId, initialBio }: { userId: string; initialBio: string }) {
+function UserBioEditor({ userId, initialBio }: { userId: string; initialBio: string }) {
   const { data: session } = useSession();
+  const [bioHtml, setBioHtml] = useState(initialBio);
 
-  // Bad: Client-side check is insufficient for security
+  // Bad: Authorization check only on client (easily bypassed)
   if (session?.user?.id !== userId) {
-    return <div>Unauthorized</div>; // Easily bypassed
+    return <p>You cannot edit this profile.</p>;
   }
 
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const bio = formData.get('bio') as string;
-
-    // Bad: Sending data to API without server-side validation/authZ
-    await fetch('/api/update-profile', {
-      method: 'POST',
-      body: JSON.stringify({ userId, bio }), // userId could be manipulated
-    });
+  const handleSave = async () => {
+    // Bad: No server-side validation or sanitization of bioHtml
+    try {
+      await fetch('/api/update-bio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        // Sending potentially unsafe HTML without server checks
+        body: JSON.stringify({ userId, bioHtml })
+      });
+      alert('Bio updated!');
+    } catch (error) {
+      alert('Failed to update bio.');
+    }
   };
 
-  return <form onSubmit={handleSubmit}>{/* ... */}</form>;
+  return (
+    <div>
+      {/* Example: Rich text editor might output HTML */}
+      <textarea value={bioHtml} onChange={(e) => setBioHtml(e.target.value)} />
+      <button onClick={handleSave}>Save Bio</button>
+
+      {/* Bad: Rendering potentially unsanitized HTML without DOMPurify */}
+      <h3>Preview:</h3>
+      <div dangerouslySetInnerHTML={{ __html: bioHtml }} />
+    </div>
+  );
 }
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Reduces the risk of common web vulnerabilities (XSS, Injection, etc.).
+-   Protects user data and application integrity.
+-   Builds user trust through a more secure application.
+-   Helps comply with security standards and regulations.
+-   Makes the application more resilient against attacks.
+</benefits>
+
+<scope>
+Applies to all parts of the application handling user input, data display, authentication, authorization, external requests, and dependency management. Includes server-side code (Server Components, Route Handlers, Server Actions, middleware) and client-side code handling data or interacting with APIs.
+</scope>
+
+<references>
+-   [OWASP Top 10 Web Application Security Risks](https://owasp.org/www-project-top-ten/)
+-   [Next.js Security Documentation](https://nextjs.org/docs/app/building-your-application/configuring/security-headers)
+-   [Zod Documentation (Validation)](https://zod.dev/)
+-   [DOMPurify (HTML Sanitization)](https://github.com/cure53/DOMPurify)
+-   [NextAuth.js Documentation](https://next-auth.js.org/)
+-   [Content Security Policy (CSP) on MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP)
+</references>
+
+</rule>

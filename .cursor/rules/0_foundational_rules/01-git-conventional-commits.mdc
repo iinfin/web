@@ -3,188 +3,221 @@ description: Enforces and automates Conventional Commits tailored for this proje
 globs: []
 alwaysApply: true
 ---
-## Description
-This rule defines and automates the process of committing changes using the Conventional Commits specification, tailored with project-specific types and scopes defined in `commitlint.config.js`. It ensures consistent, semantic commit messages suitable for automated changelog generation and versioning. It guides both manual commit authoring and the automated commit generation by Cursor, leveraging the `commitlint` setup and the Husky `commit-msg` hook.
+<rule>
 
-## Rule for Automated Commits (Cursor AI)
-When asked to commit and push changes:
-1. Format and Lint check all files first, fix linter errors and warnings if there are any
-    ```bash
-    npm run util:format
-    npm run util:lint
-    ```
-2.  Run `npm run build` to verify the project builds without error and without any linter warnings before pushing. If there are, fix the errors and then commit and push.
-    *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
-    *   **IMPORTANT**: When using `git commit -m` directly with multiple `-m` flags:
-        *   DO NOT include any escape sequences (like `\n`) in the message content.
-        *   DO NOT try to format the text with literal newlines within a single `-m` argument.
-        *   Each `-m` flag creates a new paragraph in the commit message.
-        *   See examples below for the correct way to format multi-line messages.3.  Stage all modified files (`git add .`).
-4.   Review the staged changes to understand the full context before committing:
-    ```bash
-    git --no-pager status
-    git --no-pager diff --staged
-    ```
+<id>0_foundational_rules/01-git-conventional-commits</id>
+<title>Git Conventional Commits</title>
 
-    4.a **Important:** Always use `--no-pager` for git commands:
-        When executing git commands that might produce paginated output, always include the `--no-pager` flag to ensure all output is displayed at once without requiring user interaction:
-        For example:
+<description>
+Defines and enforces the use of the Conventional Commits specification for all Git commits. This ensures a consistent, semantic commit history suitable for automated changelog generation, versioning, and improved collaboration. Includes project-specific types/scopes and guides both manual and AI-driven commit processes.
+</description>
+
+<context>
+A standardized commit message format is essential for maintaining a clear project history, automating release processes (like version bumping and changelog generation via semantic-release), and making it easier for humans and machines to understand the nature of changes over time.
+</context>
+
+<guidelines>
+
+  <section title="General Commit Message Format">
+    <format>
+```
+type(scope): subject
+[optional body]
+[optional footer(s)]
+```
+    </format>
+    <rules>
+      - **Header (`type(scope): subject`)**:
+        - **Type**: MUST be one of the **Project-Specific Types** listed below.
+        - **Scope** (Optional): Parentheses containing a noun describing the section of the codebase affected (e.g., `components`, `api`, `config`). MUST be one of the **Project-Specific Scopes** below, if used.
+        - **Subject**: Concise description of the change.
+          - Use imperative, present tense (e.g., "add", "fix", "change" not "added", "fixed", "changes").
+          - Lowercase first letter.
+          - No period (.) at the end.
+          - Max 100 characters for the entire header line.
+      - **Body** (Optional):
+        - Provides additional context or reasoning for the change.
+        - MUST be separated from the subject by a blank line.
+        - Use imperative, present tense.
+        - Wrap lines at 72 characters for readability in Git tools.
+      - **Footer** (Optional):
+        - MUST be separated from the body by a blank line.
+        - Contains metadata like issue tracker references (`Closes #123`, `Refs #456`) or breaking change information.
+      - **Breaking Changes**:
+        - Indicate with `BREAKING CHANGE:` prefix in the footer, followed by a description.
+        - Optionally, use `!` after the type/scope in the header (e.g., `feat(api)!: ...`) for emphasis.
+    </rules>
+  </section>
+
+  <section title="Project-Specific Types">
+    *(MUST use one)*
+    - `feat`: A new feature for the user.
+    - `fix`: A bug fix for the user.
+    - `docs`: Documentation only changes.
+    - `style`: Changes that do not affect the meaning of the code (white-space, formatting, missing semi-colons, etc).
+    - `refactor`: A code change that neither fixes a bug nor adds a feature.
+    - `perf`: A code change that improves performance.
+    - `test`: Adding missing tests or correcting existing tests.
+    - `build`: Changes that affect the build system or external dependencies (e.g., gulp, broccoli, npm).
+    - `ci`: Changes to CI configuration files and scripts (e.g., Travis, Circle, BrowserStack, SauceLabs).
+    - `chore`: Other changes that don't modify `src` or `test` files.
+    - `revert`: Reverts a previous commit.
+    - **`animation`**: Changes related to animations and motion (Framer Motion).
+    - **`content`**: Content updates like text or images.
+    - **`layout`**: Layout and design changes.
+    - **`a11y`**: Accessibility improvements.
+    - **`r3f`**: Changes specific to React Three Fiber / 3D scenes.
+  </section>
+
+  <section title="Project-Specific Scopes">
+    *(Optional, use one or more relevant scopes)*
+    - `components`, `pages`, `api`, `hooks`, `lib`, `utils`, `styles`, `config`, `assets`, `types`, `content`, `deps`, `tests`, `3d`
+  </section>
+
+  <section title="Guidelines for Manual Commits & AI Prompts">
+    1.  **Interactive Editor (Recommended)**: Use `git commit` without `-m` to open an editor for multi-line messages.
+    2.  **Command Line (`git commit -m`)**:
+        - For single-line messages: `git commit -m "type(scope): subject"`
+        - **IMPORTANT**: For multi-line messages, use **multiple `-m` flags**. Each `-m` creates a new paragraph. **NEVER** use literal newlines (`\n`) within a single `-m` argument.
+          ```bash
+          # CORRECT multi-line format
+          git commit -m "feat(auth): add multi-factor auth" -m "Implement TOTP verification flow using speakeasy library." -m "Closes #42"
+
+          # INCORRECT format - DO NOT USE newlines in -m
+          git commit -m "feat(auth): add multi-factor auth
+
+Implement TOTP..."
+          ```
+  </section>
+
+</guidelines>
+
+<implementation>
+
+  <section title="Automated Commits (Cursor AI Workflow)">
+    When asked to commit and push changes, the AI MUST follow these steps:
+    1.  **Pre-Commit Checks**:
         ```bash
-        git --no-pager log
-        git --no-pager diff
-        git --no-pager show
+        npm run util:format
+        npm run util:lint
+        # Fix any format/lint issues before proceeding
+        npm run build
+        # Ensure build passes without errors/warnings
         ```
-        This prevents pagination interfaces that would block Cursor AI's automation workflow.
-5.  **Check SSH authentication status** if using 1Password for SSH keys:
+    2.  **Stage Changes**:
+        ```bash
+        git add .
+        ```
+    3.  **Review Changes**:
+        ```bash
+        # ALWAYS use --no-pager for Git commands in automation
+        git --no-pager status
+        git --no-pager diff --staged
+        ```
+    4.  **Verify SSH Authentication (if using 1Password SSH Agent)**:
+        ```bash
+        ssh -T git@github.com
+        # Expected success: "Hi username! You've successfully authenticated..."
+        # Resolve any auth prompts/failures before committing.
+        ```
+    5.  **Generate Commit Message**:
+        - Follow the **General Commit Message Format** strictly.
+        - Determine the appropriate `<type>` and `<scope>` based on the staged changes.
+        - Generate a concise `<subject>`.
+        - **Body**:
+          - Add a blank line after the subject.
+          - Retrieve file statuses using `git status --porcelain`.
+          - Generate a concise bulleted list of significant changes:
+            ```
+            - Add: path/to/new/file.ts
+            - Modify: path/to/changed/file.tsx
+            - Delete: path/to/old/file.css
+            - Rename: path/to/old.js -> path/to/new.js
+            ```
+          - Optionally add a brief sentence explaining the "why".
+        - **Footer**: Include issue references if applicable.
+    6.  **Execute Commit**: Use the multiple `-m` flag method for structured messages:
+        ```bash
+        # Example commit execution
+        git commit -m "type(scope): subject" -m "Bulleted list of changes..." -m "Optional context..." -m "Closes #issue"
+        ```
+    7.  **Post-Commit Cleanup**: After commit (and push, if requested) is successful:
+        ```bash
+        npm run util:clean
+        ```
+  </section>
+
+  <section title="Tooling & Enforcement">
+    - **Configuration**: Conventional Commits rules (including types/scopes) may be further defined in `commitlint.config.js`.
+    - **Linting**: `commitlint` CLI (`@commitlint/cli`, `@commitlint/config-conventional`) is used to lint commit messages.
+    - **Enforcement**: A Husky hook (`.husky/commit-msg`) runs `npx commitlint --edit $1` to validate messages *before* they are committed, preventing non-compliant commits.
+  </section>
+
+</implementation>
+
+<examples>
+  <positive title="✅ Good Commit Examples">
     ```bash
-    # Test SSH connection to GitHub to verify authentication is working
-    ssh -T git@github.com
+    # Simple fix
+    git commit -m "fix(auth): correct redirect URL after login"
+
+    # Feature with scope and body/footer (using multiple -m)
+    git commit -m "feat(components): add UserAvatar component" -m "- Display user initials or image" -m "- Add fallback state" -m "Refs #78"
+
+    # Chore commit (dependency update)
+    git commit -m "chore(deps): update react to v19"
+
+    # Refactor with breaking change indicator
+    git commit -m "refactor(api)!: change user data structure" -m "BREAKING CHANGE: User endpoint now returns 'fullName' instead of 'firstName' and 'lastName'."
     ```
-    The expected successful response is: `Hi username! You've successfully authenticated, but GitHub does not provide shell access.`
-
-    If authentication fails or 1Password prompts for authorization, complete that process before proceeding with the commit.
-6.  Generate the commit message following the format below, using the project's specific types and scopes.
-    *   **Subject Line**: `<type>(<scope>): <description>`
-        *   **Type**: Choose the most appropriate type from the **Project-Specific Types** list below.
-        *   **Scope**: If applicable, choose the most relevant scope from the **Project-Specific Scopes** list below.
-        *   **Description**: Generate a concise summary of the *overall goal* starting with a lowercase verb.
-    *   **Body**:
-        *   Add a blank line after the subject.
-        *   Retrieve file statuses using `git status --porcelain` and generate a concise bulleted list:
-            *   `- Add: src/app/hooks/useNewHook.ts`
-            *   `- Modify: src/app/components/Button.tsx`
-            *   `- Delete: src/app/lib/oldUtil.ts`
-            *   `- Rename: src/app/styles/old.css -> src/app/styles/new.css`
-        *   Keep the list focused on significant changes.
-        *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
-    *   **IMPORTANT**: When using `git commit -m` directly with multiple `-m` flags:
-        *   DO NOT include any escape sequences (like `\n`) in the message content.
-        *   DO NOT try to format the text with literal newlines within a single `-m` argument.
-        *   Each `-m` flag creates a new paragraph in the commit message.
-        *   See examples below for the correct way to format multi-line messages.
-7.  Execute `git commit` with the generated message.
-8.  After the commit (and push, if performed) is completed, run `npm run util:clean` to clean up build directories.
-
-## Guidelines for Manual Commits & AI Prompts
-When committing manually or prompting the AI:
-
-1.  **Commit Message Format**:
     ```
-    type(scope): subject
+    # Interactive editor example (content inside editor)
+    feat(r3f): implement dynamic scene loading
 
-    body
+    - Add GLTF model loading via drei
+    - Implement Suspense for loading state
+    - Optimize texture loading
 
-    footer
+    Closes #101
     ```
-
-    **IMPORTANT**: When using `git commit -m` directly, NEVER include literal newlines or escape sequences (like `\n`) in the message content. Instead:
-    - For single-line messages: `git commit -m "type(scope): subject"`
-    - For multi-line messages: Use multiple `-m` flags, where each `-m` creates a new paragraph:
-
+  </positive>
+  <negative title="❌ Bad Commit Examples">
     ```bash
-    # CORRECT multi-line commit message format
-    git commit -m "type(scope): subject" -m "First paragraph of body." -m "Second paragraph of body."
+    # Missing type
+    git commit -m "Updated the button style"
 
-    # INCORRECT - don't do this
-    git commit -m "type(scope): subject" -m "Line 1\nLine 2\nLine 3"
+    # Subject ends with period, incorrect tense
+    git commit -m "fix: Fixed the login bug."
+
+    # Type not from allowed list
+    git commit -m "feature(ui): new banner"
+
+    # Using newline characters in -m (INCORRECT)
+    git commit -m "fix: address issue
+
+More details here."
     ```
+  </negative>
+</examples>
 
-2.  **Project-Specific Types** (Use one):
-    *   `feat`: A new feature
-    *   `fix`: A bug fix
-    *   `docs`: Documentation only changes
-    *   `style`: Changes that do not affect the meaning of the code (formatting, etc)
-    *   `refactor`: A code change that neither fixes a bug nor adds a feature
-    *   `perf`: A code change that improves performance
-    *   `test`: Adding missing tests or correcting existing tests
-    *   `build`: Changes that affect the build system or external dependencies
-    *   `ci`: Changes to CI configuration files and scripts
-    *   `chore`: Other changes that don't modify src or test files
-    *   `revert`: Reverts a previous commit
-    *   **`animation`**: Changes related to animations and motion (Framer Motion)
-    *   **`content`**: Content updates like text or images
-    *   **`layout`**: Layout and design changes
-    *   **`a11y`**: Accessibility improvements
-    *   **`r3f`**: Changes specific to React Three Fiber / 3D scenes
+<benefits>
+- Creates a clear, consistent, and navigable Git history.
+- Enables automated semantic versioning and CHANGELOG generation.
+- Improves collaboration by making changes easier to understand.
+- Provides clear traceability for changes, especially AI-generated ones.
+- Integrates seamlessly with CI/CD pipelines and Git tooling.
+</benefits>
 
-3.  **Project-Specific Scopes** (Optional, use one or more relevant scopes):
-    *   `components`, `pages`, `api`, `hooks`, `lib`, `utils`, `styles`, `config`, `assets`, `types`, `content`, `deps`, `tests`, `3d`
+<scope>
+Applies to all Git commits made in this repository by any contributor (human or AI). Enforced via commit message hooks.
+</scope>
 
-4.  **Subject**:
-    *   Use imperative, present tense (e.g., "add", "fix", "change").
-    *   Don't capitalize the first letter.
-    *   No period (.) at the end.
-    *   Keep the entire header line (`type(scope): subject`) under 100 characters.
+<references>
+- [Conventional Commits Specification](mdc:https:/www.conventionalcommits.org)
+- [commitlint Documentation](mdc:https:/commitlint.js.org)
+- [Husky Documentation](mdc:https:/typicode.github.io/husky)
+- `commitlint.config.js` (Project-specific configuration)
+- `.husky/commit-msg` (Git hook script)
+</references>
 
-5.  **Body** (Optional):
-    *   Explain the "why" behind the change.
-    *   Use imperative, present tense.
-    *   Wrap lines at 72 characters.
-
-6.  **Footer** (Optional):
-    *   Reference related issues (e.g., `Closes #123`, `Refs #456`).
-    *   Indicate breaking changes with `BREAKING CHANGE: <description>`.
-
-7.  **Breaking Changes**:
-    *   Must have a description starting with `BREAKING CHANGE:` in the footer.
-    *   Can optionally use `!` after the type/scope (e.g., `refactor(api)!: ...`) to draw attention.
-
-## Implementation Details
-*   **Configuration**: Rules are defined in `commitlint.config.js`.
-*   **Enforcement**: The Husky hook defined in `.husky/commit-msg` runs `npx commitlint --edit $1` to validate messages before committing.
-*   **Packages**: Uses `@commitlint/cli` and `@commitlint/config-conventional`.
-
-## Benefits
-- Consistent, semantic commit history.
-- Enables automated changelog generation and versioning.
-- Improves collaboration and code review efficiency.
-- Provides clear traceability for AI-generated changes.
-
-## Examples
-✅ **Good Examples:**
-
-**Interactive commit editor (recommended for complex commits):**
-```
-git commit
-```
-Then in the editor:
-```
-feat(components): add responsive hero section with 3D background
-
-- Implement new Hero component structure
-- Integrate R3F canvas for background animation
-- Use Tailwind CSS for responsive layout
-
-Resolves #42
-```
-
-**Command line with multiple -m flags:**
-```bash
-git commit -m "ci(config): implement github workflows" -m "- Add: GitHub workflows for PR checks" -m "- Add: Release automation configuration" -m "Closes #123"
-```
-
-**Simple one-line commit:**
-```bash
-git commit -m "fix(hooks): prevent infinite loop in useDataFetching hook"
-```
-```bash
-git commit -m "style(layout): adjust main content padding for better alignment"
-```
-```bash
-git commit -m "refactor(r3f): optimize shader code for performance"
-```
-```bash
-git commit -m "chore(deps): update framer-motion to latest version"
-```
-
-❌ **Bad Examples:**
-```
-fixed stuff
-update readme
-WIP
-Component changes
-```
-```bash
-# NEVER do this - using escape sequences in the message
-git commit -m "type(scope): subject" -m "Line 1\nLine 2\nLine 3"
-```
+</rule>

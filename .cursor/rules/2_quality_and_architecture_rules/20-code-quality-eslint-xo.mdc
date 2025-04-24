@@ -3,55 +3,138 @@ description: Code Quality and Linting (ESLint with xo/xo-typescript) Rule
 globs: ["**/*.ts", "**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Enforces code quality standards using ESLint, specifically configured with the `xo` and `xo-typescript` presets.
+<rule>
 
-## Rule
-1.  **Linter Configuration**: The project MUST be configured to use ESLint with the `xo` and `xo-typescript` configurations (`eslint.config.js`).
-2.  **No Lint Errors**: Code submitted or generated MUST NOT contain any ESLint errors according to the configured rules.
-3.  **No Lint Warnings (Ideal)**: Code SHOULD NOT contain ESLint warnings. Address warnings unless there's a strong, documented reason not to.
-4.  **Auto-Fixing**: Leverage ESLint's auto-fixing capabilities (`eslint --fix` or IDE integration) whenever possible to resolve style and minor issues automatically.
-5.  **Disabling Rules**: Disabling ESLint rules (`// eslint-disable-next-line ...`) MUST be used sparingly and always include a clear justification comment explaining *why* the rule is being disabled for that specific line or block. Avoid disabling rules globally unless absolutely necessary and documented in `eslint.config.js`.
-6.  **Readability**: Code must adhere to general readability principles enforced by `xo` (e.g., consistent indentation, spacing, naming conventions).
+<id>2_quality_and_architecture_rules/20-code-quality-eslint-xo</id>
+<title>Code Quality Enforcement (ESLint with XO)</title>
 
-## Actions
-- **Reject**: Code containing ESLint errors reported by the configured `xo`/`xo-typescript` ruleset.
-- **Suggest**: Running `eslint --fix` to automatically resolve fixable issues.
-- **Warn**: Presence of ESLint warnings.
-- **Reject**: Use of `eslint-disable` comments without a clear justification.
-- **Execute (Optional/Advanced)**: Configure Cursor to automatically run `eslint --fix` on generated/edited code blocks. (Requires careful setup).
+<description>
+Ensures consistent code style, identifies potential errors, and enforces best practices using ESLint, specifically configured with the strict and opinionated `xo` preset (`xo` and `xo-typescript`).
+</description>
 
-## Examples
-✅ Correct (Adheres to xo standards):
+<context>
+Maintaining consistent code quality and style across the project is crucial for readability, maintainability, and reducing bugs. ESLint, powered by the `xo` preset, automates this process, catching issues early and enforcing a high standard.
+</context>
+
+<guidelines>
+1.  **Configuration**: The project MUST use ESLint configured via `eslint.config.js` (or `package.json` ESLint config) and MUST extend the `xo` and `xo-typescript` configurations.
+    ```javascript
+    // Example eslint.config.js (conceptual)
+    import xoConfig from 'eslint-config-xo';
+    import xoTsConfig from 'eslint-config-xo-typescript';
+    // ... other configs (React, Next.js, Prettier)
+
+    export default [
+      xoConfig,
+      xoTsConfig,
+      // ... other plugin/rule configurations
+      {
+        rules: {
+          // Project-specific overrides (use sparingly)
+        }
+      }
+    ];
+    ```
+2.  **No Errors**: All committed code, whether human-written or AI-generated, MUST NOT contain any ESLint errors as reported by the configured `xo` ruleset. Builds or pre-commit hooks should fail if errors exist.
+3.  **Address Warnings**: ESLint warnings SHOULD be addressed. While not strictly blocking, they often indicate potential issues or deviations from best practices. Fix warnings unless there is a compelling, documented reason to ignore them.
+4.  **Auto-Fixing**: Utilize ESLint's auto-fixing capabilities (`eslint . --fix`, integrated IDE features) frequently to resolve stylistic and minor pattern issues automatically.
+5.  **Rule Disabling (`eslint-disable`)**:
+    *   Disabling ESLint rules using comments (`// eslint-disable-next-line <rule-name>`, `/* eslint-disable <rule-name> */`) MUST be used sparingly and only for specific, justifiable exceptions.
+    *   Every `eslint-disable` comment MUST be accompanied by a clear explanation comment on the preceding line explaining *why* the rule is being violated and why it's necessary in this specific instance.
+    *   Avoid disabling rules globally or for entire files unless absolutely essential and approved as a project standard (documented in `eslint.config.js`).
+6.  **Readability & Style**: Adhere to the stylistic conventions enforced by `xo` (indentation, spacing, naming conventions, use of modern syntax features, etc.) to ensure consistent readability.
+</guidelines>
+
+<implementation>
+-   **Setup**: ESLint, `xo`, `eslint-config-xo-typescript`, and necessary plugins (React, Next.js, Prettier integration) must be installed as development dependencies.
+-   **Integration**:
+    *   IDE ESLint extensions should be configured for real-time feedback.
+    *   Pre-commit hooks (e.g., using Husky and lint-staged) should run ESLint (`eslint --fix`) on staged files to prevent committing code with errors.
+    *   CI pipelines should include an ESLint check step to verify code quality.
+-   **AI Actions**:
+    *   **Reject**: Generating or suggesting code that contains ESLint errors according to the `xo` configuration.
+    *   **Suggest**: Running `eslint --fix` or using IDE integration to automatically resolve fixable lint issues before committing or finalizing code.
+    *   **Warn**: If generated code contains ESLint warnings, suggest resolution.
+    *   **Reject**: Adding `eslint-disable` comments without providing a clear justification comment.
+    *   **Apply**: Automatically apply `eslint --fix` to generated code if possible and configured.
+</implementation>
+
+<examples>
+<positive title="✅ Correct: Code Adhering to XO Standards">
 ```typescript
-import { type FC } from 'react'; // Type import first
+import { type FC } from 'react'; // Type import first, consistent spacing
 
-type GreetingProps = {
-  name: string;
+type UserCardProps = {
+  userId: string;
+  userName: string; // Consistent camelCase
 };
 
-const Greeting: FC<GreetingProps> = ({ name }) => {
-  if (!name) {
-    throw new Error('Name is required'); // Proper error handling
+const UserCard: FC<UserCardProps> = ({ userId, userName }) => {
+  if (!userId) {
+    throw new Error('User ID is required for UserCard.'); // Use Error object
   }
 
-  const message = `Hello, ${name}!`; // Correct template literal usage
+  const profileUrl = `/users/${userId}`;
+  const displayText = `View profile for ${userName}`;
 
-  return <div>{message}</div>; // Consistent JSX formatting
+  return (
+    <div className="card">
+      <a href={profileUrl}>{displayText}</a>
+    </div>
+  ); // Consistent JSX formatting and spacing
 };
 
-export default Greeting;
+export default UserCard;
 ```
+</positive>
 
-❌ Incorrect (Violates xo standards):
+<negative title="❌ Incorrect: Code Violating XO Standards">
 ```typescript
-import React from 'react';
+import React, {FC} from 'react'; // Incorrect import grouping/spacing
 
-const Greeting = (props: {name: string}) => { // Inconsistent type definition style
-    var msg = "Hello, " + props.name + "!"; // Use let/const, template literal
-    if (props.name == null) console.log("Name missing") // Use ===, avoid console.log in production, inconsistent spacing
-    return <div>{ msg }</div>; // Inconsistent spacing in JSX
+type userCardProps = { // Type name should be PascalCase
+    UserId: string; // Prop name should be camelCase
+    username: string;
 }
 
-export default Greeting
+const UserCard: FC<userCardProps> = (props) => { // Incorrect prop handling
+  // Missing validation for props.UserId
+  var profile_url = "/users/" + props.UserId; // Use const/let, template literal, camelCase
+  let display_text = "View profile for " + props.username;
+
+  // eslint-disable-next-line no-console -- Bad: No justification provided
+  console.log('Rendering card');
+
+  // Inconsistent indentation and spacing
+  return (
+  <div className = "card">
+  <a href = { profile_url }>{ display_text }</a>
+        </div>
+  );
+}
+
+export default UserCard // Missing semicolon
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Ensures a consistent and readable codebase across all contributors.
+-   Catches potential errors and anti-patterns early in the development cycle.
+-   Reduces time spent on style debates during code reviews.
+-   Improves overall code quality and maintainability.
+-   Automates adherence to best practices.
+</benefits>
+
+<scope>
+Applies to all JavaScript (`.js`, `.mjs`, `.cjs`) and TypeScript (`.ts`, `.tsx`) files within the project.
+</scope>
+
+<references>
+-   [XO Linter GitHub Repository](https://github.com/xojs/xo)
+-   [ESLint Documentation](https://eslint.org/docs/latest/)
+-   `eslint.config.js` (Project ESLint configuration file)
+-   Pre-commit hook configuration (e.g., `.husky/pre-commit`, `lint-staged` config)
+</references>
+
+</rule>

@@ -3,83 +3,244 @@ description: React Component Design and Architecture Rule
 globs: ["src/app/components/**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Enforces best practices for designing reusable, maintainable, and composable React components.
+<rule>
 
-## Rule
-1.  **Single Responsibility Principle (SRP)**: Components SHOULD ideally have a single, well-defined responsibility. Avoid creating monolithic components that handle too many unrelated tasks (e.g., complex data fetching, multiple UI interactions, business logic all in one).
-2.  **Composition over Inheritance**: Build complex UI by composing smaller, focused components. Avoid using class component inheritance patterns.
-3.  **Props Interface**: Define clear, specific, and well-typed prop interfaces (using TypeScript). Avoid overly generic props like `data: any` or passing down excessive, unused props. Use `Readonly` for props where appropriate.
-4.  **Reusability**: Design components with reusability in mind. Abstract common UI patterns and logic into shared components (`src/app/components/shared/`).
+<id>2_quality_and_architecture_rules/21-component-design</id>
+<title>React Component Design Principles</title>
+
+<description>
+Establishes guidelines for designing well-structured, reusable, maintainable, and composable React components within the Next.js App Router architecture.
+</description>
+
+<context>
+Effective component design is fundamental to building scalable and understandable React applications. Principles like SRP, composition, and clear prop definitions lead to a more robust and easier-to-manage codebase.
+</context>
+
+<guidelines>
+1.  **Single Responsibility Principle (SRP)**:
+    *   Components SHOULD focus on a single, well-defined piece of functionality or UI representation.
+    *   Avoid creating "god components" that manage excessive state, handle unrelated user interactions, perform complex data fetching, and contain large amounts of rendering logic all at once.
+    *   Break down complex features into smaller, specialized components.
+2.  **Composition over Inheritance**:
+    *   Build complex UI and functionality by composing smaller, independent components together.
+    *   Utilize props (including `children`) to customize appearance and behavior.
+    *   Avoid patterns resembling class inheritance; use hooks and prop composition instead.
+3.  **Clear Prop Interfaces**:
+    *   Define explicit and strictly typed prop interfaces using TypeScript (see <id>1_technical_stack_rules/10-typescript-strict</id>).
+    *   Be specific with prop types. Avoid overly generic types like `any`, `object`, or `Function`.
+    *   Use `Readonly<T>` or `readonly` modifiers for props that should not be mutated within the component.
+    *   Avoid passing down excessive or unused props (prop drilling). Use Context, state management (e.g., Zustand), or component composition to pass data deeply.
+4.  **Reusability**:
+    *   Design components with potential reuse in mind.
+    *   Abstract common UI patterns (buttons, cards, inputs, modals) and logic (custom hooks) into shared locations (e.g., `src/app/components/shared/`, `src/app/hooks/`).
+    *   Parameterize reusable components effectively through props.
 5.  **Separation of Concerns**:
-    *   Separate data fetching logic (ideally in Server Components or custom hooks/Route Handlers) from presentational UI logic.
-    *   Separate complex business logic from UI components (move to hooks, utility functions, or service layers).
-    *   Separate state management logic (use hooks like `useState`, `useReducer`, or context/external stores) from rendering logic.
-6.  **Naming Conventions**: Use clear, descriptive names for components (PascalCase) and props (camelCase). Component filenames should match the component name (e.g., `UserProfile.tsx`).
-7.  **Directory Structure**: Follow the established project structure (`src/app/components/section*/`, `src/app/components/shared/`). Group related components together.
-8.  **Minimal State**: Keep component state minimal. Derive state whenever possible from props or other state variables. Lift state up when multiple components need access to the same state.
+    *   **UI vs. Data Fetching**: Separate data fetching logic from presentational components. Prefer data fetching in Server Components, Route Handlers, or dedicated hooks.
+    *   **UI vs. Business Logic**: Extract complex business logic, calculations, or state transformations into custom hooks or utility functions (`src/app/lib/utils/`), keeping UI components focused on rendering.
+    *   **UI vs. State Management**: Keep state management logic contained (using hooks like `useState`, `useReducer`) and separate from the core rendering logic. For shared state, use Context or external stores.
+6.  **Naming Conventions**:
+    *   Use PascalCase for component names (e.g., `UserProfileCard`).
+    *   Use camelCase for prop names (e.g., `initialCount`).
+    *   Component filenames MUST match the component name exactly (e.g., `UserProfileCard.tsx`).
+7.  **Directory Structure**:
+    *   Follow the established project structure. Place reusable, application-agnostic components in `src/app/components/shared/`.
+    *   Group feature-specific or route-specific components within relevant directories (e.g., `src/app/(main)/blog/components/`, `src/app/components/auth/`).
+8.  **Minimal State**:
+    *   Components should own the minimal amount of state necessary.
+    *   Derive state from props or other state variables whenever possible instead of duplicating data in state.
+    *   Lift state up to the nearest common ancestor component when multiple components need access to or need to modify the same state.
+</guidelines>
 
-## Actions
-- **Suggest**: Breaking down large components into smaller, more focused ones.
-- **Suggest**: Extracting data fetching or complex logic into custom hooks or Server Components.
-- **Reject**: Components with overly generic or poorly typed prop interfaces.
-- **Suggest**: Moving reusable UI elements to the `shared` directory.
-- **Suggest**: Lifting state up or using Context/state management libraries instead of prop drilling through many levels.
+<implementation>
+-   **Code Structure**: Adherence to naming and directory structure conventions.
+-   **Linting**: Rules like `react/prop-types` (though less relevant with TS), hook rules (`react-hooks/rules-of-hooks`), and complexity rules can partially help.
+-   **Code Review**: Component granularity (SRP), prop design, separation of concerns, and reusability are key review points.
+-   **AI Actions**:
+    *   **Suggest**: Breaking down large, multi-responsibility components into smaller, focused ones.
+    *   **Suggest**: Extracting data fetching logic into Server Components or hooks.
+    *   **Suggest**: Extracting complex business logic or state manipulations into custom hooks.
+    *   **Reject**: Components with poorly defined, untyped, or overly generic prop interfaces (`any`, `object`).
+    *   **Suggest**: Moving genuinely reusable UI elements or logic to shared directories/hooks.
+    *   **Suggest**: Using Context API or state management libraries as alternatives to deep prop drilling.
+    *   **Enforce**: Consistent naming conventions for files, components, and props.
+</implementation>
 
-## Examples
-✅ Correct (Composable Components):
+<examples>
+<positive title="✅ Correct: Composable & Focused Components">
 ```typescript
 // src/app/components/shared/Button.tsx
-type ButtonProps = { /* ... */ };
-function Button(props: ButtonProps) { /* ... */ }
+import { type ButtonHTMLAttributes, type FC } from 'react';
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+}
+
+const Button: FC<Readonly<ButtonProps>> = ({ variant = 'primary', className, ...props }) => {
+  // ... implementation with base styles + variant styles ...
+  return <button className={`... ${className}`} {...props} />;
+};
+export default Button;
 
 // src/app/components/shared/Card.tsx
-type CardProps = { children: React.ReactNode; title?: string };
-function Card({ children, title }: CardProps) { /* ... */ }
+import { type FC, type ReactNode } from 'react';
 
-// src/app/components/sectionAbout/AboutCard.tsx
-import Button from '../shared/Button';
-import Card from '../shared/Card';
+interface CardProps {
+  children: ReactNode;
+  title?: string;
+  className?: string;
+}
 
-function AboutCard({ content }: { content: string }) {
+const Card: FC<Readonly<CardProps>> = ({ children, title, className }) => {
   return (
-    <Card title="About Me">
-      <p>{content}</p>
-      <Button>Learn More</Button>
+    <div className={`p-4 border rounded shadow ${className ?? ''}`}>
+      {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+      {children}
+    </div>
+  );
+};
+export default Card;
+
+// src/app/features/posts/components/PostCard.tsx
+import Card from '@/app/components/shared/Card';
+import Button from '@/app/components/shared/Button';
+
+interface PostCardProps {
+  title: string;
+  excerpt: string;
+  postId: string;
+}
+
+// Focused on displaying post summary
+function PostCard({ title, excerpt, postId }: Readonly<PostCardProps>) {
+  return (
+    <Card title={title} className="mb-4">
+      <p className="text-gray-600 mb-3">{excerpt}</p>
+      <Button onClick={() => alert(`Navigate to post ${postId}`)}>
+        Read More
+      </Button>
     </Card>
   );
 }
+export default PostCard;
 ```
+</positive>
 
-❌ Incorrect (Monolithic Component):
+<negative title="❌ Incorrect: Monolithic Component Violating SRP">
 ```typescript
-// Bad: Mixing data fetching, state, and complex UI in one component
-function UserProfilePage({ userId }: { userId: string }) {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [posts, setPosts] = useState([]);
+// Bad: Component handles data fetching, state management for multiple unrelated pieces,
+// complex rendering logic, and specific interactions all in one place.
+'use client'; // Likely needed due to state and effects
+import { useState, useEffect } from 'react';
 
+// Assume fetchUser, fetchPosts, followUser are API calls
+
+function UserProfilePage({ userId }: { userId: string }) {
+  // State Management for different concerns mixed
+  const [user, setUser] = useState<any>(null); // Bad: any type
+  const [posts, setPosts] = useState<any[]>([]); // Bad: any type
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [error, setError] = useState<string | null>(null); // Error state
+
+  // Data Fetching Logic mixed with UI
   useEffect(() => {
-    // Data fetching logic mixed in
-    Promise.all([fetchUser(userId), fetchPosts(userId)])
-      .then(([userData, postData]) => {
+    async function loadData() {
+      setIsLoading(true);
+      setError(null);
+      try {
+        // Unrelated data fetched together
+        const [userData, postData] = await Promise.all([
+          fetchUser(userId),
+          fetchPosts(userId),
+        ]);
         setUser(userData);
         setPosts(postData);
-      })
-      .finally(() => setIsLoading(false));
+        // Determine follow status based on user data (example logic)
+        setIsFollowing(userData.viewerIsFollowing ?? false);
+      } catch (err) {
+        setError('Failed to load profile data.');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    void loadData();
   }, [userId]);
 
-  const handleFollow = () => { /* Complex interaction logic */ };
+  // Interaction Logic mixed in
+  const handleFollowToggle = async () => {
+    try {
+      await followUser(userId, !isFollowing);
+      setIsFollowing(!isFollowing);
+    } catch {
+      alert('Failed to update follow status');
+    }
+  };
 
-  if (isLoading) return <div>Loading...</div>;
+  // Complex Conditional Rendering Logic
+  if (isLoading) {
+    return <div>Loading profile...</div>;
+  }
+  if (error) {
+    return <div className="text-red-500">Error: {error}</div>;
+  }
+  if (!user) {
+    return <div>User not found.</div>;
+  }
 
+  // Rendering Logic for multiple sections
   return (
-    <div> {/* Complex rendering logic */}
-      <h1>{user.name}</h1>
-      <button onClick={handleFollow}>Follow</button>
-      <ul>{posts.map(post => <li key={post.id}>{post.title}</li>)}</ul>
-      {/* ... more UI and logic */}
+    <div className="p-4">
+      <section className="mb-6">
+        <img src={user.avatarUrl} alt={`${user.name}'s avatar`} className="w-16 h-16 rounded-full mr-4 float-left"/>
+        <h1 className="text-2xl font-bold">{user.name}</h1>
+        <p className="text-gray-500">{user.bio}</p>
+        <button
+          onClick={handleFollowToggle}
+          className={`mt-2 px-3 py-1 rounded ${isFollowing ? 'bg-gray-300' : 'bg-blue-500 text-white'}`}>
+          {isFollowing ? 'Unfollow' : 'Follow'}
+        </button>
+      </section>
+
+      <section>
+        <h2 className="text-xl font-semibold mb-3">Posts</h2>
+        {posts.length > 0 ? (
+          <ul>
+            {posts.map(post => (
+              <li key={post.id} className="mb-2 border-b pb-2">
+                {post.title}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p>No posts yet.</p>
+        )}
+      </section>
+      {/* Potentially more sections like Friends, Activity Feed etc. */}
     </div>
   );
 }
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Improves code readability and understandability.
+-   Increases component reusability across the application.
+-   Simplifies testing by isolating functionality.
+-   Makes refactoring and maintenance less error-prone.
+-   Facilitates better collaboration among developers.
+</benefits>
+
+<scope>
+Applies to all React components (`.tsx` files) created within the project.
+</scope>
+
+<references>
+-   [React Docs: Composition vs Inheritance](https://react.dev/learn/composition-vs-inheritance)
+-   [React Docs: Lifting State Up](https://react.dev/learn/sharing-state-between-components)
+-   [React Docs: Thinking in React](https://react.dev/learn/thinking-in-react)
+-   <id>1_technical_stack_rules/10-typescript-strict</id>
+-   <id>1_technical_stack_rules/11-react-patterns</id>
+</references>
+
+</rule>

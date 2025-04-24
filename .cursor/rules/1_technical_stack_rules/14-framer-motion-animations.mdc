@@ -3,82 +3,129 @@ description: Framer Motion Animation Best Practices Rule
 globs: ["**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Enforces best practices for implementing animations using Framer Motion and standard CSS transitions.
+<rule>
 
-## Rule
-1.  **Tool Choice**:
-    *   Use standard CSS transitions/animations (`transition`, `animate-*` utilities in Tailwind) for simple, non-interactive state changes (e.g., hover effects, subtle background changes).
-    *   Use Framer Motion (`motion` components, `animate` prop, variants, `useAnimate`, `staggerChildren`, `AnimatePresence`, etc.) for complex sequences, physics-based animations, layout animations, gesture-based interactions, and animating component mount/unmount.
-2.  **Performance**:
-    *   Prioritize animating `transform` (translate, scale, rotate) and `opacity` as they are typically hardware-accelerated. Avoid animating layout properties (width, height, margin, padding) frequently, as they trigger reflows/repaints.
-    *   Use `will-change` CSS property sparingly via Tailwind (`will-change-transform`, `will-change-opacity`) if needed, but rely on Framer Motion's optimizations first.
-    *   For list animations, use `staggerChildren` or `AnimatePresence` correctly to manage performance.
-3.  **Framer Motion Components**: Wrap elements to be animated with `motion.` (e.g., `motion.div`, `motion.button`).
-4.  **Animation Definition**:
-    *   Use the `animate` prop for simple animations directly on `motion` components.
-    *   Use `variants` for defining complex animation states and orchestrating animations between parent and children.
-    *   Use `whileHover`, `whileTap`, `whileFocus` for interactive state animations.
-    *   Use `AnimatePresence` for animating components when they mount and unmount (e.g., modals, list items). Ensure components have a unique `key` prop.
-    *   For advanced tuning of easing, physics, and achieving a unique animation style, refer to Rule `40-animation-advanced.mdc`.
-5.  **Accessibility**:
-    *   Respect the `prefers-reduced-motion` media query. Provide alternative, reduced animations or disable animations entirely for users who prefer less motion. Framer Motion often handles this automatically, but be mindful. Check `useReducedMotion` hook if needed.
-    *   Ensure animations do not hinder usability or readability. Avoid excessively long or distracting animations.
-6.  **Loading States**: Implement smooth transitions between loading, error, and content states, potentially using `AnimatePresence`.
-7.  **Code Structure**: Keep animation logic clean. Define complex `variants` outside the component for better readability. Use custom hooks to encapsulate reusable animation logic if necessary.
+<id>1_technical_stack_rules/14-framer-motion-animations</id>
+<title>Animation Implementation (Framer Motion & CSS)</title>
 
-## Actions
-- **Suggest**: Using Framer Motion for animations involving layout changes (`layout` prop), complex sequences, or entry/exit animations (`AnimatePresence`).
-- **Suggest**: Animating `transform` and `opacity` for better performance.
-- **Reject**: Overuse of CSS animations for complex interactions where Framer Motion would be more suitable and maintainable.
-- **Info**: Remind to check `prefers-reduced-motion` behavior.
-- **Suggest**: Using `variants` for managing multiple animation states.
-- **Reject**: Missing `key` prop on direct children of `AnimatePresence`.
+<description>
+Enforces best practices for implementing UI animations using Framer Motion as the primary tool, supplemented by standard CSS transitions for simpler effects, focusing on performance, accessibility, and maintainability.
+</description>
 
-## Examples
-✅ Correct (Framer Motion Entrance Animation):
+<context>
+A consistent and well-implemented animation strategy enhances user experience by providing visual feedback, guiding attention, and creating a more dynamic interface. Framer Motion offers powerful tools for complex animations, while CSS transitions suffice for basic effects.
+</context>
+
+<guidelines>
+1.  **Primary Tool: Framer Motion**:
+    *   Utilize Framer Motion (`motion` components, `animate` prop, `variants`, hooks like `useAnimate`, `useScroll`, `useTransform`, `useSpring`) as the default choice for all significant UI animations, especially:
+        *   Complex sequences involving multiple elements or properties.
+        *   Physics-based animations (springs).
+        *   Layout animations (`layout` prop).
+        *   Gesture-based interactions (`whileHover`, `whileTap`, `drag`).
+        *   Component mount/unmount animations (`AnimatePresence`).
+        *   Scroll-linked animations.
+2.  **CSS Transitions (Limited Use)**:
+    *   Use standard CSS transitions (via Tailwind utilities like `transition-colors`, `duration-*`, `ease-*`) *only* for simple, non-interactive, single-property state changes on individual elements (e.g., subtle background color changes on hover/focus where Framer Motion might be overkill).
+3.  **Performance First**:
+    *   Prioritize animating `transform` (translate, scale, rotate) and `opacity` as these are typically hardware-accelerated by the browser and least likely to cause performance issues.
+    *   Avoid animating layout-triggering properties (e.g., `width`, `height`, `margin`, `padding`, `top`, `left`) frequently or on many elements simultaneously, especially within scroll or animation loops.
+    *   Use the `will-change` CSS property (via Tailwind utilities like `will-change-transform`, `will-change-opacity`) *sparingly* as a last resort if performance issues are observed and directly attributable to compositing layers. Rely on browser and Framer Motion optimizations first.
+    *   For list animations, leverage `staggerChildren` within variants or `AnimatePresence` correctly to manage performance and visual flow.
+4.  **Framer Motion Implementation**:
+    *   Wrap elements intended for animation with the `motion.` prefix (e.g., `motion.div`, `motion.button`, `motion.li`).
+    *   Use the `animate` prop for straightforward, direct animations on a `motion` component.
+    *   Define `variants` objects for managing complex animation states (e.g., `hidden`, `visible`, `hovered`) and orchestrating parent/child animations using `initial`, `animate`, `exit`, `whileHover`, etc.
+    *   Use `AnimatePresence` to gracefully animate components when they are added to or removed from the React tree. Ensure direct children of `AnimatePresence` have a unique and stable `key` prop.
+5.  **Advanced Animation Control**: For fine-tuning easing, physics, and achieving unique motion characteristics, refer to and apply guidelines from <id>4_ui_ux_rules/40-animation-advanced</id>.
+6.  **Accessibility (`a11y`)**:
+    *   Always respect the `prefers-reduced-motion` media query. Users may enable this system setting if they are sensitive to motion.
+    *   Use the `useReducedMotion` hook from Framer Motion to conditionally disable or significantly reduce animations.
+        ```typescript
+        import { useReducedMotion } from 'framer-motion';
+        // ...
+        const shouldReduceMotion = useReducedMotion();
+        const animationProps = shouldReduceMotion ? { initial: false, animate: { opacity: 1 } } : { initial: { opacity: 0 }, animate: { opacity: 1 } };
+        return <motion.div {...animationProps} />;
+        ```
+    *   Ensure animations do not impede usability (e.g., excessively long loading animations) or readability (e.g., text that moves too quickly).
+7.  **State Transitions**: Implement smooth and clear visual transitions between different application states (loading, error, success, content display), potentially using `AnimatePresence` to manage the entering/exiting elements.
+8.  **Code Structure**:
+    *   Keep animation logic clean and understandable.
+    *   Define complex `variants` objects outside the component function body for better readability and potential reuse.
+    *   Encapsulate highly reusable animation logic or complex sequences into custom hooks (e.g., `useFadeIn`, `useScrollTransform`).
+</guidelines>
+
+<implementation>
+-   **Library**: `framer-motion` is the required library.
+-   **Linting**: No specific ESLint rules typically enforce animation logic, relies on code review.
+-   **Code Review**: Focus on appropriate tool choice (Framer vs. CSS), performance implications (animated properties), accessibility (`prefers-reduced-motion`), and code structure.
+-   **AI Actions**:
+    *   **Suggest**: Using Framer Motion instead of CSS transitions for complex sequences, layout changes, or enter/exit animations.
+    *   **Suggest**: Animating `transform` and `opacity` instead of layout-triggering properties.
+    *   **Reject**: Overuse of simple CSS transitions for interactions where Framer Motion provides better control and orchestration.
+    *   **Info**: Remind developers to test and respect `prefers-reduced-motion`.
+    *   **Suggest**: Using `variants` for managing multiple animation states cleanly.
+    *   **Reject**: Direct children of `AnimatePresence` lacking a stable `key` prop.
+    *   **Suggest**: Extracting complex variants or reusable logic into constants or hooks.
+</implementation>
+
+<examples>
+<positive title="✅ Correct: Framer Motion Modal Entrance/Exit">
 ```typescript
 'use client';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useState } from 'react';
 
-function AnimatedModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
-  const backdropVariants = {
-    hidden: { opacity: 0 },
-    visible: { opacity: 1 },
-  };
+const backdropVariants = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1 },
+};
 
-  const modalVariants = {
-    hidden: { y: 30, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
-    exit: { y: -30, opacity: 0 },
-  };
+const modalVariants = {
+  hidden: { y: 30, opacity: 0 },
+  visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 300, damping: 30 } },
+  exit: { y: -30, opacity: 0 },
+};
+
+function AnimatedModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) {
+  const shouldReduceMotion = useReducedMotion();
+
+  const modalTransition = shouldReduceMotion ? { duration: 0.1 } : { type: 'spring', stiffness: 300, damping: 30 };
+  const modalAnim = {
+      hidden: { y: shouldReduceMotion ? 0 : 30, opacity: 0 },
+      visible: { y: 0, opacity: 1, transition: modalTransition },
+      exit: { y: shouldReduceMotion ? 0 : -30, opacity: 0, transition: { duration: 0.15 } }, // Faster exit
+  }
 
   return (
-    <AnimatePresence>
+    <AnimatePresence mode="wait"> {/* Use mode='wait' if needed */}
       {isOpen && (
         <motion.div
-          key="backdrop" // Key for AnimatePresence
-          className="fixed inset-0 bg-black/50 z-40"
+          key="backdrop" // Stable key required
+          className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center"
           variants={backdropVariants}
           initial="hidden"
           animate="visible"
           exit="hidden"
+          transition={{ duration: shouldReduceMotion ? 0.1 : 0.2 }}
           onClick={onClose}
         >
+          {/* Stop propagation prevents backdrop click from closing modal */}
           <motion.div
-            key="modal" // Key for AnimatePresence
-            className="absolute top-1/2 left-1/2 p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800 z-50"
-            style={{ x: '-50%', y: '-50%' }} // Centering
-            variants={modalVariants}
+            key="modal" // Stable key required
+            className="p-6 bg-white rounded-lg shadow-xl dark:bg-gray-800 z-50 w-full max-w-md"
+            variants={modalAnim}
             initial="hidden"
             animate="visible"
             exit="exit"
-            onClick={(e) => e.stopPropagation()} // Prevent closing when clicking modal itself
+            onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Content */}
             <h2>Modal Title</h2>
-            <button onClick={onClose}>Close</button>
+            <p>Modal content goes here...</p>
+            <button onClick={onClose} className="mt-4 px-4 py-2 bg-blue-500 text-white rounded">
+              Close
+            </button>
           </motion.div>
         </motion.div>
       )}
@@ -86,23 +133,84 @@ function AnimatedModal({ isOpen, onClose }: { isOpen: boolean; onClose: () => vo
   );
 }
 ```
+</positive>
 
-✅ Correct (Simple CSS Transition):
+<positive title="✅ Correct: Simple CSS Transition for Hover">
 ```typescript
-function HoverButton() {
+function HoverHighlightButton() {
   return (
-    <button className="px-4 py-2 bg-blue-500 text-white rounded transition-colors duration-200 ease-in-out hover:bg-blue-700">
+    <button className="px-4 py-2 bg-indigo-600 text-white rounded
+                      transition-colors duration-200 ease-in-out
+                      hover:bg-indigo-700 focus-visible:outline-indigo-500">
       Hover Me
     </button>
   );
 }
 ```
+</positive>
 
-❌ Incorrect:
+<negative title="❌ Incorrect: Complex Animation with CSS Only">
 ```typescript
-// Bad: Attempting complex entrance animation with only CSS transitions
-function BadModalEntry() {
-  // Would require complex CSS, better handled by Framer Motion
-  return <div className="opacity-0 translate-y-10 transition-all duration-500 /* ... more */">Modal</div>;
+// Bad: Attempting complex staggered list entrance with only CSS transitions.
+// This is difficult to manage, orchestrate, and less performant than Framer Motion.
+function BadListAnimation({ items }: { items: string[] }) {
+  return (
+    <ul>
+      {items.map((item, index) => (
+        <li
+          key={item}
+          className="opacity-0 translate-y-5 transition-all duration-500 delay-[var(--delay)] /* complex state needed */"
+          style={{ '--delay': `${index * 100}ms` } as React.CSSProperties}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
 }
 ```
+</negative>
+
+<negative title="❌ Incorrect: Missing Key in AnimatePresence">
+```typescript
+// Bad: Direct children of AnimatePresence need unique keys
+function BadAnimatePresence({ isVisible }: { isVisible: boolean }) {
+  return (
+    <AnimatePresence>
+      {isVisible && (
+        <motion.div /* Missing key prop here! */
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        >
+          Content
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+```
+</negative>
+</examples>
+
+<benefits>
+-   Provides powerful and declarative API for complex animations.
+-   Simplifies orchestration of sequences and interactions.
+-   Optimized for performance, especially when animating transforms and opacity.
+-   Built-in support for gestures, layout animations, and accessibility.
+-   Integrates seamlessly with React component lifecycle.
+</benefits>
+
+<scope>
+Applies to all animation implementations across the application, covering both Framer Motion usage and standard CSS transitions.
+</scope>
+
+<references>
+-   [Framer Motion Documentation](https://www.framer.com/motion/)
+-   [MDN `transition`](https://developer.mozilla.org/en-US/docs/Web/CSS/transition)
+-   [Web Fundamentals: Animation Performance](https://web.dev/articles/animations-guide)
+-   <id>4_ui_ux_rules/40-animation-advanced</id>
+-   <id>3_performance_security_rules/30-performance-web-vitals</id>
+</references>
+
+</rule>

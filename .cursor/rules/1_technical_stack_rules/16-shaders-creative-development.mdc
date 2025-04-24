@@ -1,176 +1,218 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
-## Description
-Enforces creative and performant shader development practices inspired by Inigo Quilez (IQ), focusing on mathematical elegance, GPU optimization, and visual innovation for Three.js/R3F integration.
+<rule>
 
-## Rule
+<id>1_technical_stack_rules/16-shaders-creative-development</id>
+<title>Shader Development & Creative Coding Principles</title>
+
+<description>
+Guides the development of custom GLSL shaders within the Three.js/R3F environment, emphasizing creative visual output, mathematical elegance, and GPU performance optimization, inspired by principles common in the creative coding community (e.g., Inigo Quilez).
+</description>
+
+<context>
+Custom shaders unlock unique visual possibilities beyond standard materials. Applying creative coding principles ensures shaders are not only visually innovative but also performant and maintainable, leveraging mathematical techniques for procedural generation and optimization.
+</context>
+
+<guidelines>
 1.  **Core Philosophy**:
-    *   **Mathematical Elegance**: Prioritize vector mathematics, analytical solutions, and elegant formulas over complex or computationally expensive approaches. Favor algebraic solutions over trigonometry where possible.
-    *   **Performance First**: Optimize for GPU execution by minimizing instruction count, reducing texture fetches, avoiding expensive operations in tight loops, and understanding hardware-level implications of shader code.
-    *   **Procedural Power**: Leverage procedural techniques (noise functions, SDFs, fractals) to create complex visuals from minimal data, enabling high detail with small memory footprint.
-    *   **Visual Innovation**: Strive for unique, polished aesthetics beyond standard rendering techniques. Focus on smooth motion, anti-aliasing, thoughtful color design, and artistic excellence.
-2.  **SDF & Raymarching Techniques**:
-    *   Master Signed Distance Functions (SDFs) for complex geometry representation, combining primitives with operators (union, difference, intersection, smooth blends).
-    *   Implement efficient raymarching with adaptive step sizes, early termination, and bounding volumes.
-    *   Use analytical derivatives for normals (`∇f`) rather than finite differences where possible.
-    *   Apply SDF techniques for advanced visual effects (soft shadows, ambient occlusion, subsurface scattering).
-3.  **Procedural Pattern Generation**:
-    *   Implement efficient noise functions (Value, Gradient, Simplex, Voronoi/Cellular) and understand their characteristics.
-    *   Combine noise at multiple frequencies (fBM, turbulence) for natural-looking detail.
-    *   Apply domain warping and domain repetition to create complex patterns from simple functions.
-    *   Use analytical derivatives for proper texture filtering and anti-aliasing of procedural patterns.
-4.  **Performance Optimization**:
-    *   **ALU vs. Texture**: Prefer arithmetic operations over texture lookups when feasible, especially in fragment shaders with high pixel counts.
-    *   **Precision Control**: Use `mediump` for most operations, reserving `highp` for world positions, ray directions, or precision-sensitive calculations.
-    *   **Avoid Expensive Operations**: Minimize use of `pow`, `exp`, `log`, `sin`, `cos`, `tan`, and especially inverse trigonometric functions (`asin`, `acos`, `atan`, `atan2`).
-    *   **Branching Optimization**: Understand the difference between conditional moves (`?:`, `step`, `mix`) and actual branch divergence. Use the former for simple conditions; avoid complex, unpredictable branching in tight loops.
-    *   **Data Packing**: Pack multiple values into vector components (e.g., store distance and material ID in a `vec2`).
-5.  **Shader Code Structure**:
-    *   Organize complex shaders into well-named helper functions.
-    *   Use consistent naming conventions (`p` for position, `ro`/`rd` for ray origin/direction, `nor` for normal, `t` for time/parameter).
-    *   Document non-obvious techniques with clear comments, including references to algorithms or papers.
-    *   Use `const` for compile-time constants and define descriptive names for magic numbers.
-6.  **Visual Quality**:
-    *   Implement analytical anti-aliasing for sharp edges, procedural patterns, and SDF boundaries.
-    *   Design thoughtful color palettes using parametric equations rather than hard-coded values.
-    *   Create smooth, organic motion using well-designed easing functions and continuous mathematical formulations.
-    *   Consider advanced lighting models beyond basic Lambertian/Phong, even if simplified or approximated.
+    *   **Mathematical Thinking**: Prioritize vector mathematics, analytical solutions (where possible), and concise formulas over brute-force or overly complex computational approaches. Favor algebraic solutions (dot products, cross products, reflections) over trigonometry where equivalent and cheaper.
+    *   **Performance Awareness**: Optimize aggressively for the GPU. Minimize instruction counts, reduce texture fetches (ALU often cheaper), manage precision (`mediump` vs. `highp`), avoid expensive built-ins (`pow`, `exp`, `log`, `sin`, `cos`, `tan`, inverse trig) in tight loops, and understand branching costs (conditional moves vs. divergent branches).
+    *   **Procedural Generation**: Leverage procedural techniques (noise functions like Simplex/Value/Voronoi, Signed Distance Functions (SDFs), fractals, domain warping) to generate complex visuals from simple mathematical descriptions, minimizing texture dependencies and memory usage.
+    *   **Visual Craftsmanship**: Strive for unique, high-quality aesthetics. Focus on details like smooth motion (good easing, continuous functions), analytical anti-aliasing, thoughtful color palettes (parametric generation), and artistic intent beyond basic PBR.
+2.  **SDF & Raymarching (If Applicable)**:
+    *   Master SDF primitives and operators (union, difference, intersection, smooth minimum `smin`) for complex geometry representation.
+    *   Implement efficient raymarching algorithms (e.g., sphere tracing) with techniques like adaptive step sizes, early hit termination, and bounding volume checks.
+    *   Calculate normals analytically using SDF gradients (`∇f`) rather than numerical finite differences when feasible for better accuracy and performance.
+    *   Explore SDF applications for effects like soft shadows, ambient occlusion, and approximate subsurface scattering.
+3.  **Procedural Patterns & Noise**:
+    *   Implement or utilize efficient noise functions (Value, Gradient/Perlin, Simplex, Voronoi/Cellular). Understand their visual characteristics and computational costs.
+    *   Combine noise at multiple frequencies/amplitudes (Fractal Brownian Motion - fBM, turbulence) for creating naturalistic detail.
+    *   Use domain manipulation techniques (warping/distortion, repetition `mod`, mirroring `abs`) to create intricate patterns from basic functions.
+    *   Apply analytical derivatives (`dFdx`, `dFdy`, `fwidth`) for proper anti-aliasing of procedural patterns and sharp geometric edges.
+4.  **Performance Optimization Techniques**:
+    *   **Instruction Count**: Keep shader code concise. Pre-calculate uniforms or constants on the CPU where possible.
+    *   **Precision**: Default to `mediump` for colors, UVs, and intermediate calculations unless `highp` is explicitly required for precision (e.g., world positions, complex accumulations, ray directions).
+    *   **Expensive Operations**: Minimize or refactor usage of `pow`, `exp`, `log`, `sin`, `cos`, `tan`. Avoid inverse trigonometric functions (`asin`, `acos`, `atan`, `atan2`) – often replaceable with vector math.
+    *   **Branching**: Prefer branchless logic using `step`, `smoothstep`, `mix`, ternary operator (`?:`), or mathematical equivalents where performance is critical (especially in fragment shaders). Understand GPU warp/wavefront execution and the cost of divergence.
+    *   **Data Packing**: Utilize vector components efficiently (e.g., store related values in `vec2`, `vec3`, `vec4`).
+5.  **Shader Code Structure & Style**:
+    *   Organize code into well-named helper functions for readability and reuse.
+    *   Use consistent naming conventions (e.g., `p` for sample point, `uv` for texture coords, `ro`/`rd` for ray origin/direction, `t` for time, `n` or `nor` for normal).
+    *   Document non-obvious algorithms, mathematical tricks, or optimization choices with concise comments. Reference external resources (papers, articles) if applicable.
+    *   Use GLSL `const` for compile-time constants. Define descriptive names for constants instead of using magic numbers directly in formulas.
+6.  **Visual Quality & Polish**:
+    *   Implement analytical anti-aliasing (using `fwidth` or derivatives) for procedural patterns, SDF edges, and geometric lines.
+    *   Design color palettes programmatically (e.g., using `cos`, `mix`, gradients) for flexibility and aesthetic control.
+    *   Ensure smooth, continuous motion using well-chosen easing functions or mathematical formulations (avoiding discontinuities).
+    *   Consider implementing or approximating more sophisticated lighting models if required by the visual style.
 7.  **Three.js/R3F Integration**:
-    *   Choose appropriate material types: `ShaderMaterial` for extending Three.js shaders or `RawShaderMaterial` for complete control.
-    *   Properly structure uniforms for dynamic data from React (`time`, `resolution`, `mouse`, props).
-    *   Leverage Three.js built-ins where possible (`projectionMatrix`, `modelViewMatrix`, `normalMatrix`).
-    *   Implement appropriate cleanup for shader resources to prevent memory leaks.
+    *   Choose the appropriate material: `ShaderMaterial` (for extending existing Three.js chunks) or `RawShaderMaterial` (for full control, requiring manual matrix/attribute handling).
+    *   Pass dynamic data from React/JavaScript via `uniforms`. Structure uniforms clearly.
+    *   Utilize built-in Three.js uniforms and attributes (`projectionMatrix`, `modelViewMatrix`, `normalMatrix`, `position`, `normal`, `uv`) correctly.
+    *   Ensure proper disposal of custom `ShaderMaterial` or `RawShaderMaterial` instances if they are created dynamically, along with any associated custom `BufferGeometry`. (See <id>1_technical_stack_rules/15-r3f-threejs</id>)
+</guidelines>
 
-## Actions
-- **Reject**: Use of inverse trigonometric functions (`asin`, `acos`, `atan`, `atan2`) when dot products or other vector operations would suffice.
-- **Reject**: Expensive operations (texture lookups, trig functions) inside tight loops without clear justification.
-- **Reject**: Unnecessarily complex code that could be simplified with vector math or analytical solutions.
-- **Suggest**: Using SDFs and procedural patterns where appropriate instead of texture-based approaches.
-- **Suggest**: Optimizing shader code by removing redundant calculations or moving constants outside loops.
-- **Suggest**: Implementing proper anti-aliasing for procedural patterns using analytical derivatives.
-- **Suggest**: Using vector operations (dot, cross, normalize) instead of angle-based calculations.
-- **Info**: Remind about GPU architecture considerations (warp/wavefront execution, branch divergence, texture cache).
+<implementation>
+-   **Language**: GLSL (OpenGL Shading Language) versions compatible with WebGL 2 (typically `#version 300 es`).
+-   **Environment**: Integrated within Three.js materials (`ShaderMaterial`, `RawShaderMaterial`) used in R3F components.
+-   **File Types**: Shader code can reside in `.glsl`, `.vert`, `.frag` files or be embedded as strings within `.ts`/`.tsx` files.
+-   **Tooling**: Consider tools like VS Code extensions for GLSL syntax highlighting and linting. Use browser developer tools (e.g., Spector.js) for debugging.
+-   **Code Review**: Focus on mathematical correctness, performance implications (ALU vs texture, branching, expensive ops), code clarity, visual output, and proper integration with Three.js/R3F.
+-   **AI Actions**:
+    *   **Reject**: Obvious performance anti-patterns (e.g., heavy trig/texture lookups in loops) without strong justification.
+    *   **Reject**: Use of inverse trigonometric functions (`asin`, `acos`, `atan`) where vector equivalents exist.
+    *   **Suggest**: Replacing numerical derivatives with analytical ones for normals or anti-aliasing.
+    *   **Suggest**: Using procedural techniques (noise, SDFs) instead of relying solely on textures for complex details.
+    *   **Suggest**: Optimizing shader logic (e.g., pre-calculating values, simplifying expressions, using `mediump`).
+    *   **Suggest**: Implementing analytical anti-aliasing using `fwidth`.
+    *   **Suggest**: Using vector operations (dot, cross, reflect, normalize) instead of angle-based calculations.
+    *   **Info**: Remind about GPU architecture basics (parallelism, branching cost) relevant to optimization.
+</implementation>
 
-## Examples
-✅ Correct (Vector Math Over Trig):
+<examples>
+<positive title="✅ Correct: Efficient Vector Math">
 ```glsl
-// Good: Using dot product for angle comparison
-vec3 normal = normalize(p);
-vec3 lightDir = normalize(lightPos - p);
-float cosAngle = dot(normal, lightDir);
-float lighting = max(cosAngle, 0.0);
+// Good: Using dot product for diffuse lighting factor
+vec3 lightDir = normalize(u_lightPos - v_worldPosition);
+float diffuse = max(dot(v_normal, lightDir), 0.0);
 
-// Good: Using reflect for perfect reflection
-vec3 reflectedRay = reflect(rayDir, normal);
+// Good: Using reflect for reflection vector
+vec3 eyeDir = normalize(u_cameraPos - v_worldPosition);
+vec3 reflectDir = reflect(-eyeDir, v_normal);
 ```
+</positive>
 
-✅ Correct (Efficient SDF):
+<positive title="✅ Correct: Efficient SDF Primitive & Smooth Minimum">
 ```glsl
-// Good: Efficient sphere SDF
-float sdSphere(vec3 p, float radius) {
-  return length(p) - radius;
+// Good: Compact sphere SDF
+float sdSphere(vec3 p, float r) {
+  return length(p) - r;
 }
 
-// Good: Smooth blend operation
-float smin(float a, float b, float k) {
-  float h = max(k - abs(a - b), 0.0) / k;
-  return min(a, b) - h * h * k * 0.25;
-}
-
-// Good: Domain repetition for multiple instances
-vec3 opRepeat(vec3 p, vec3 c) {
-  return mod(p + 0.5 * c, c) - 0.5 * c;
-}
-```
-
-✅ Correct (Procedural Pattern with AA):
-```glsl
-// Good: Anti-aliased checkerboard pattern
-float checker(vec2 p) {
-  vec2 fw = fwidth(p);
-  vec2 q = 2.0 * fract(p) - 1.0;
-  vec2 edge = abs(q);
-  float result = max(edge.x, edge.y);
-  float fw_scale = max(fw.x, fw.y);
-  return smoothstep(1.0 - fw_scale, 1.0, result);
+// Good: Smooth minimum for blending shapes
+// k controls the smoothness
+float opSmoothUnion(float d1, float d2, float k) {
+    float h = clamp(0.5 + 0.5*(d2-d1)/k, 0.0, 1.0);
+    return mix(d2, d1, h) - k*h*(1.0-h);
 }
 ```
+</positive>
 
-✅ Correct (Three.js Integration):
+<positive title="✅ Correct: Anti-Aliased Procedural Circle">
 ```glsl
-// Good: Well-structured shader with Three.js integration
-// vertex shader
-void main() {
-  vUv = uv;
-  vNormal = normalMatrix * normal;
-  vViewPosition = -(modelViewMatrix * vec4(position, 1.0)).xyz;
-  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-}
-
-// fragment shader
-uniform float time;
-uniform vec2 resolution;
-uniform vec3 cameraPosition;
-
-void main() {
-  // Efficient procedural texture calculation
-  vec3 color = calculateProceduralColor(vUv, time);
-  // Physically plausible lighting
-  vec3 lighting = calculateLighting(vNormal, vViewPosition, cameraPosition);
-  gl_FragColor = vec4(color * lighting, 1.0);
+// Good: Uses fwidth for smooth edge
+float circle(vec2 uv, vec2 center, float radius) {
+  float dist = length(uv - center);
+  // Get pixel width of the distance function
+  float fw = fwidth(dist);
+  // Smoothstep over 1 pixel width for anti-aliasing
+  return 1.0 - smoothstep(radius - fw, radius + fw, dist);
 }
 ```
+</positive>
 
-❌ Incorrect:
-```glsl
-// Bad: Using inverse trig for angle
-float angle = acos(dot(normalize(v1), normalize(v2)));
-if (angle < threshold) {
-  // Do something
-}
+<positive title="✅ Correct: R3F ShaderMaterial Integration">
+```typescript
+// In a React Component ('use client')
+import * as THREE from 'three';
+import { useMemo } from 'react';
+import { useFrame } from '@react-three/fiber';
 
-// Bad: Inefficient noise with many texture lookups
-float noise(vec3 p) {
-  return texture(noiseTex, p.xy).r + texture(noiseTex, p.yz).r + texture(noiseTex, p.xz).r;
-}
-
-// Bad: Expensive calculation repeated in loop
-void main() {
-  vec3 color = vec3(0.0);
-  for (int i = 0; i < 100; i++) {
-    float t = float(i) / 99.0;
-    vec3 p = ro + rd * t * maxDist;
-    float dist = map(p); // Expensive SDF calculation
-    if (dist < 0.001) {
-      // Found surface
-      vec3 normal = calcNormal(p); // Computing expensive normal without caching position
-      color = lighting(p, normal); // Recomputing position
-      break;
-    }
+const vertexShader = /* glsl */ `
+  varying vec2 vUv;
+  void main() {
+    vUv = uv;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
   }
+`;
+
+const fragmentShader = /* glsl */ `
+  uniform float uTime;
+  varying vec2 vUv;
+  void main() {
+    float color = 0.5 + 0.5 * sin(vUv.x * 10.0 + uTime);
+    gl_FragColor = vec4(vec3(color), 1.0);
+  }
+`;
+
+function MyShaderComponent() {
+  const materialRef = useRef<THREE.ShaderMaterial>(null!)
+
+  const uniforms = useMemo(() => ({
+      uTime: { value: 0.0 }
+  }), []);
+
+  useFrame((state) => {
+      if(materialRef.current) {
+          materialRef.current.uniforms.uTime.value = state.clock.elapsedTime;
+      }
+  });
+
+  return (
+    <mesh>
+      <planeGeometry args={[2, 2]} />
+      <shaderMaterial
+        ref={materialRef}
+        vertexShader={vertexShader}
+        fragmentShader={fragmentShader}
+        uniforms={uniforms}
+      />
+    </mesh>
+  );
 }
 ```
+</positive>
 
-## Implementation
-This rule is applicable to:
-1. GLSL shader files (`.glsl`, `.vert`, `.frag`)
-2. JavaScript/TypeScript files using Three.js shaders (within `ShaderMaterial`, `RawShaderMaterial`, or string templates)
-3. React components that create or use custom shaders
+<negative title="❌ Incorrect: Performance Anti-Patterns">
+```glsl
+// Bad: Using atan2 for angle calculation - often slow and unnecessary
+float angle = atan(v_direction.y, v_direction.x);
+if (angle > PI_HALF) { ... }
 
-Tools like Shader Toy, The Book of Shaders, and Inigo Quilez's website (iquilezles.org) are excellent references for implementation examples and techniques.
+// Bad: Unnecessary pow() call
+float squaredDist = pow(length(pos - center), 2.0); // Just use dot(delta, delta)
 
-## Benefits
-- Improved rendering performance, especially important for real-time applications.
-- More elegant, maintainable shader code with clearer mathematical foundation.
-- Higher visual quality through proper anti-aliasing, smooth transitions, and thoughtful design.
-- Unique visual aesthetics that go beyond standard rendering techniques.
-- Better integration with the Three.js and React Three Fiber ecosystem.
+// Bad: Texture lookup inside a loop without caching/optimization
+vec3 finalColor = vec3(0.0);
+for (int i = 0; i < 10; ++i) {
+  finalColor += texture(u_someTexture, uv + vec2(float(i)*0.01)).rgb;
+}
 
-## References
-- Inigo Quilez's articles: https://iquilezles.org/articles/
-- The Book of Shaders: https://thebookofshaders.com/
-- React Three Fiber documentation: https://docs.pmnd.rs/react-three-fiber
-- Three.js documentation: https://threejs.org/docs/
+// Bad: Complex branching based on uniforms in fragment shader
+uniform int u_mode;
+void main() {
+  vec3 color;
+  if (u_mode == 1) { color = calcMode1(); }
+  else if (u_mode == 2) { color = calcMode2(); } // Potential divergence
+  else { color = calcMode3(); }
+  gl_FragColor = vec4(color, 1.0);
+}
+```
+</negative>
+</examples>
+
+<benefits>
+-   Unlocks unique and highly customized visual effects.
+-   Improves rendering performance through GPU optimization techniques.
+-   Reduces reliance on large texture assets through procedural generation.
+-   Promotes deeper understanding of rendering pipelines and computer graphics mathematics.
+-   Leads to more elegant, maintainable, and reusable shader code.
+</benefits>
+
+<scope>
+Applies to all custom GLSL shader code (`.glsl`, `.vert`, `.frag` files or embedded strings) and its integration within JavaScript/TypeScript using Three.js materials (`ShaderMaterial`, `RawShaderMaterial`) in the R3F environment.
+</scope>
+
+<references>
+-   [The Book of Shaders](https://thebookofshaders.com/)
+-   [Inigo Quilez's Articles](https://iquilezles.org/articles/)
+-   [WebGL GLSL Specification (ES 3.0)](https://registry.khronos.org/OpenGL/specs/es/3.0/GLSL_ES_Specification_3.00.pdf)
+-   [Three.js Materials Documentation](https://threejs.org/docs/#api/en/materials/Material)
+-   [R3F `shaderMaterial` helper](https://github.com/pmndrs/drei#shadermaterial)
+-   <id>1_technical_stack_rules/15-r3f-threejs</id>
+</references>
+
+</rule>

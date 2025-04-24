@@ -3,130 +3,237 @@ description: React Three Fiber (R3F) and Three.js Best Practices
 globs: ["**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Enforces best practices when using React Three Fiber (R3F) to integrate Three.js scenes into the React application.
+<rule>
 
-## Rule
-1.  **Canvas Setup**:
-    *   Use the `<Canvas>` component from `@react-three/fiber` as the root of your 3D scene.
-    *   Configure camera, shadows, performance settings (`dpr`, `frameloop`) appropriately within the `<Canvas>` props.
-2.  **Component Structure**:
-    *   Represent Three.js objects (`Mesh`, `Group`, `Light`, etc.) as React components using R3F's intrinsic elements (e.g., `<mesh>`, `<group>`, `<ambientLight>`).
-    *   Compose scenes by nesting these components. Keep components focused and reusable.
-    *   Pass props directly to configure object properties (e.g., `<mesh position={[0, 1, 0]} scale={2}>`).
-3.  **Hooks**:
-    *   Use R3F hooks like `useFrame` for animations and updates within the render loop. Keep `useFrame` logic efficient.
-    *   Use `useThree` to access the R3F state (scene, camera, gl renderer, size, etc.).
-    *   Use `@react-three/drei` hooks like `useTexture`, `useGLTF`, `useAnimations` for common tasks like loading assets.
-4.  **State Management**:
-    *   Use standard React state (`useState`, `useReducer`) or external state managers (like Zustand, Jotai - if already in the project) for managing scene state that affects React components.
-    *   For state purely internal to the Three.js scene, consider using `useRef` on meshes/objects or dedicated state management within the `useFrame` loop if appropriate.
-5.  **Performance**:
-    *   Optimize draw calls: Use `InstancedMesh` for rendering many similar objects.
-    *   Manage geometry and materials efficiently: Share instances where possible. Dispose of unused geometries, materials, and textures using `useLayoutEffect` cleanup functions or Drei's helpers.
-    *   Be mindful of expensive operations within `useFrame`.
-    *   Leverage R3F's performance optimizations (automatic render loop management, conditional rendering). Use `frameloop="demand"` on `<Canvas>` if the scene doesn't need constant updates.
-6.  **Asset Loading**:
-    *   Use hooks from `@react-three/drei` (`useTexture`, `useGLTF`, etc.) for loading assets.
-    *   Utilize React `Suspense` to handle loading states gracefully while assets are being fetched. Wrap asset-loading components or the entire scene in `<Suspense>`.
-7.  **Interactivity**: Use R3F's event system (e.g., `onPointerOver`, `onClick`) for interacting with 3D objects.
-8.  **Typing**: Use TypeScript effectively with R3F. Utilize types provided by `@react-three/fiber` and `@types/three`. Define types for custom component props.
+<id>1_technical_stack_rules/15-r3f-threejs</id>
+<title>React Three Fiber (R3F) & Three.js Integration</title>
 
-## Actions
-- **Suggest**: Using Drei hooks (`useTexture`, `useGLTF`) for asset loading wrapped in `<Suspense>`.
-- **Suggest**: Using `InstancedMesh` for rendering large numbers of identical objects.
-- **Reject**: Performing heavy computations directly inside `useFrame` without memoization or optimization.
-- **Suggest**: Disposing of Three.js resources (geometries, materials, textures) when components unmount using `useLayoutEffect` or `useEffect` cleanup.
-- **Info**: Remind to ensure the R3F component is marked `'use client'` as it relies on browser APIs and hooks.
+<description>
+Enforces best practices for integrating and managing Three.js scenes within the React application using React Three Fiber (R3F), focusing on performance, structure, and maintainability.
+</description>
 
-## Examples
-✅ Correct (Simple R3F Scene):
+<context>
+React Three Fiber provides a declarative React renderer for Three.js, allowing developers to build complex 3D scenes using familiar React concepts. Adhering to best practices ensures optimal performance and leverages the strengths of both libraries.
+</context>
+
+<guidelines>
+1.  **Client Component Requirement**: All components directly using R3F hooks (`useFrame`, `useThree`, etc.) or rendering the `<Canvas>` component MUST be marked with the `'use client'` directive, as R3F relies on browser APIs and client-side rendering.
+2.  **Canvas Setup (`<Canvas>`)**:
+    *   Use the `<Canvas>` component from `@react-three/fiber` as the root entry point for the 3D scene.
+    *   Configure essential scene settings via props on `<Canvas>`: `camera` (position, fov), `shadows` (enable/configure shadow map type), performance hints (`dpr`, `frameloop`).
+    *   Example: `<Canvas shadows camera={{ position: [0, 5, 10], fov: 50 }} frameloop="demand">`
+3.  **Declarative Scene Structure**:
+    *   Represent Three.js objects (meshes, lights, groups, cameras) using R3F's declarative JSX syntax (e.g., `<mesh>`, `<group>`, `<ambientLight>`, `<perspectiveCamera>`).
+    *   Pass props directly to configure object properties (e.g., `<mesh position={[1, 0, 0]} scale={1.5} rotation={[0, Math.PI / 4, 0]}>`). Use array literals for vectors/rotations.
+    *   Nest components to create scene hierarchies (e.g., `<group><mesh /></group>`).
+    *   Keep components focused and reusable (see <id>2_quality_and_architecture_rules/21-component-design</id>).
+4.  **R3F Hooks**:
+    *   `useFrame((state, delta) => { ... })`: Use for animations and updates within the render loop. Keep logic inside `useFrame` efficient; avoid complex computations or state updates that trigger frequent React re-renders.
+    *   `useThree()`: Use to access the core R3F state (gl renderer, scene, camera, mouse coordinates, viewport size, etc.) when needed.
+    *   `@react-three/drei` Hooks: Leverage Drei helpers extensively for common tasks: `useTexture`, `useGLTF`, `useFBX`, `useAnimations`, `useEnvironment`, `useProgress`, etc.
+5.  **State Management**:
+    *   Use standard React state hooks (`useState`, `useReducer`) or project state management solutions (e.g., Zustand) for managing state that affects the React component tree or UI outside the canvas.
+    *   For state purely internal to the Three.js scene and managed within the render loop, `useRef` attached to Three.js objects is often appropriate.
+6.  **Performance Optimization**:
+    *   **Draw Calls**: Use `InstancedMesh` from Three.js (or Drei's `<Instances>` helper) for rendering large numbers of identical objects efficiently.
+    *   **Geometry & Materials**: Share geometry and material instances whenever possible. Avoid creating new geometries/materials inside loops or `useFrame`.
+    *   **Resource Disposal**: Manually dispose of unused Three.js resources (geometries, materials, textures) when components unmount to prevent memory leaks. Use `useEffect` or `useLayoutEffect` cleanup functions.
+        ```typescript
+        useLayoutEffect(() => {
+          // Assume meshRef.current holds a THREE.Mesh
+          const mesh = meshRef.current;
+          return () => {
+            mesh?.geometry?.dispose();
+            if (Array.isArray(mesh?.material)) {
+              mesh.material.forEach(mat => mat.dispose());
+            } else {
+              mesh?.material?.dispose();
+            }
+            // Dispose textures if manually created and not managed elsewhere
+          };
+        }, []);
+        ```
+    *   **`useFrame` Efficiency**: Minimize calculations within `useFrame`. Memoize expensive calculations if necessary.
+    *   **Conditional Rendering / `frameloop`**: Use React conditional rendering to add/remove parts of the scene. Set `frameloop="demand"` on `<Canvas>` if the scene only needs to re-render based on user input or specific state changes, and manually invalidate using `invalidate()` from `useThree`. Set `frameloop="never"` if rendering is entirely controlled externally.
+7.  **Asset Loading (`@react-three/drei`)**:
+    *   Use hooks like `useTexture`, `useGLTF`, `useFBX` for loading assets.
+    *   Wrap components that load assets (or the entire scene) within `<Suspense>` to handle loading states gracefully. Provide a meaningful `fallback` prop to `<Suspense>`.
+    *   Use Drei's `<Preload all />` component inside `<Suspense>` to preload assets associated with `useGLTF`, `useTexture`, etc.
+8.  **Interactivity**: Utilize R3F's built-in event system (`onClick`, `onPointerOver`, `onPointerOut`, `onPointerMove`, `onWheel`, etc.) directly on mesh components for interaction.
+9.  **Typing**:
+    *   Use TypeScript effectively. Leverage types from `@react-three/fiber`, `@react-three/drei`, and `@types/three`.
+    *   Define clear types for custom component props and internal state.
+    *   Use non-null assertions (`!`) on refs (`meshRef.current!`) cautiously, only when certain the ref is populated.
+</guidelines>
+
+<implementation>
+-   **Libraries**: `@react-three/fiber`, `@react-three/drei`, `three`.
+-   **Linting**: Standard React/TypeScript linting applies.
+-   **Code Review**: Check for `'use client'` directive, proper hook usage, performance patterns (instancing, disposal), asset loading with Suspense, and efficient `useFrame` logic.
+-   **AI Actions**:
+    *   **Reject**: R3F components/hooks used without the `'use client'` directive.
+    *   **Suggest**: Using Drei hooks (`useTexture`, `useGLTF`, etc.) wrapped in `<Suspense>` for asset loading.
+    *   **Suggest**: Using `InstancedMesh` or `<Instances>` for rendering numerous similar objects.
+    *   **Reject**: Heavy computations or unnecessary state updates within `useFrame`.
+    *   **Suggest**: Adding cleanup functions (`useEffect`/`useLayoutEffect`) to dispose of Three.js resources.
+    *   **Warn**: If `<Suspense>` fallback is missing or overly simplistic for asset loading.
+    *   **Info**: Remind about `frameloop="demand"` for scenes that don't require constant updates.
+</implementation>
+
+<examples>
+<positive title="✅ Correct: Basic R3F Scene with Interaction">
 ```typescript
-'use client';
+'use client'; // Required for R3F
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, Box } from '@react-three/drei';
-import { useRef, useState } from 'react';
+import { useRef, useState, useLayoutEffect } from 'react';
 import * as THREE from 'three';
 
-function SpinningBox() {
-  const meshRef = useRef<THREE.Mesh>(null!); // Non-null assertion okay here if sure
+function InteractiveBox() {
+  const meshRef = useRef<THREE.Mesh>(null); // Use null initially
   const [hovered, setHover] = useState(false);
   const [active, setActive] = useState(false);
 
+  // Basic rotation animation
   useFrame((state, delta) => {
     if (meshRef.current) {
-      meshRef.current.rotation.x += delta * 0.5;
       meshRef.current.rotation.y += delta * 0.5;
     }
   });
 
+  // Example of resource disposal (though Box manages its own geometry/material)
+  useLayoutEffect(() => {
+      const mesh = meshRef.current;
+      // Example: If we manually created geometry/material, dispose here
+      return () => {
+          // mesh?.geometry?.dispose();
+          // mesh?.material?.dispose();
+      }
+  }, []);
+
   return (
-    <Box
+    <Box // Using Drei's Box simplifies geometry/material creation
       ref={meshRef}
+      args={[1, 1, 1]} // Box dimensions
       scale={active ? 1.5 : 1}
       onClick={() => setActive(!active)}
-      onPointerOver={() => setHover(true)}
+      onPointerOver={(event) => { event.stopPropagation(); setHover(true); }}
       onPointerOut={() => setHover(false)}
-      material-color={hovered ? 'hotpink' : 'orange'} // Direct material prop modification
-    />
+    >
+      <meshStandardMaterial color={hovered ? '#ff69b4' : '#ff8c00'} />
+    </Box>
   );
 }
 
 export default function MyScene() {
   return (
     <div className="h-screen w-full">
-      <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
-        <ambientLight intensity={0.5} />
-        <pointLight position={[10, 10, 10]} />
-        <SpinningBox />
+      <Canvas shadows camera={{ position: [0, 2, 5], fov: 60 }}>
+        <ambientLight intensity={Math.PI / 2} />
+        <spotLight position={[10, 10, 10]} angle={0.15} penumbra={1} decay={0} intensity={Math.PI} castShadow />
+        <pointLight position={[-10, -10, -10]} decay={0} intensity={Math.PI} />
+
+        <InteractiveBox />
+
         <OrbitControls />
+        {/* Add a ground plane to receive shadows */}
+        <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -1, 0]}>
+            <planeGeometry args={[10, 10]} />
+            <shadowMaterial transparent opacity={0.5} />
+        </mesh>
       </Canvas>
     </div>
   );
 }
 ```
+</positive>
 
-✅ Correct (Asset Loading with Suspense):
+<positive title="✅ Correct: GLTF Model Loading with Suspense & Preload">
 ```typescript
 'use client';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, useGLTF, Preload } from '@react-three/drei';
+import { OrbitControls, useGLTF, Preload, Environment } from '@react-three/drei';
 import { Suspense } from 'react';
 
 function Model({ url }: { url: string }) {
+  // useGLTF handles disposal automatically via react-three-fiber lifecycle
   const { scene } = useGLTF(url);
-  // Remember to dispose! useLayoutEffect cleanup needed for production
-  return <primitive object={scene} scale={0.5} />;
+  return <primitive object={scene} scale={0.8} />;
+}
+
+// Loading fallback component
+function Loader() {
+  // Could use Drei's <Html> and <useProgress> for a percentage loader
+  return <mesh><boxGeometry /><meshBasicMaterial color="gray" wireframe /></mesh>;
 }
 
 export default function SceneWithModel() {
   return (
-    <Canvas>
-      <ambientLight />
-      <Suspense fallback={null}> {/* Fallback for loading */}
-        <Model url="/path/to/model.glb" />
-        <Preload all /> {/* Preload assets */}
+    <Canvas shadows camera={{ position: [3, 3, 3], fov: 50 }}>
+      <Suspense fallback={<Loader />}> {/* Meaningful fallback */}
+        <Environment preset="city" /> {/* Add environment lighting */}
+        <Model url="/models/robot.glb" />
+        <Preload all /> {/* Preload assets used by useGLTF/useTexture etc. */}
       </Suspense>
-      <OrbitControls />
+      <OrbitControls autoRotate />
     </Canvas>
   );
 }
 ```
+</positive>
 
-❌ Incorrect:
+<negative title="❌ Incorrect: Missing 'use client'">
 ```typescript
-// Bad: Missing 'use client' for R3F component
+// Bad: Missing 'use client' directive
 import { Canvas } from '@react-three/fiber';
 
 export default function BadScene() {
-  // R3F requires client-side rendering
+  // This component will fail because R3F requires client-side rendering
   return <Canvas>{/* ... */}</Canvas>;
 }
+```
+</negative>
 
-// Bad: Manual DOM manipulation or direct Three.js API calls outside hooks
+<negative title="❌ Incorrect: Manual Three.js Calls Outside R3F">
+```typescript
+// Bad: Mixing imperative Three.js code outside the R3F declarative structure
+'use client';
+import { useEffect } from 'react';
+import * as THREE from 'three';
+
 function ManualManipulation() {
-  const scene = new THREE.Scene(); // Avoid direct Three.js setup outside R3F context/hooks
-  // ...
-  return null; // Or incorrect rendering
+  useEffect(() => {
+    // Avoid creating scenes/renderers manually like this when using R3F
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    // ... manual setup and rendering ...
+    // This bypasses R3F's optimizations and React integration.
+  }, []);
+
+  return <div id="manual-three-container"></div>; // Not using <Canvas>
 }
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Allows building complex 3D scenes using React's component model.
+-   Simplifies Three.js setup and boilerplate.
+-   Integrates 3D scenes seamlessly with the rest of the React UI.
+-   Provides performance optimizations and a managed render loop.
+-   Rich ecosystem via `@react-three/drei` for common tasks and helpers.
+</benefits>
+
+<scope>
+Applies to all components and code interacting with Three.js via React Three Fiber (`@react-three/fiber`) and its ecosystem (`@react-three/drei`).
+</scope>
+
+<references>
+-   [React Three Fiber Documentation](mdc:https:/docs.pmnd.rs/react-three-fiber)
+-   [React Three Drei Documentation](mdc:https:/github.com/pmndrs/drei)
+-   [Three.js Documentation](mdc:https:/threejs.org/docs)
+-   <id>2_quality_and_architecture_rules/21-component-design</id>
+</references>
+
+</rule>

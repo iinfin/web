@@ -3,249 +3,226 @@ description: PR Review Automation Rule for dev to main
 globs: []
 alwaysApply: true
 ---
-## Description
-This rule automates the process of reviewing changes when creating a Pull Request from `dev` to `main`. It leverages the AI to analyze differences between branches, understand the CI/CD workflow context, and generate properly formatted PR titles and descriptions that follow the project's Conventional Commits standard.
+<rule>
 
-## Rule
-When requesting a review of current changes for a PR from `dev` to `main`:
+<id>0_foundational_rules/02-pr-review-automation</id>
+<title>Pull Request Review Automation (dev -> main)</title>
 
-1. Compare the diff between `dev` and `main` branches to understand what has changed.
-2. Analyze the changes in the context of:
-   - The Conventional Commits specification (`01-git-conventional-commits.mdc`)
-   - The release workflow configuration (`.github/workflows/release.yml`)
-   - The semantic release configuration (`.releaserc.json`)
-   - Any affected CI/CD workflows
-   - Any changes to dependencies (`package.json`)
-   - Potential breaking changes or migration requirements
+<description>
+Automates the generation of a comprehensive Pull Request review when merging changes from the `dev` branch to the `main` branch. The AI analyzes branch differences, considers CI/CD context, and produces a structured PR title and description compliant with Conventional Commits and project release workflows.
+</description>
 
-3. Generate:
-   - A properly formatted PR title following the Conventional Commits format: `<type>(<scope>): <description>`
-   - A comprehensive PR description that explains the changes, their impact, and any special considerations
-   - Both outputs formatted in Markdown code blocks for easy copying
+<context>
+Automating the PR review process from `dev` to `main` ensures consistency, saves developer time, and provides reviewers with crucial context regarding changes, potential impacts (versioning, breaking changes), and the post-merge release process. This is particularly important before merging changes that trigger automated releases.
+</context>
 
-4. Categorize changes into logical groups in the PR description:
-   - CI/CD Changes
-   - Features
-   - Bug Fixes
-   - Performance Improvements
-   - Documentation
-   - Style/UI Changes
-   - Refactoring
-   - Dependency Updates
-   - Breaking Changes (if any)
-   - Other Changes
+<guidelines>
+When requested to review changes for a PR from `dev` to `main` (e.g., using queries like "review current changes for PR from dev to main" or "prepare PR dev to main"), the AI MUST perform the following:
 
-5. Include version impact analysis:
-   - Predict the semantic version bump (MAJOR, MINOR, PATCH) that will result from the changes
-   - Explain the reasoning behind the version bump prediction
-   - List commit types that influence the version bump decision
+1.  **Analyze Differences**: Compare the `dev` branch against the `main` branch to identify all changes (commits, files).
+2.  **Contextual Analysis**: Evaluate the identified changes considering:
+    *   Conventional Commits rules (<id>0_foundational_rules/01-git-conventional-commits</id>).
+    *   Release workflow configuration (`.github/workflows/release.yml`).
+    *   Semantic release configuration (`.releaserc.json`).
+    *   Impact on other CI/CD workflows (in `.github/workflows/`).
+    *   Dependency changes (`package.json`).
+    *   Potential breaking changes (`BREAKING CHANGE:` footers or `!` in commit headers).
+    *   Migration requirements or special deployment considerations.
+3.  **Generate Output**: Produce the following, formatted clearly in Markdown code blocks:
+    *   **PR Title**: Strictly follow Conventional Commits format: `<type>(<scope>): <description>`.
+    *   **PR Description**: A comprehensive summary including:
+        *   Overall purpose of the changes.
+        *   Categorized list of changes.
+        *   Version impact analysis.
+        *   Potential merge issues/CI status.
+        *   Related issue references.
+        *   Explanation of the post-merge process.
+4.  **Categorize Changes** (in PR Description):
+    *   Group commits/changes logically (e.g., Features, Bug Fixes, CI/CD, Docs, Refactoring, Perf, Style, Tests, Dependencies, Breaking Changes).
+5.  **Version Impact Analysis** (in PR Description):
+    *   Predict the semantic version bump (MAJOR, MINOR, PATCH) based on Conventional Commit types present.
+    *   Explain the reasoning (e.g., "Contains `feat` commits", "Includes `BREAKING CHANGE:`").
+    *   List the commit types influencing the decision.
+6.  **Address Merge Issues** (in PR Description):
+    *   Highlight potential merge conflicts (if detectable).
+    *   Mention the status of CI checks (if available/applicable).
+    *   Note any significant changes in test coverage (if detectable).
+7.  **Reference Issues** (in PR Description):
+    *   Extract and list all issue references (`Closes #X`, `Refs #Y`) found in the commit messages between `main` and `dev`.
+8.  **Explain Post-Merge Process** (in PR Description):
+    *   Clearly state what happens automatically after merging to `main`:
+        *   How `semantic-release` processes commits.
+        *   The type and pattern of the release version created.
+        *   How `CHANGELOG.md` will be updated (include a preview).
+        *   Creation of a GitHub Release.
+        *   The merge-back process from `main` to `dev` (if applicable).
 
-6. Address potential merge issues:
-   - Identify and highlight any potential merge conflicts
-   - Verify that all required CI checks are passing (if applicable)
-   - Check test coverage changes (if applicable)
+</guidelines>
 
-7. Reference related issues:
-   - Extract and list any issue references from commit messages
+<implementation>
 
-8. Explicitly explain what will happen after merging into `main`, including:
-   - How semantic-release will process the commits
-   - How the release workflow will create a new version
-   - How the merge-back process will sync changes back to `dev`
-   - A preview of how the CHANGELOG entries will appear
+  <section title="AI Execution Steps">
+    Upon receiving a relevant user request, the AI MUST execute the following process:
 
-## Implementation
-When a user asks for a review of changes with a query like "review current changes" or "prepare PR":
+    1.  **Fetch & Compare Branches**:
+        ```bash
+        # Ensure local branches are up-to-date
+        git fetch origin main:main dev:dev
 
-1. Run necessary commands to fetch and compare branches:
-   ```bash
-   # Fetch the latest changes from both branches
-   git fetch origin main dev
+        # List differing files
+        git diff --name-status origin/main...origin/dev --no-pager
 
-   # List files that differ between branches
-   git diff --name-status origin/main...origin/dev
+        # Get commit history differences (log of commits in dev but not main)
+        git log origin/main..origin/dev --oneline --no-pager
 
-   # View commit history differences (what's in dev but not in main)
-   git log origin/main..origin/dev --oneline
+        # Get detailed commit messages (for analysis)
+        git log origin/main..origin/dev --pretty=format:"%h %s%n%b" --no-merges --no-pager
 
-   # For more detailed commit messages with descriptions
-   git log origin/main..origin/dev --pretty=format:"%h %s%n%b" --no-merges
+        # Get commit types for version prediction
+        # Note: This grep focuses on standard types. Adapt if custom types are primary drivers.
+        git log origin/main..origin/dev --pretty=format:"%H %s" --no-pager | grep -E "^[a-f0-9]+ [a-z]+(\(.+\))?!?: "
+        ```
+    2.  **Detect Breaking Changes**:
+        ```bash
+        # Check commit bodies/footers for BREAKING CHANGE
+        git log origin/main..origin/dev --pretty=format:"%B" --no-pager | grep -E -i "BREAKING CHANGE:"
 
-   # Categorize commits by type for semantic versioning prediction
-   git log origin/main..origin/dev --pretty=format:"%h %s" | grep -E "^[a-z]+(\([a-z-]+\))?: " | sort -k1.1,1.7
-   ```
+        # Check commit subjects for !
+        git log origin/main..origin/dev --pretty=format:"%s" --no-pager | grep -E "^[a-z]+(\(.+\))?!: "
+        ```
+    3.  **Analyze Dependencies**:
+        ```bash
+        # Check for changes in package.json or lock files
+        git diff origin/main...origin/dev -- package.json package-lock.json pnpm-lock.yaml yarn.lock --no-pager
+        ```
+    4.  **Review Key Configuration Files**:
+        ```bash
+        # Read relevant rule and config files for context
+        cat .cursor/rules/0_foundational_rules/01-git-conventional-commits.mdc
+        cat .github/workflows/release.yml
+        cat .releaserc.json
+        # Optionally check PR template
+        cat .github/PULL_REQUEST_TEMPLATE.md 2>/dev/null
+        # List other workflows
+        ls -la .github/workflows/
+        ```
+    5.  **Analyze Specific File Changes** (If needed for deeper context):
+        ```bash
+        # Show diff for a specific critical file
+        git diff origin/main...origin/dev -- <path/to/file> --no-pager
 
-2. Check for breaking changes specifically:
-   ```bash
-   # Detect breaking changes in commit messages
-   git log origin/main..origin/dev --pretty=format:"%B" | grep -i "BREAKING CHANGE"
+        # Show content of file on each branch
+        git show origin/dev:<path/to/file> | cat
+        git show origin/main:<path/to/file> | cat
+        ```
+    6.  **Synthesize & Generate Output**: Based on the analysis from steps 1-5, construct the PR Title and Description according to the format specified in the `<guidelines>` and `<examples>` sections.
 
-   # Look for breaking change marker (!) in commit types
-   git log origin/main..origin/dev --pretty=format:"%s" | grep -E "^[a-z]+(\([a-z-]+\))?!: "
-   ```
+  </section>
 
-3. For dependency analysis:
-   ```bash
-   # Check for package.json changes
-   git diff origin/main...origin/dev -- package.json
-   ```
+</implementation>
 
-4. For changed files, analyze their contents:
-   ```bash
-   git show origin/dev:<file>
-   git show origin/main:<file>
-   ```
-
-5. For deeper understanding of specific changes:
-   ```bash
-   # File-specific diff
-   git diff origin/main...origin/dev -- <file>
-
-   # Show patches introduced by each commit
-   git log origin/main..origin/dev -p -- <file>
-
-   # Check for test coverage changes
-   git diff origin/main...origin/dev -- "**/*.test.js" "**/*.spec.js" "**/*.test.tsx" "**/*.spec.tsx"
-   ```
-
-6. Review these specific files to get context:
-   ```bash
-   # Git conventional commits rule
-   cat .cursor/rules/0_foundational_rules/01-git-conventional-commits.mdc
-
-   # Release workflow
-   cat .github/workflows/release.yml
-
-   # Semantic release configuration
-   cat .releaserc.json
-
-   # PR template (if exists)
-   cat .github/PULL_REQUEST_TEMPLATE.md 2>/dev/null
-
-   # List workflow files to understand CI/CD processes
-   ls -la .github/workflows/
-   ```
-
-7. Generate the PR title and description based on the analysis, formatted as:
-   ```markdown
-   ## PR Title
-   type(scope): concise description of changes
-
-   ## PR Description
-   Brief summary of the changes and their purpose.
-
-   ### Changes
-   #### Features
-   - Feature change 1
-   - Feature change 2
-
-   #### Bug Fixes
-   - Bug fix 1
-   - Bug fix 2
-
-   #### Documentation
-   - Doc change 1
-
-   #### Dependency Updates
-   - Updated X from v1.0 to v1.1
-
-   ### Version Impact
-   This PR will trigger a [MAJOR|MINOR|PATCH] release because:
-   - [List of commit types that influence the version]
-
-   ### Breaking Changes
-   [Include breaking changes if any, or "None"]
-
-   ### Related Issues
-   - Fixes #123
-   - Relates to #456
-
-   ### Documentation Status
-   - [ ] New features are documented
-   - [ ] API changes are documented
-   - [ ] Breaking changes include migration guides
-
-   ### Post-Merge Process
-   Once merged to main:
-   1. semantic-release will create a [version_type] release ([version_pattern])
-   2. The CHANGELOG.md will be updated with:
-      ```
-      [preview of changelog entries]
-      ```
-   3. A GitHub release will be created with these notes
-   4. Changes will be automatically merged back to dev
-   ```
-
-## Benefits
-- Ensures PR titles and descriptions follow project conventions
-- Saves time by automating the process of analyzing changes
-- Improves quality and consistency of PR documentation
-- Helps reviewers understand the purpose and impact of changes
-- Provides explicit version impact analysis
-- Identifies breaking changes and dependency updates
-- Links to related issues for better traceability
-- Provides context about the release process flow
-- Encourages documentation of changes
-
-## Examples
-✅ Correct User Query:
+<examples>
+<positive title="✅ Correct User Query">
+```text
+Review current changes for PR from dev to main
 ```
-review current changes for PR from dev to main
-```
+</positive>
 
-✅ Correct Response:
+<positive title="✅ Correct AI Response Format">
 ```markdown
 ## PR Title
-feat(auth): implement social login providers
+
+```text
+feat(auth): implement multi-factor authentication
+```
 
 ## PR Description
-This PR adds support for social login providers to enhance user authentication options.
+
+This PR introduces multi-factor authentication (MFA) using TOTP to enhance account security.
 
 ### Changes
-#### Features
-- Added OAuth integration for Google, GitHub and Twitter
-- Implemented unified auth provider interface
-- Added user profile merge functionality
 
-#### Documentation
-- Updated authentication docs with new provider setup instructions
+*   **Features**
+    *   Added TOTP setup and verification flow.
+    *   Integrated `speakeasy` library for code generation/verification.
+    *   Updated user profile settings page with MFA options.
+*   **Dependencies**
+    *   Added `speakeasy` and `@types/speakeasy`.
+*   **Tests**
+    *   Added unit tests for TOTP logic.
+    *   Added integration tests for the settings page flow.
 
 ### Version Impact
-This PR will trigger a MINOR release because:
-- Contains feat commits which trigger minor version bump
-- No breaking changes detected
+
+This PR will trigger a **MINOR** release.
+
+*Reasoning*: Contains `feat` commits, indicating new functionality added in a backwards-compatible manner.
+*Influencing Commits*: `feat(auth)`, `feat(settings)`
 
 ### Breaking Changes
+
 None
 
 ### Related Issues
-- Resolves #42
-- Related to #55
+
+*   Closes #42
+*   Refs #55
+
+### Merge/CI Status
+
+*   *Potential Conflicts*: None detected.
+*   *CI Checks*: [Pending/Passing/Failing - *AI should state status if known*]
 
 ### Documentation Status
-- [x] New features are documented
-- [x] API changes are documented
-- [ ] Breaking changes include migration guides (N/A)
+
+*   [x] New features are documented (added MFA section to user guide).
+*   [ ] API changes are documented (N/A).
+*   [ ] Breaking changes include migration guides (N/A).
 
 ### Post-Merge Process
-Once merged to main:
-1. semantic-release will create a minor version release (0.x.0)
-2. The CHANGELOG.md will be updated with:
-   ```
-   ## [0.2.0] - 2023-05-15
-   ### Features
-   - Added OAuth integration for Google, GitHub and Twitter
-   - Implemented unified auth provider interface
-   - Added user profile merge functionality
 
-   ### Documentation
-   - Updated authentication docs with new provider setup instructions
-   ```
-3. A GitHub release will be created with these notes
-4. Changes will be automatically merged back to dev
-```
+Once merged to `main`:
+1.  The `semantic-release` workflow will trigger.
+2.  It will analyze commits since the last release and determine the next version (e.g., `0.3.0` if current is `0.2.x`).
+3.  The `CHANGELOG.md` will be updated with entries like:
+    ```markdown
+    ### Features
+    *   **auth:** implement multi-factor authentication (closes #42) (#pr-number)
+    *   **settings:** add MFA options to profile page (#pr-number)
+    ```
+4.  A GitHub Release tagged with the new version (e.g., `v0.3.0`) will be created with the changelog notes.
+5.  Changes from `main` will be automatically merged back into `dev` by the `merge-back` workflow.
 
-❌ Incorrect Response:
 ```
-The changes look good, we should merge them.
+</positive>
+
+<negative title="❌ Incorrect AI Response">
+```text
+The changes look good. Diff shows updates to auth files. Ready to merge.
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Ensures PRs merging to `main` have consistent, informative titles and descriptions.
+-   Automates the analysis of changes, saving significant developer time.
+-   Improves the quality and usefulness of PR documentation for reviewers.
+-   Provides explicit version impact prediction based on semantic release rules.
+-   Clearly communicates the automated release process triggered by the merge.
+-   Helps identify breaking changes and dependency updates early.
+-   Links commits to issues for better traceability.
+</benefits>
+
+<scope>
+This rule specifically applies to the process of generating Pull Request reviews and documentation for merges from the `dev` branch into the `main` branch, particularly when automated release processes are tied to `main`.
+</scope>
+
+<references>
+-   `<id>0_foundational_rules/01-git-conventional-commits</id>`
+-   `.github/workflows/release.yml` (Project's Release Workflow)
+-   `.releaserc.json` (Semantic Release Configuration)
+-   [Semantic Release Documentation](https://semantic-release.gitbook.io/)
+-   GitHub PR Templates (if `.github/PULL_REQUEST_TEMPLATE.md` exists)
+</references>
+
+</rule>

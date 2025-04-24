@@ -3,71 +3,147 @@ description: Code Commenting Standards Rule
 globs: ["**/*.ts", "**/*.tsx"]
 alwaysApply: true
 ---
-## Description
-Enforces consistent and meaningful code commenting practices.
+<rule>
 
-## Rule
-1.  **Purpose**: Comments MUST primarily explain the "why" behind the code, not just restate the "what". Explain complex logic, non-obvious decisions, workarounds, or the intent behind a piece of code.
-2.  **Conciseness**: Comments MUST be concise and to the point. Avoid long, rambling explanations.
-3.  **Minimalism**: Avoid excessive commenting. Code should be as self-documenting as possible through clear naming and structure. Do not comment obvious code.
-4.  **Format**:
-    *   Use `//` for single-line comments.
-    *   Use `/* ... */` for multi-line comments or for temporarily commenting out blocks of code during development (remove before committing).
-    *   Use JSDoc format (`/** ... */`) for documenting exported functions, classes, types, and complex component props, especially for public APIs or shared library code. Include `@param`, `@returns`, `@throws`, `@deprecated`, `@see`, `@example` tags where appropriate.
-5.  **Placement**: Place comments on the line *before* the code they refer to, or at the end of a line for very short annotations.
-6.  **TODOs/FIXMEs**: Use `// TODO:` or `// FIXME:` markers for temporary notes about pending work or known issues. Include a brief explanation and ideally a tracking reference (like a ticket number or GitHub issue). These should be addressed and removed in a timely manner.
-7.  **Up-to-date**: Comments MUST be kept up-to-date with the code they describe. Remove or update comments when the corresponding code changes. Stale comments are misleading and harmful.
-8.  **Clarity over Comments**: If code requires extensive comments to be understood, consider refactoring the code itself for better clarity first.
+<id>2_quality_and_architecture_rules/23-code-comments</id>
+<title>Code Commenting Guidelines</title>
 
-## Actions
-- **Suggest**: Adding JSDoc comments for exported functions/types/classes.
-- **Suggest**: Explaining the "why" for complex or non-obvious code sections.
-- **Warn**: Presence of potentially stale `// TODO:` or `// FIXME:` comments without clear action items or context.
-- **Suggest**: Removing comments that merely restate obvious code.
-- **Suggest**: Refactoring code that requires excessive comments for clarity.
+<description>
+Establishes guidelines for writing clear, concise, and meaningful comments in the codebase to improve understanding and maintainability, while avoiding unnecessary clutter.
+</description>
 
-## Examples
-✅ Correct:
+<context>
+Well-placed comments explain the intent and reasoning behind non-obvious code, aiding future developers (including one's future self). However, excessive or outdated comments can be detrimental. Code should strive to be self-documenting first.
+</context>
+
+<guidelines>
+1.  **Explain the "Why", Not the "What"**: Comments should primarily focus on *why* a particular approach was taken, the intent behind a complex piece of logic, or the context that isn't immediately obvious from the code itself. Avoid comments that simply restate what the code does in plain English.
+    *   **Good**: `// Use a Set for faster lookups (~O(1)) compared to Array.includes (~O(n))`
+    *   **Bad**: `// Increment the counter` (when the code is `counter++`)
+2.  **Conciseness and Clarity**: Comments must be clear, concise, and easy to understand. Avoid jargon where simpler terms suffice. Get straight to the point.
+3.  **Self-Documenting Code First**: Strive to write code that is clear and readable on its own through good naming conventions (variables, functions, components), logical structure, and small, focused functions/components. Comments are for clarifying the non-obvious parts.
+4.  **JSDoc for Public APIs**: Use JSDoc comments (`/** ... */`) to document all exported functions, classes, types, interfaces, and complex component props, especially within shared libraries or modules.
+    *   Include essential tags like `@param`, `@returns`, `@throws`, `@template` (for generics), `@deprecated`.
+    *   Provide a concise summary of the entity's purpose.
+    *   Include `@example` tags for non-trivial functions.
+5.  **Standard Comments (`//`)**: Use standard single-line comments (`//`) for inline explanations of specific lines or blocks of code where the "why" isn't immediately clear.
+6.  **Multi-line Comments (`/* ... */`)**: Use block comments (`/* ... */`) primarily for temporarily commenting out sections of code during development. These should generally be removed before committing.
+7.  **Placement**: Place comments on the line *immediately before* the code they refer to. For very short annotations, they can be placed at the end of the line after the code, separated by at least two spaces.
+8.  **TODOs and FIXMEs**:
+    *   Use `// TODO:` for planned enhancements or future work.
+    *   Use `// FIXME:` for known issues or bugs that need fixing.
+    *   Both markers MUST include a brief explanation of the task/issue and SHOULD include a reference (e.g., GitHub issue number `(GH-123)`, username, or date).
+    *   These comments imply an action item and should be addressed and removed in a timely manner, not left indefinitely.
+9.  **Keep Comments Up-to-Date**: Comments MUST accurately reflect the code they describe. When refactoring or changing logic, update or remove the corresponding comments immediately. Stale comments are worse than no comments.
+10. **Review Comments**: During code reviews, assess comments for clarity, accuracy, necessity, and adherence to these guidelines.
+</guidelines>
+
+<implementation>
+-   **Linting**: ESLint rules like `jsdoc/require-jsdoc` can help enforce documentation for specific code elements. Rules can also flag TODO/FIXME comments.
+-   **Code Review**: Reviewers should actively check comment quality and necessity.
+-   **AI Actions**:
+    *   **Suggest**: Adding JSDoc comments for exported entities lacking them.
+    *   **Suggest**: Adding explanatory comments for complex algorithms, regular expressions, or non-obvious logic.
+    *   **Warn**: Presence of `// TODO:` or `// FIXME:` comments, especially if lacking context or seeming stale.
+    *   **Suggest**: Removing comments that merely restate obvious code functionality.
+    *   **Suggest**: Refactoring code that is overly complex and requires excessive comments to be understood.
+    *   **Enforce**: Correct JSDoc tag usage and formatting.
+</implementation>
+
+<examples>
+<positive title="✅ Correct Commenting Practices">
 ```typescript
 /**
- * Calculates the factorial of a non-negative integer using recursion.
- * @param n - The non-negative integer.
- * @returns The factorial of n.
- * @throws {Error} If n is negative.
+ * Calculates the Levenshtein distance between two strings.
+ * Represents the minimum number of single-character edits required to change one word into the other.
+ *
+ * @param str1 - The first string.
+ * @param str2 - The second string.
+ * @returns The Levenshtein distance between str1 and str2.
+ * @see https://en.wikipedia.org/wiki/Levenshtein_distance
  * @example
- * factorial(5); // Returns 120
+ * const distance = levenshtein('kitten', 'sitting'); // distance will be 3
  */
-export function factorial(n: number): number {
-  if (n < 0) {
-    throw new Error('Factorial is not defined for negative numbers');
+export function levenshtein(str1: string, str2: string): number {
+  // Implementation uses dynamic programming approach
+  // Create a matrix to store distances between prefixes
+  const matrix: number[][] = Array(str2.length + 1).fill(0).map(() => Array(str1.length + 1).fill(0));
+
+  // Initialize matrix
+  for (let i = 0; i <= str1.length; i++) { matrix[0][i] = i; }
+  for (let j = 0; j <= str2.length; j++) { matrix[j][0] = j; }
+
+  // Fill the matrix
+  for (let j = 1; j <= str2.length; j++) {
+    for (let i = 1; i <= str1.length; i++) {
+      const cost = str1[i - 1] === str2[j - 1] ? 0 : 1; // Cost is 0 if chars match, 1 otherwise
+      matrix[j][i] = Math.min(
+        matrix[j - 1][i] + 1,       // Deletion
+        matrix[j][i - 1] + 1,       // Insertion
+        matrix[j - 1][i - 1] + cost // Substitution
+      );
+    }
   }
-  // Base case: factorial of 0 is 1
-  if (n === 0) {
-    return 1;
-  }
-  // Recursive step: n * factorial(n-1)
-  // This is safe due to the non-negative check above.
-  return n * factorial(n - 1);
+
+  return matrix[str2.length][str1.length];
 }
 
-// TODO: Refactor this to use an iterative approach for performance (GH-123)
-function complexCalculation() {
-  // ... complex logic ...
+// TODO: Optimize state updates for high-frequency changes (GH-45)
+function handleMouseMove(event: MouseEvent) {
+  // ... state update logic ...
 }
+
+// Workaround for Safari bug where flex-gap isn't calculated correctly in nested containers
+// See: https://bugs.webkit.org/show_bug.cgi?id=1 FlexGapBugID
+const needsSafariGapWorkaround = checkUserAgentForSafari();
 ```
+</positive>
 
-❌ Incorrect:
+<negative title="❌ Incorrect Commenting Practices">
 ```typescript
-// This function adds two numbers
-// It takes two numbers, a and b
-// It returns the sum
+// Bad: Comment merely restates the obvious code
+// Function to add two numbers
 function add(a: number, b: number): number {
-  // Add a and b
-  return a + b; // Return the result // Obvious comments
+  // Return the sum of a and b
+  return a + b;
 }
 
-// fix this later
-function somethingBroken() { // Vague FIXME comment
-  // ... broken code ...
+// Bad: Vague TODO without context or action item
+// TODO: Needs improvement
+function processData(data: unknown): Result {
+  // ... complex logic ...
+  return result;
 }
+
+/*
+Bad: Using block comments for regular explanations where // is standard.
+This logic filters the user list based on the active status.
+It iterates through the array and checks the isActive property.
+*/
+const activeUsers = users.filter(user => user.isActive);
+
+// Bad: Stale comment - the logic now uses find, not filter
+// Filter the products array to get the item by ID
+const product = products.find(p => p.id === targetId);
 ```
+</negative>
+</examples>
+
+<benefits>
+-   Improves code comprehension for current and future developers.
+-   Clarifies intent and design decisions behind complex code.
+-   Facilitates easier debugging and maintenance.
+-   Serves as inline documentation, especially for public APIs (via JSDoc).
+-   Tracks necessary future work or known issues (via TODO/FIXME).
+</benefits>
+
+<scope>
+Applies to all source code files (e.g., `.ts`, `.tsx`, `.js`, `.glsl`) within the project.
+</scope>
+
+<references>
+-   [JSDoc Documentation](https://jsdoc.app/)
+-   [Clean Code (Chapter 4: Comments)](https://www.oreilly.com/library/view/clean-code-a/9780136083238/) (Conceptual reference)
+</references>
+
+</rule>

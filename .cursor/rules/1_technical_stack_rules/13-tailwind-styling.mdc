@@ -3,95 +3,104 @@ description: Tailwind CSS Styling Conventions Rule
 globs: ["**/*.tsx", "src/app/styles/global.css", "tailwind.config.ts"]
 alwaysApply: true
 ---
-# Description
-Enforces consistent and best-practice usage of Tailwind CSS 4.x for styling.
+<rule>
 
-## Rule
-1.  **Utility-First**: Prioritize using Tailwind utility classes directly in JSX over custom CSS classes whenever possible.
-2.  **Class Ordering**: Ensure Tailwind classes are automatically sorted using `prettier-plugin-tailwindcss`. Configure Prettier accordingly.
-3.  **Responsiveness**: Use Tailwind's responsive modifiers (`sm:`, `md:`, `lg:`, `xl:`, `2xl:`) for building responsive layouts. Design mobile-first.
-4.  **State Variants**: Utilize state variants (`hover:`, `focus:`, `active:`, `disabled:`, etc.) for styling interactive states.
-5.  **Dark Mode**: Implement dark mode using Tailwind's `dark:` variant, configured via the `class` strategy in your CSS.
-6.  **Customization**:
-    *   Extend the default theme using the `@theme` directive in `src/app/styles/global.css` for project-specific colors, fonts, spacing, etc. Avoid arbitrary values in utilities (`bg-[#123456]`) where a theme value would be more appropriate.
-    *   Define custom reusable utility classes using `@layer utilities` *sparingly* in `src/app/styles/global.css`, primarily for complex or highly repeated patterns not easily achieved with standard utilities. Prefer component abstraction over excessive custom utilities.
-7.  **Component Abstraction**: Encapsulate complex or reusable styled elements into dedicated React components rather than relying solely on long strings of utility classes in parent components. Pass styling variations via props if necessary.
-8.  **CSS Grid/Flexbox**: Prefer CSS Grid (`grid`, `grid-cols-*`, `gap-*`) for layout where applicable due to its power and clarity. Use Flexbox (`flex`, `justify-*`, `items-*`) for simpler one-dimensional layouts or when Grid is unsuitable.
-9.  **Accessibility**: Ensure sufficient color contrast and use appropriate utilities for focus states (`focus-visible:`) to maintain accessibility.
-10. **`global.css`**: Use `src/app/styles/global.css` for importing Tailwind with `@import "tailwindcss"`, defining theme variables with `@theme`, and adding minimal global utility classes via `@layer utilities`.
+<id>1_technical_stack_rules/13-tailwind-styling</id>
+<title>Tailwind CSS Styling Conventions (v4)</title>
 
-## Actions
-- **Suggest**: Consolidating repeated utility patterns into reusable React components.
-- **Reject**: Use of arbitrary values (e.g., `mt-[13px]`) when a theme value (e.g., `mt-3`, `mt-4`) or a small theme extension would suffice.
-- **Suggest**: Using `dark:` variants for dark mode styling.
-- **Suggest**: Using responsive modifiers (`sm:`, `md:`, etc.) for layout adjustments.
-- **Info**: Remind to ensure `prettier-plugin-tailwindcss` is configured for automatic class sorting.
+<description>
+Enforces consistent and effective usage of Tailwind CSS 4.x for styling within the Next.js application, prioritizing utility-first principles, maintainability, and performance.
+</description>
 
-## Examples
-✅ Correct:
-```typescript
-// Tailwind CSS v4 setup in global.css
+<context>
+Tailwind CSS provides a highly efficient way to build custom user interfaces using low-level utility classes. Consistent application ensures readability, facilitates rapid development, and leverages Tailwind's optimization features.
+</context>
+
+<guidelines>
+1.  **Utility-First Principle**: Prioritize using Tailwind utility classes directly within JSX/HTML over creating custom CSS classes. Apply utilities for styling, layout, and responsiveness.
+2.  **Class Ordering**: Ensure Tailwind classes are automatically sorted using the official `prettier-plugin-tailwindcss`. This MUST be configured in the project's Prettier setup (`prettier.config.js` or `package.json`).
+3.  **Responsiveness**: Design layouts mobile-first. Use Tailwind's responsive modifiers (`sm:`, `md:`, `lg:`, `xl:`, `2xl:`) to adapt styles and layouts for different screen sizes.
+4.  **State Variants**: Utilize state variants (`hover:`, `focus:`, `focus-visible:`, `active:`, `disabled:`, `group-hover:`, `peer-focus:`, etc.) for styling interactive element states directly with utilities.
+5.  **Dark Mode**: Implement dark mode using Tailwind's `dark:` variant. Ensure the `darkMode: 'class'` strategy is configured in `tailwind.config.js` (or implied by default setup) and the class is toggled on the `<html>` element.
+6.  **Customization (Tailwind v4)**:
+    *   **Theme Extension (`@theme`)**: Define project-specific design tokens (colors, fonts, spacing, etc.) using CSS variables within the `@theme` directive in the main CSS file (`src/app/styles/global.css`). Reference these variables using `theme('--variable-name')` in utilities if needed, but prefer direct CSS variable usage (`bg-[--color-brand]`) for simplicity.
+    *   **Avoid Arbitrary Values**: Minimize the use of arbitrary values in utilities (e.g., `mt-[13px]`, `bg-[#1A2B3C]`). If a specific value is needed repeatedly, define it as a CSS variable under `@theme`.
+    *   **Custom Utilities (`@layer utilities`)**: Define custom reusable utility classes *sparingly* using the `@layer utilities` directive in `global.css`. Reserve this for complex patterns not easily achievable with standard utilities or component abstraction.
+7.  **Component Abstraction**: For complex or frequently reused UI elements with many utilities, encapsulate them into dedicated React components (`src/app/components/shared/`). Pass styling variations via props rather than excessively long `className` strings in parent components.
+8.  **Layout Techniques**: Use CSS Grid (`grid`, `grid-cols-*`, `gap-*`) for two-dimensional layouts and Flexbox (`flex`, `justify-*`, `items-*`, `gap-*`) for one-dimensional layouts. Leverage `gap-*` utilities for consistent spacing.
+9.  **Accessibility (`a11y`)**:
+    *   Ensure sufficient color contrast between text and background, especially when defining custom colors.
+    *   Use `focus-visible:` variant for focus styling to avoid outlining elements for mouse users while maintaining keyboard accessibility.
+10. **Global CSS (`src/app/styles/global.css`)**:
+    *   Keep this file minimal. Primarily use it for:
+        *   Importing Tailwind: `@import "tailwindcss";`
+        *   Defining theme variables: `@theme { ... }`
+        *   Minimal base styles (if absolutely necessary, but often handled by Tailwind Preflight).
+        *   Rare custom utilities: `@layer utilities { ... }`
+    *   Avoid defining component-specific styles here; place them in component files or encapsulate them in components.
+</guidelines>
+
+<implementation>
+-   **Configuration**: Tailwind setup is primarily driven by CSS imports (`@import "tailwindcss"`) and directives (`@theme`, `@layer`) in `global.css`. A minimal `tailwind.config.js` might exist for plugins or specific overrides, but theme definition moves to CSS.
+-   **Tooling**: `prettier-plugin-tailwindcss` MUST be installed and configured for automatic class sorting.
+-   **Linting**: Consider ESLint plugins for Tailwind (`eslint-plugin-tailwindcss`) to enforce best practices and class ordering if Prettier isn't sufficient.
+-   **AI Actions**:
+    *   **Suggest**: Consolidating repeated utility patterns into reusable React components.
+    *   **Reject**: Use of arbitrary values (e.g., `p-[17px]`) where a theme value/variable (e.g., `p-4`, `p-[--spacing-md]`) or a small theme extension would be more appropriate and maintainable.
+    *   **Suggest**: Using `dark:` variants for dark mode styling based on the `class` strategy.
+    *   **Suggest**: Applying responsive modifiers (`sm:`, `md:`, etc.) for adapting layouts.
+    *   **Info**: Remind to ensure `prettier-plugin-tailwindcss` is active for consistent class sorting.
+    *   **Suggest**: Using `focus-visible:` for focus states.
+</implementation>
+
+<examples>
+<positive title="✅ Correct: Tailwind v4 Theme & Component Usage">
+```css
+/* src/app/styles/global.css */
 @import "tailwindcss";
 
 @theme {
-  --color-brand: oklch(0.6 0.24 250);
-  --color-brand-light: oklch(0.8 0.2 250);
-  --color-brand-dark: oklch(0.4 0.24 250);
-  --font-display: "Inter", sans-serif;
+  /* Define custom CSS variables for the theme */
+  --color-brand-primary: oklch(65% 0.25 250); /* Example brand color */
+  --color-brand-secondary: oklch(80% 0.15 150);
+  --font-body: "Inter", sans-serif;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  /* Minimal custom utility if needed */
+  .text-pretty {
+    text-wrap: pretty;
   }
 }
-
-// Component using Tailwind utilities and responsive modifiers
-function ResponsiveCard({ title }: { title: string }) {
-  return (
-    <div className="p-4 bg-white rounded-lg shadow-md dark:bg-gray-800 md:p-6 lg:p-8">
-      <h3 className="text-lg font-semibold text-gray-900 dark:text-white md:text-xl">
-        {title}
-      </h3>
-      {/* Mobile first, then larger screens */}
-      <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 md:text-base">
-        Content goes here...
-      </p>
-    </div>
-  );
-}
 ```
 
-❌ Incorrect:
 ```typescript
-// Bad: Using a separate tailwind.config.js file (no longer needed in v4)
-// tailwind.config.js - DEPRECATED in v4
-module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        brand: '#0071e3',
-      },
-    },
-  },
+// src/app/components/shared/StyledButton.tsx
+import { type FC, type ButtonHTMLAttributes } from 'react';
+
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary';
+}
+
+const StyledButton: FC<ButtonProps> = ({
+  variant = 'primary',
+  className = '',
+  children,
+  ...props
+}) => {
+  const baseStyle = 'px-4 py-2 rounded font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2';
+  const variantStyle = variant === 'primary'
+    ? 'bg-[--color-brand-primary] text-white hover:bg-opacity-90 focus-visible:outline-[--color-brand-primary]'
+    : 'bg-[--color-brand-secondary] text-gray-800 hover:bg-opacity-90 focus-visible:outline-[--color-brand-secondary]';
+
+  // Ensure prettier-plugin-tailwindcss sorts this dynamically generated string
+  return (
+    <button className={`${baseStyle} ${variantStyle} ${className}`} {...props}>
+      {children}
+    </button>
+  );
 };
 
-// Bad: Excessive use of arbitrary values and inline styles
-function BadCard() {
-  return (
-    <div style={{ padding: '13px', backgroundColor: '#f1f1f1' }} className="mt-[7px] shadow-[2px_2px_5px_rgba(0,0,0,0.1)]">
-      {/* ... */}
-    </div>
-  );
-}
-
-// Bad: Old v3 directives in global.css
-/* global.css - OUTDATED */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-.my-button {
-  @apply px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-700;
-}
-```
+export default StyledButton;

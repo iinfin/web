@@ -1,95 +1,166 @@
 ---
-description: 
-globs: 
+description:
+globs:
 alwaysApply: true
 ---
-# Rule: Advanced Animation Philosophy and Implementation
+<rule>
 
-## Description
-This rule guides the implementation of animations, emphasizing high-fidelity, unique, and robust motion design inspired by creative coding principles. It encourages going beyond default framework presets by leveraging custom easing, fine-tuned physics, and mathematical precision within the Next.js/React/Framer Motion stack. The goal is animations that are meticulously detailed, performant, and contribute significantly to a standout user experience.
+<id>4_ui_ux_rules/40-animation-advanced</id>
+<title>Advanced Animation Philosophy and Implementation</title>
 
-## Rule
-1.  **Foundation**: Use Framer Motion (`motion` components, hooks like `useSpring`, `useTransform`, `useAnimate`) as the primary tool for UI animations, layout transitions (`layout` prop), and enter/exit effects (`AnimatePresence`), following Rule `14-framer-motion-animations.mdc`.
-2.  **Beyond Presets**: Avoid relying solely on default animation presets (e.g., Framer Motion's default `ease` or `spring`). Strive for unique motion characteristics.
-3.  **Custom Easing**: For precise control over timing and feel, utilize:
-    *   Custom cubic Bézier curves (`cubicBezier(t, x1, y1, x2, y2)`) within Framer Motion's `transition` prop (`ease` array).
-    *   Custom easing functions defined in `src/app/lib/utils/ease.ts` when implementing animations with `useAnimate` or custom hooks where direct function application is feasible.
-4.  **Physics Fine-Tuning**: When using spring physics (`type: 'spring'`), meticulously tune parameters (`stiffness`, `damping`, `mass`, `restDelta`, `restSpeed`) to achieve the desired character – don't just accept defaults. Consider slightly varying parameters for related elements (like the cursor lines vs. dot) for more organic movement.
-5.  **Mathematical Precision**: Leverage utility functions from `src/app/lib/utils/math.ts` (e.g., `lerp`, `mix`, `clamp`, `fit`, `normalizeAngle`) within custom animation logic (hooks, `useAnimate`, `useTransform`) when precise control over values based on scroll, input, or state is required.
-6.  **Curve Selection Guidance**:
-    *   **Default**: Use "ease-out" style curves (`easeOut`, custom cubic Bézier mimicking ease-out) for most interactions triggered by the user (e.g., opening modals, hover effects) to feel responsive.
-    *   **Visible Elements**: Use "ease-in-out" style curves (`easeInOut`, custom cubic Bézier mimicking ease-in-out) for animations of elements already on screen (e.g., subtle shifts, state changes) for a smoother start and end.
-    *   **Avoid Linear**: Do *not* use linear easing (`linear`) unless for constant velocity animations like infinite marquees or spinners.
-7.  **Performance**: Adhere strictly to performance best practices (Rule `30-performance-web-vitals.mdc`), primarily animating `transform` and `opacity`. Profile complex animations if necessary.
-8.  **Accessibility**: Always respect `prefers-reduced-motion`. Provide alternative, reduced, or disabled animations. Use the `useReducedMotion` hook from Framer Motion if needed for conditional logic.
-9.  **Collaboration Model**: The AI (Assistant) provides technical expertise in implementing animations using these principles, based on the User's overall art direction and specific requirements.
+<description>
+Guides the implementation of high-fidelity, unique, and robust UI animations, emphasizing custom easing, fine-tuned physics, and mathematical precision within the Framer Motion stack. Aims to move beyond default presets towards animations that enhance the user experience with detail and character.
+</description>
 
-## Actions
-- **Suggest**: Replacing default Framer Motion `ease` values with specific `cubicBezier` arrays or named eases (`easeIn`, `easeOut`, `easeInOut` from `ease.ts` via `cubicBezier`).
-- **Suggest**: Fine-tuning `stiffness`, `damping`, and `mass` for `spring` animations instead of using defaults.
-- **Suggest**: Using `useTransform` to map input values (scroll, cursor position) to animated properties using custom curves or math functions.
-- **Suggest**: Creating custom animation hooks for complex, reusable animation sequences leveraging `useAnimate` or `useSpring`.
-- **Reject**: Use of `ease: 'linear'` without justification for constant velocity needs.
-- **Warn**: If animations seem too generic or rely only on default library presets.
-- **Info**: Remind to check `prefers-reduced-motion` for complex or potentially jarring animations.
+<context>
+While basic animations provide feedback, advanced animation techniques elevate the user experience by adding personality, improving perceived performance, and creating a more engaging interface. This involves careful control over timing, physics, and value interpolation, often inspired by creative coding principles.
+</context>
 
-## Examples
-✅ Correct (Custom Bezier in Transition):
+<guidelines>
+1.  **Foundation**: Build upon the principles of <id>1_technical_stack_rules/14-framer-motion-animations</id>, using Framer Motion as the primary tool.
+2.  **Beyond Presets**: Actively avoid relying solely on default Framer Motion easing curves (like the generic `"easeInOut"`, `"linear"`) or default spring parameters. Aim for bespoke motion characteristics tailored to the specific interaction or element.
+3.  **Custom Easing (Cubic Bézier)**: For precise temporal control, define custom easing curves using the four-point cubic Bézier representation within the `transition` prop's `ease` array (e.g., `ease: [0.22, 1, 0.36, 1]`). Use tools like `cubic-bezier.com` to visualize and select appropriate curves.
+4.  **Physics Fine-Tuning (`useSpring`)**: When using `type: 'spring'`, meticulously tune parameters (`stiffness`, `damping`, `mass`, `restDelta`, `restSpeed`) to achieve the desired feel (e.g., bouncy, stiff, gentle). Experiment with values rather than accepting defaults. Consider subtle variations for related elements to create more organic group motion.
+5.  **Mathematical Precision (`useTransform`)**: Leverage `useTransform` to map input values (scroll progress, cursor position, state variables) to animated properties (`x`, `y`, `opacity`, `scale`). Use mathematical utility functions (e.g., `lerp`, `clamp`, `smoothstep`, custom curves from `src/app/lib/utils/math.ts` or `src/app/lib/utils/ease.ts`) within the transform function for precise control over the mapping.
+6.  **Curve Selection Philosophy**:
+    *   **Responsive Easing (Ease-Out Style)**: For animations triggered directly by user input (clicks, hovers initiating an appearance/change), use curves that are fast initially and slow down towards the end (e.g., `cubicBezier(t, 0.25, 1, 0.5, 1)`). This provides immediate feedback.
+    *   **Smooth Transitions (Ease-In-Out Style)**: For animations of elements already visible or transitioning between states without direct, abrupt user input, use curves that start and end slowly (e.g., `cubicBezier(t, 0.4, 0, 0.2, 1)`). This feels smoother and less abrupt.
+    *   **Avoid Linear**: Strictly avoid `ease: "linear"` unless animating something with constant velocity (e.g., a continuous rotation, a marquee scroll).
+7.  **Performance & Accessibility**: Rigorously adhere to performance (<id>3_performance_security_rules/30-performance-web-vitals</id>) and accessibility (<id>1_technical_stack_rules/14-framer-motion-animations</id>) guidelines. Prioritize `transform`/`opacity`, and always respect `prefers-reduced-motion` (using `useReducedMotion` hook for conditional adjustments).
+8.  **Orchestration**: Use `staggerChildren` within `variants` or control delays manually via the `transition` prop (`delay`) to create sophisticated sequences for multiple elements.
+</guidelines>
+
+<implementation>
+-   **Libraries**: `framer-motion`.
+-   **Utilities**: Functions from `src/app/lib/utils/math.ts`, `src/app/lib/utils/ease.ts`.
+-   **Tooling**: `cubic-bezier.com` for visualizing easing curves, React DevTools Profiler for performance analysis.
+-   **Code Review**: Focus on the choice and tuning of easing/physics parameters, appropriate use of `useTransform`, performance implications, and adherence to the specified curve selection philosophy.
+-   **AI Actions**:
+    *   **Suggest**: Replacing generic string eases (`"easeInOut"`) with specific `cubicBezier` arrays (e.g., `[0.4, 0, 0.2, 1]`).
+    *   **Suggest**: Explicitly defining and tuning `stiffness`, `damping`, `mass` for `spring` animations rather than relying on defaults.
+    *   **Suggest**: Utilizing `useTransform` with custom mapping functions (leveraging math/ease utilities) for scroll-based or input-driven animations.
+    *   **Reject**: Use of `ease: "linear"` for standard UI transitions.
+    *   **Warn**: If animations appear overly simplistic or use only default library presets without apparent consideration.
+    *   **Info**: Remind to test animations with `prefers-reduced-motion` enabled.
+</implementation>
+
+<examples>
+<positive title="✅ Correct: Custom Cubic Bezier Ease">
 ```typescript
-<motion.div
-  initial={{ opacity: 0, y: 20 }}
-  animate={{ opacity: 1, y: 0 }}
-  transition={{
-    duration: 0.6,
-    // Custom ease-out style bezier
-    ease: [0.22, 1, 0.36, 1] // Corresponds to cubicBezier(t, 0.22, 1, 0.36, 1)
-  }}
-/>
-```
+import { motion } from 'framer-motion';
 
-✅ Correct (Fine-tuned Spring):
-```typescript
-const x = useSpring(0, {
-  stiffness: 300, // Specific stiffness
-  damping: 25,    // Specific damping
-  mass: 0.5,       // Specific mass
-});
-```
-
-✅ Correct (Using useTransform with Math):
-```typescript
-import { useTransform, useScroll } from 'framer-motion';
-import { fit } from '@/app/lib/utils/math'; // Import math util
-
-function ParallaxImage() {
-  const { scrollYProgress } = useScroll();
-  // Map scroll progress (0-1) to a y-offset (-50px to 50px)
-  const y = useTransform(scrollYProgress, (latest) => fit(latest, 0, 1, -50, 50));
-  // Could also use custom easing here:
-  // const y = useTransform(scrollYProgress, [0, 1], [-50, 50], { ease: Easing.easeInOut });
-
-  return <motion.img style={{ y }} src="..." />;
+function FadeInSlideUp() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.8,
+        // Custom ease-out curve (fast start, slow end)
+        ease: [0.25, 1, 0.5, 1]
+      }}
+    >
+      Content
+    </motion.div>
+  );
 }
 ```
+</positive>
 
-❌ Incorrect (Generic Defaults):
+<positive title="✅ Correct: Fine-tuned Spring Physics">
 ```typescript
-<motion.div
-  animate={{ scale: 1.1 }}
-  // Bad: Relies on default spring/tween without considering context or desired feel.
-  transition={{ type: 'spring' }}
-/>
+import { motion, useSpring } from 'framer-motion';
 
-<motion.div
-  animate={{ x: 100 }}
-  // Bad: Using linear for typical UI transition without justification.
-  transition={{ ease: 'linear', duration: 0.5 }}
-/>
+function BouncyElement() {
+  const scale = useSpring(1, {
+    stiffness: 400,  // High stiffness
+    damping: 15,     // Lower damping for bounce
+    mass: 0.8,
+  });
+
+  return (
+    <motion.div
+      style={{ scale }}
+      whileHover={{ scale: 1.2 }} // Spring updates automatically on hover
+    />
+  );
+}
 ```
+</positive>
 
-## Benefits
-- Creates a unique, signature animation style.
-- Provides precise control over motion characteristics.
-- Enhances perceived quality and craftsmanship.
-- Ensures animations are robust and performant within the React ecosystem.
-- Facilitates effective collaboration between user's vision and AI's technical execution.
+<positive title="✅ Correct: useTransform with Custom Mapping">
+```typescript
+import { motion, useScroll, useTransform } from 'framer-motion';
+import { mix } from '@/app/lib/utils/math'; // Assumed lerp function
+import { easeInOut } from '@/app/lib/utils/ease'; // Assumed easing function
+
+function ScrollFadeHeader() {
+  const { scrollYProgress } = useScroll();
+
+  // Fade out header opacity between 0% and 10% scroll
+  // Apply an ease-in-out curve to the fade
+  const opacity = useTransform(
+    scrollYProgress,
+    [0, 0.1], // Input range (scroll progress)
+    [1, 0],   // Output range (opacity)
+    {
+      clamp: true,
+      mixer: (from, to) => (progress) => mix(from, to, easeInOut(progress))
+    }
+  );
+
+  return <motion.header style={{ opacity }}>Header Content</motion.header>;
+}
+```
+</positive>
+
+<negative title="❌ Incorrect: Over-reliance on Defaults">
+```typescript
+import { motion } from 'framer-motion';
+
+function GenericAnimation() {
+  return (
+    <motion.div
+         a     tween without tuning.
+      // The resulting motion might feel generic or unsuitable.
+      transition={{ type: 'spring' }}
+    />
+  );
+}
+
+function LinearTransition() {
+  return (
+    <motion.div
+      animate={{ x: 200 }}
+      // Bad: Linear ease is usually unnatural for UI elements.
+      transition={{ ease: "linear", duration: 1 }}
+    />
+  );
+}
+```
+</negative>
+</examples>
+
+<benefits>
+-   Creates a unique and memorable user experience through signature motion design.
+-   Provides precise control over the timing, feel, and character of animations.
+-   Enhances the perceived quality and craftsmanship of the UI.
+-   Ensures complex animations remain performant and accessible.
+-   Facilitates a clear distinction between standard and high-effort animation implementations.
+</benefits>
+
+<scope>
+Applies to all UI animations implemented using Framer Motion where a high degree of control, unique character, or sophisticated interaction feedback is desired, going beyond basic transitions.
+</scope>
+
+<references>
+-   [Framer Motion Documentation](https://www.framer.com/motion/)
+-   [Cubic Bezier Generator](https://cubic-bezier.com/)
+-   [Easing Functions Cheat Sheet](https://easings.net/)
+-   <id>1_technical_stack_rules/14-framer-motion-animations</id>
+-   <id>3_performance_security_rules/30-performance-web-vitals</id>
+-   `src/app/lib/utils/math.ts` (Project-specific math utilities)
+-   `src/app/lib/utils/ease.ts` (Project-specific easing functions)
+</references>
+
+</rule>

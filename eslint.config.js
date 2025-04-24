@@ -2,6 +2,7 @@
 import { FlatCompat } from '@eslint/eslintrc';
 import eslint from '@eslint/js';
 import nextPlugin from '@next/eslint-plugin-next';
+import reactCompiler from 'eslint-plugin-react-compiler';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRecommended from 'eslint-plugin-react/configs/recommended.js';
 import globals from 'globals';
@@ -42,9 +43,9 @@ export default tseslint.config(
 	// If you were using stricter XO rules, consider tseslint.configs.strict instead or add specific rules
 
 	// Load Next.js config using FlatCompat
-	...compat.config({
-		// extends: ['next/core-web-vitals'],
-	}),
+	// ...compat.config({
+	//   // extends: ['next/core-web-vitals'],
+	// }),
 
 	{
 		languageOptions: {
@@ -55,7 +56,7 @@ export default tseslint.config(
 			globals: {
 				...globals.browser, // Add browser globals
 				...globals.node, // Add Node.js globals (for config files, etc. if not ignored)
-				React: 'readonly', // Define React global if needed (often not required with new JSX transform)
+				// React: 'readonly', // Usually not needed anymore
 			},
 		},
 	},
@@ -78,11 +79,40 @@ export default tseslint.config(
 		},
 		plugins: {
 			'react-hooks': reactHooks, // Add React Hooks plugin
+			'react-compiler': reactCompiler, // Add React Compiler plugin
 		},
 		rules: {
 			...reactHooks.configs.recommended.rules, // Enable recommended React Hooks rules
 			'react/prop-types': 'off', // Disable prop-types rule (handled by TypeScript)
 			'react/react-in-jsx-scope': 'off', // Disable old React scope rule (not needed)
+			'react-compiler/react-compiler': 'error', // Enable React Compiler rule
+		},
+	},
+
+	// Next.js Plugin Configuration (Reverted to standard structure)
+	// tseslint.plugin(nextPlugin, {
+	// 	name: '@next/next',
+	// 	configs: {
+	// 		recommended: nextPlugin.configs.recommended,
+	// 		'core-web-vitals': nextPlugin.configs['core-web-vitals'],
+	// 	},
+	// }),
+	{
+		files: ['**/*.{ts,tsx}'],
+		plugins: {
+			'@next/next': nextPlugin,
+		},
+		rules: {
+			// Apply Next.js rules directly from plugin object
+			...nextPlugin.rules, // Spread all available rules (if structured this way)
+			// Or, enable specific rules if the above spread doesn't work:
+			// '@next/next/no-html-link-for-pages': 'error',
+			// '@next/next/no-sync-scripts': 'error',
+			// '@next/next/google-font-display': 'warn',
+			// ... add other desired core-web-vitals and recommended rules ...
+			// Fallback: Apply recommended rules if spread works
+			// ...nextPlugin.configs.recommended.rules, // This caused errors
+			// ...nextPlugin.configs['core-web-vitals'].rules, // This caused errors
 		},
 	},
 
