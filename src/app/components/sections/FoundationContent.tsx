@@ -1,7 +1,6 @@
 'use client';
 
 import type { FC, ReactNode } from 'react';
-import { useCallback, useEffect, useState } from 'react';
 
 import Image from 'next/image';
 import Link from 'next/link';
@@ -17,21 +16,13 @@ import clsx from 'clsx';
  */
 const CONTENT = {
 	// Fixed introduction paragraph
-	introduction:
+	introduction: [
 		'Incomplete Infinity is an evolving, multifaceted creative practice working with companies and institutions in pursuit of a better future. Embracing an enigmatic style, we create work that is completed by the viewer and lives on in their minds.',
-
-	// Description paragraphs
-	description: [
-		'In the fertile void between disciplines, Incomplete Infinity cultivates living frameworks rather than final artifacts.',
-		'We exist in the deliberate pause between completion and becoming. Incomplete Infinity navigates the territories where technology becomes language, where sustainability becomes conversation, and where creativity transmutes the abstract into the experiential. Our work inhabits the fertile tensions between disorder and pattern, between revelation and concealment, between finite expression and infinite interpretation.',
-		'We dwell in the territory of incompleteness—where unfinished becomes invitation rather than flaw.',
-		'At the intersection of imperfection, mystery, and openness, Incomplete Infinity crafts experiences that resist finite closure. We navigate liminal spaces where technology functions as collaborative language rather than mere tool, where sustainability manifests as regenerative dialogue with natural systems, and where creativity transforms abstract potential into tangible yet unresolved encounters. Our work exists not as static artifact but as living ecosystem—adapting, evolving, and completing itself anew with each engagement.',
-		'Incomplete Infinity occupies the tension between definition and possibility.',
-		'We architect the unfinished—creating systems and experiences that evolve beyond their origins through engagement.',
-		'Between conception and completion lies a fertile territory of possibility. We transform apparent limitations into portals of potential, crafting experiences that gain strength through vulnerability and resonance through ambiguity. Each project exists as structured emergence: deliberately unresolved systems that invite completion without dictating conclusion.',
-		"At Incomplete Infinity, we navigate the threshold between order and chaos, embracing imperfection as the fertile ground where true innovation emerges. We craft experiences that resist immediate comprehension, preferring instead to dwell in the mysterious territories where meaning remains partially concealed, inviting deeper contemplation. Our work deliberately preserves spaces of emptiness—incomplete by design—creating frameworks that await your participation to fulfill their purpose, ensuring each encounter becomes uniquely yours. We find resonance in Carl Jung's insight that within apparent disorder lies hidden pattern, in Khalil Gibran's journey toward the arcane, and in Degas' understanding that true art manifests in the space between creator and observer.",
+		"We operate in the deliberate pause, that charged moment when breath is held between inhalation and release. Incomplete Infinity isn't situated at intersections; we inhabit the unmapped territories where conventional disciplines dare not venture. Here, in these fertile absences, we find what Jung understood: in all chaos, there is a cosmos. Our practice transforms the unfinished from apparent deficiency into generative potential, finding quiet beauty in what's broken, hidden rhythm in disorder. The cracks aren't flaws but portals through which light enters.",
+		'What emerges when work deliberately preserves its gaps? When completion becomes collaborative rather than predetermined? Our projects exist as structured provocations: carefully architected systems of absence and presence that activate when encountered. We step from the obvious toward the concealed, creating art that lives in the shadows between what is seen and what is felt. Each experience becomes an echo that lingers, a riddle without an answer, inviting deeper journeys into mystery rather than immediate comprehension.',
+		'A creation is never whole on its own; it waits, suspended, until you step into the frame. This approach manifests across our practice, from immersive environments where darkness becomes as crucial as light to digital frameworks built with deliberate gaps in their architecture. We craft experiences that simultaneously reveal and conceal, offering enough structure to engage but refusing the closure that would render them inert. This philosophy has drawn us into dialogues with entities from automotive visionaries to cultural institutions, not because we offer solutions, but because we transform limitations into possibilities. We find ourselves continually returning to the paradox embedded in our name itself. The concept of infinity stretches toward the boundless, yet remains perpetually beyond complete comprehension. Between chaos and order, between revelation and mystery, between structure and emergence, this is the territory we deliberately choose to inhabit. Our practice thrives in this productive tension, finding in the unresolved not deficiency, but the most authentic expression of reality itself.',
+		"After all, isn't true infinity always incomplete?",
 	],
-
 	// Lists for section content
 	lists: {
 		// Services list for services column
@@ -69,36 +60,6 @@ const CONTENT = {
 };
 
 // =============================================
-// UTILITY FUNCTIONS
-// =============================================
-
-/**
- * Selects two unique random paragraphs from the source array.
- * @param sourceArray - Array of paragraph strings to select from.
- * @returns A tuple of two distinct paragraphs, or undefined values if array is too small.
- */
-const selectRandomParagraphs = (sourceArray: string[]): [string | undefined, string | undefined] => {
-	// Handle empty array case
-	if (sourceArray.length === 0) return [undefined, undefined];
-
-	// Handle single-item array case
-	if (sourceArray.length === 1) return [sourceArray[0], undefined];
-
-	// Select first random paragraph
-	const index1 = Math.floor(Math.random() * sourceArray.length);
-	const paragraph1 = sourceArray[index1];
-
-	// Select second random paragraph (ensuring it's different from the first)
-	let index2 = Math.floor(Math.random() * sourceArray.length);
-	while (index2 === index1) {
-		index2 = Math.floor(Math.random() * sourceArray.length);
-	}
-	const paragraph2 = sourceArray[index2];
-
-	return [paragraph1, paragraph2];
-};
-
-// =============================================
 // SUB-COMPONENTS
 // =============================================
 
@@ -123,25 +84,7 @@ const ContactLink: FC<ContactLinkProps> = ({ href, children }): JSX.Element => (
  * Main content description section.
  */
 const DescriptionSection: FC = (): JSX.Element => {
-	// State for randomly selected paragraphs
-	const [selectedParagraphs, setSelectedParagraphs] = useState<[string | undefined, string | undefined]>([undefined, undefined]);
-
-	// Initialize paragraphs only on client-side to avoid hydration mismatch
-	useEffect(() => {
-		// Only run random selection on the client side
-		setSelectedParagraphs(selectRandomParagraphs(CONTENT.description));
-	}, []);
-
-	// Handler to regenerate paragraphs on click
-	const regenerateParagraphs = useCallback(() => {
-		setSelectedParagraphs(selectRandomParagraphs(CONTENT.description));
-	}, []);
-
-	const [paragraph1, paragraph2] = selectedParagraphs;
-
-	// Use only the introduction for initial SSR render to avoid hydration mismatch
-	// Then add random paragraphs on client side
-	const descriptionText = [CONTENT.introduction, paragraph1 || '', paragraph2 || ''];
+	const descriptionText = CONTENT.introduction;
 
 	return (
 		<div
@@ -152,12 +95,10 @@ const DescriptionSection: FC = (): JSX.Element => {
 		>
 			<div
 				className={clsx(
-					'font-caption-01 h-fit text-sm md:text-base', // Typography
+					'h-fit',
 					'col-span-1 md:col-span-2 md:col-start-2', // Column positioning
-					'cursor-pointer', // Show interactivity
 					'grid grid-rows-[auto_1fr] gap-12', // Explicit grid for logo and text
 				)}
-				onClick={regenerateParagraphs}
 			>
 				{/* Logo display - explicit row 1 */}
 				<div className="row-start-1 mix-blend-multiply">
