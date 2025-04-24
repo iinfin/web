@@ -10,10 +10,10 @@ This rule defines and automates the process of committing changes using the Conv
 When asked to commit and push changes:
 1. Format and Lint check all files first, fix linter errors and warnings if there are any
     ```bash
-    bun run util:format
-    bun run util:lint
+    npm run util:format
+    npm run util:lint
     ```
-2.  Run `bun run build` to verify the project builds without error and without any linter warnings before pushing. If there are, fix the errors and then commit and push.
+2.  Run `npm run build` to verify the project builds without error and without any linter warnings before pushing. If there are, fix the errors and then commit and push.
     *   **(Optional Context)**: Add a brief sentence summarizing the "why" or linking to the prompt's goal.
     *   **IMPORTANT**: When using `git commit -m` directly with multiple `-m` flags:
         *   DO NOT include any escape sequences (like `\n`) in the message content.
@@ -63,7 +63,7 @@ When asked to commit and push changes:
         *   Each `-m` flag creates a new paragraph in the commit message.
         *   See examples below for the correct way to format multi-line messages.
 7.  Execute `git commit` with the generated message.
-8.  After the commit (and push, if performed) is completed, run `bun run util:clean` to clean up build directories.
+8.  After the commit (and push, if performed) is completed, run `npm run util:clean` to clean up build directories.
 
 ## Guidelines for Manual Commits & AI Prompts
 When committing manually or prompting the AI:

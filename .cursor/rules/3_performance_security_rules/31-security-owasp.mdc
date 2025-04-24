@@ -30,8 +30,8 @@ Enforces security best practices inspired by OWASP guidelines within the Next.js
     *   Use role-based or attribute-based access control models.
 6.  **Security Headers**: Configure important security headers in `next.config.ts` or middleware: `Content-Security-Policy`, `Strict-Transport-Security`, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`.
 7.  **Dependency Management**:
-    *   Keep dependencies up-to-date. Regularly run `bun pm audit` to check for known vulnerabilities.
-    *   Use a `bun.lockb` file to lock dependency versions.
+    *   Keep dependencies up-to-date. Regularly run `npm audit` to check for known vulnerabilities.
+    *   Use a `package-lock.json` file to lock dependency versions.
 8.  **Server-Side Request Forgery (SSRF) Prevention**: If making server-side requests based on user input (e.g., fetching a URL provided by a user), validate the URL strictly, use allowlists for domains/IPs if possible, and configure network policies.
 9.  **Sensitive Data Exposure**:
     *   Avoid logging sensitive information (passwords, API keys, PII).
