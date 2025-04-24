@@ -17,16 +17,28 @@ import clsx from 'clsx';
 const CONTENT = {
 	// Fixed introduction paragraph
 	introduction: [
-		'Incomplete Infinity is an evolving, multifaceted creative practice working with companies and institutions in pursuit of a better future. Embracing an enigmatic style, we create work that is completed by the viewer and lives on in their minds.',
-		"We operate in the deliberate pause, that charged moment when breath is held between inhalation and release. Incomplete Infinity isn't situated at intersections; we inhabit the unmapped territories where conventional disciplines dare not venture. Here, in these fertile absences, we find what Jung understood: in all chaos, there is a cosmos. Our practice transforms the unfinished from apparent deficiency into generative potential, finding quiet beauty in what's broken, hidden rhythm in disorder. The cracks aren't flaws but portals through which light enters.",
-		'What emerges when work deliberately preserves its gaps? When completion becomes collaborative rather than predetermined? Our projects exist as structured provocations: carefully architected systems of absence and presence that activate when encountered. We step from the obvious toward the concealed, creating art that lives in the shadows between what is seen and what is felt. Each experience becomes an echo that lingers, a riddle without an answer, inviting deeper journeys into mystery rather than immediate comprehension.',
-		'A creation is never whole on its own; it waits, suspended, until you step into the frame. This approach manifests across our practice, from immersive environments where darkness becomes as crucial as light to digital frameworks built with deliberate gaps in their architecture. We craft experiences that simultaneously reveal and conceal, offering enough structure to engage but refusing the closure that would render them inert. This philosophy has drawn us into dialogues with entities from automotive visionaries to cultural institutions, not because we offer solutions, but because we transform limitations into possibilities. We find ourselves continually returning to the paradox embedded in our name itself. The concept of infinity stretches toward the boundless, yet remains perpetually beyond complete comprehension. Between chaos and order, between revelation and mystery, between structure and emergence, this is the territory we deliberately choose to inhabit. Our practice thrives in this productive tension, finding in the unresolved not deficiency, but the most authentic expression of reality itself.',
+		'Incomplete Infinity is an evolving, multifaceted creative practice working with companies and institutions in pursuit of a better future. Embracing an enigmatic style, creates work that is completed by the viewer and lives on in their minds.',
+
+		'It crafts aesthetic experiences that wait, suspended, until you step into the frame. It reveals and conceals simultaneously. It offers structure while refusing closure. It embodies the paradox embedded in its name — stretches toward boundlessness while remaining perpetually beyond complete comprehension.',
+
+		'It operates in the deliberate pause, dwells in the charged moment.',
+
+		'It rejects the obvious intersections, inhabits the unmapped territories, ventures where conventional disciplines dare not, thrives in fertile absences.',
+
+		'It chooses to inhabit the space between chaos and order, between revelation and mystery, the shadows between what is seen and what is felt.',
+
+		'It finds in the unresolved not deficiency, but authenticity.',
+
+		'',
+
+		'It expresses reality itself... in incomplete form.',
+
 		"After all, isn't true infinity always incomplete?",
 	],
 	// Lists for section content
 	lists: {
 		// Services list for services column
-		services: ['Creative Strategy', '', 'Reseach', 'Direction', '', 'Production'],
+		services: ['Creative Strategy', '', 'Research', 'Direction', '', 'Production'],
 
 		// Clients list for clients column
 		clients: [

@@ -2,6 +2,7 @@ import { APIErrorCode, APIResponseError, Client } from '@notionhq/client';
 import type {
 	FormulaPropertyItemObjectResponse,
 	MultiSelectPropertyItemObjectResponse,
+	NumberPropertyItemObjectResponse,
 	PageObjectResponse,
 	QueryDatabaseParameters,
 	RichTextItemResponse,
@@ -63,6 +64,9 @@ interface NotionGalleryProperties {
 	Tags?: MultiSelectPropertyItemObjectResponse;
 	URL?: FormulaPropertyItemObjectResponse;
 	Status?: SelectPropertyItemObjectResponse;
+	Width?: NumberPropertyItemObjectResponse;
+	Height?: NumberPropertyItemObjectResponse;
+	AspectRatio?: FormulaPropertyItemObjectResponse;
 }
 
 /**
@@ -102,6 +106,24 @@ export const NotionExtractors = {
 	},
 
 	/**
+	 * Extracts number value from number property
+	 * @param numberProperty - Number property value
+	 * @returns Extracted number or undefined
+	 */
+	number(numberProperty: unknown): number | undefined {
+		try {
+			const numProp = numberProperty as NumberPropertyItemObjectResponse | undefined;
+			if (numProp?.type === 'number' && typeof numProp.number === 'number') {
+				return numProp.number;
+			}
+			return undefined;
+		} catch (_) {
+			logger.warn('Error extracting number from Number property', { numberProperty });
+			return undefined;
+		}
+	},
+
+	/**
 	 * Extracts string value from formula property
 	 * @param formulaProperty - Formula property value
 	 * @returns Extracted string or undefined
@@ -116,6 +138,25 @@ export const NotionExtractors = {
 			return undefined;
 		} catch (error) {
 			logger.warn('Error extracting string from Formula property', { error, formulaProperty });
+			return undefined;
+		}
+	},
+
+	/**
+	 * Extracts number value from formula property
+	 * @param formulaProperty - Formula property value
+	 * @returns Extracted number or undefined
+	 */
+	formulaNumber(formulaProperty: unknown): number | undefined {
+		try {
+			const formulaProp = formulaProperty as FormulaPropertyItemObjectResponse | undefined;
+			if (formulaProp?.type === 'formula' && formulaProp.formula.type === 'number') {
+				return formulaProp.formula.number ?? undefined;
+			}
+			logger.warn('Formula property did not contain a number result', { formulaProperty });
+			return undefined;
+		} catch (error) {
+			logger.warn('Error extracting number from Formula property', { error, formulaProperty });
 			return undefined;
 		}
 	},
@@ -298,6 +339,9 @@ export class NotionProvider implements DatabaseProvider {
 		const tags = properties.Tags?.multi_select?.map((tag) => tag.name) ?? [];
 		const url = NotionExtractors.formula(properties.URL);
 		const mediaType = NotionExtractors.mediaType(url);
+		const width = NotionExtractors.number(properties.Width);
+		const height = NotionExtractors.number(properties.Height);
+		const aspectRatio = NotionExtractors.formulaNumber(properties.AspectRatio) ?? (width && height ? width / height : 1);
 
 		const item: GalleryItem = {
 			id: page.id,
@@ -308,6 +352,9 @@ export class NotionProvider implements DatabaseProvider {
 		if (tags.length > 0) item.tags = tags;
 		if (url) item.url = url;
 		if (mediaType) item.mediaType = mediaType;
+		if (width) item.width = width;
+		if (height) item.height = height;
+		if (aspectRatio) item.aspectRatio = aspectRatio;
 
 		return item;
 	}

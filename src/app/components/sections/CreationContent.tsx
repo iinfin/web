@@ -80,59 +80,6 @@ const FEATURES = {
 };
 
 // =============================================
-// UTILITY FUNCTIONS
-// =============================================
-
-/**
- * Calculate plane dimensions based on aspect ratio, maintaining a constant height.
- * @param aspectRatio - The target aspect ratio.
- * @param layoutMode - The current layout mode.
- * @param viewportFixedAxisLength - The length of the viewport on the fixed axis.
- * @returns Array containing [width, height].
- */
-export function calculateDimensions(aspectRatio: AspectRatio, layoutMode: LayoutMode, viewportFixedAxisLength: number): [number, number] {
-	const ratio = aspectRatio.width / aspectRatio.height;
-
-	// Vertical Mode: Fixed height (SCENE.planeHeight), variable width
-	if (layoutMode === 'vertical') {
-		const height = SCENE.planeHeight;
-		const width = height * ratio;
-		return [width, height];
-	}
-
-	// Horizontal Mode: Fit height to viewport (with padding), calculate width
-	else {
-		// DRASTICALLY REDUCE SIZE - 20% of viewport height
-		const height = viewportFixedAxisLength * 0.2;
-		const width = height * ratio;
-		logger.info('Mobile dimensions calculated:', { width, height, viewportFixedAxisLength });
-		return [width, height];
-	}
-}
-
-/**
- * Finds the closest predefined aspect ratio from COMMON_ASPECT_RATIOS to a given numeric ratio.
- * @param ratio - The numeric aspect ratio (width / height).
- * @returns The closest predefined AspectRatio object.
- */
-export function findClosestAspectRatio(ratio: number): AspectRatio {
-	const defaultRatio = COMMON_ASPECT_RATIOS.SQUARE;
-	let closestRatio = defaultRatio;
-	let smallestDiff = Infinity;
-
-	Object.values(COMMON_ASPECT_RATIOS).forEach((ar: AspectRatio) => {
-		const arRatio = ar.width / ar.height;
-		const diff = Math.abs(arRatio - ratio);
-		if (diff < smallestDiff) {
-			smallestDiff = diff;
-			closestRatio = ar;
-		}
-	});
-
-	return closestRatio;
-}
-
-// =============================================
 // SHADER DEFINITIONS
 // =============================================
 
@@ -820,7 +767,7 @@ VideoPlaneContent.displayName = 'VideoPlaneContent';
 
 /**
  * Internal component: Wraps a single gallery item (image or video) plane in the 3D scene.
- * Handles aspect ratio detection, dimensions, hover events, and media rendering.
+ * Handles hover events and media rendering using pre-calculated dimensions/aspect ratio.
  */
 const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 	({
@@ -831,13 +778,13 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		onHoverChange,
 		viewportScrollAxisLength,
 		viewportFixedAxisLength,
-		dimensions,
-		aspect,
+		dimensions, // Use pre-calculated dimensions
+		aspect, // Use pre-calculated aspect ratio
 		grainIntensity = MATERIAL.grain.intensity,
 		grainScale = MATERIAL.grain.scale,
 		grainSpeed = MATERIAL.grain.speed,
 	}) => {
-		const groupRef = useRef<THREE.Group>(null!);
+		const groupRef = useRef<THREE.Group>(null!); // Use THREE.Group type
 		const [initialAnimProgress, setInitialAnimProgress] = useState(0); // 0 to 1
 		const [isMounted, setIsMounted] = useState(false);
 		const startTimeRef = useRef<number | null>(null);
@@ -897,7 +844,7 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 				viewportFixedAxisLength: viewportFixedAxisLength,
 				layoutMode: layoutMode === 'vertical' ? 0 : 1,
 				initialAnimProgress: initialAnimProgress,
-				aspect: aspect,
+				aspect: aspect, // Pass pre-calculated aspect
 				fallbackMaterial: fallbackMaterial,
 				grainIntensity: grainIntensity,
 				grainScale: grainScale,
@@ -917,6 +864,7 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		return (
 			<group ref={groupRef} userData={{ itemId: item.id }} onPointerOver={handlePointerOver} onPointerOut={handlePointerOut}>
 				<mesh
+					// Scale uses pre-calculated dimensions
 					scale={[dimensions[0], dimensions[1], 1]}
 					// Adjust position calculation to properly center planes based on layout mode
 					position={[layoutMode === 'vertical' ? dimensions[0] / 2 : 0, layoutMode === 'vertical' ? 0 : dimensions[1] / 2, 0]}
@@ -927,11 +875,11 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 			</group>
 		);
 	},
-	// Custom comparison function for React.memo to prevent unnecessary re-renders
+	// Custom comparison function - remains mostly the same
 	(prevProps, nextProps) => {
 		return (
 			prevProps.item.id === nextProps.item.id &&
-			prevProps.position.equals(nextProps.position) && // Use Vector3.equals for comparison
+			prevProps.position.equals(nextProps.position) &&
 			prevProps.layoutMode === nextProps.layoutMode &&
 			prevProps.disableMedia === nextProps.disableMedia &&
 			prevProps.viewportScrollAxisLength === nextProps.viewportScrollAxisLength &&
@@ -948,11 +896,6 @@ PlaneWrapper.displayName = 'PlaneWrapper';
 // SCROLLING SYSTEM
 // =============================================
 
-/**
- * Renders the scrollable/recyclable gallery planes within the Canvas.
- * Handles the primary animation loop, position updates, and recycling logic.
- * Now uses forwardRef to expose scroll control.
- */
 const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(({ galleryItems, layoutMode, disableMedia, isTouchDevice: _isTouchDevice, onHoverChange }, ref) => {
 	const { camera, size } = useThree();
 
@@ -963,21 +906,30 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 	});
 
 	const [planeStates, setPlaneStates] = useState<PlaneState[]>([]);
-	const [isInitialized, setIsInitialized] = useState(false);
+	const [isInitialized, setIsInitialized] = useState(false); // Keep this flag
 	const viewportScrollAxisLengthRef = useRef<number>(0);
 	const viewportFixedAxisLengthRef = useRef<number>(0);
 	const fixedAxisPositionRef = useRef<number>(0);
 	const totalContentLengthRef = useRef<number>(0);
-	const planeDataCache = useRef<Map<string, { dims: [number, number]; aspect: number }>>(new Map());
 
-	// Calculate viewport dimensions and fixed axis position whenever size or layoutMode changes
+	// Calculate viewport dimensions AND initialize plane states whenever items, size, or layoutMode changes
 	useEffect(() => {
+		logger.info('Recalculating viewport and initializing/updating plane states...');
+		// Calculate viewport dimensions (same as before)
 		const cameraZ = camera.position.z;
 		const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
 		const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
 		const aspectRatio = size.width / size.height;
 		const visibleWidth = visibleHeight * aspectRatio;
 
+		// --- START NEW INITIALIZATION LOGIC ---
+		if (galleryItems.length === 0 || size.width === 0 || size.height === 0) {
+			setPlaneStates([]); // Clear states if no items or size
+			setIsInitialized(false);
+			return;
+		}
+
+		// Update viewport refs based on layout mode
 		if (layoutMode === 'vertical') {
 			viewportScrollAxisLengthRef.current = visibleHeight;
 			viewportFixedAxisLengthRef.current = visibleWidth;
@@ -985,164 +937,110 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 		} else {
 			viewportScrollAxisLengthRef.current = visibleWidth;
 			viewportFixedAxisLengthRef.current = visibleHeight;
-
-			// DRASTIC CHANGE - Move items significantly upward in the viewport
-			// Position items 2 units above the bottom, which should place them well in view
 			fixedAxisPositionRef.current = -visibleHeight / 2 + SCENE.horizontalOffset;
-
-			logger.info('HORIZONTAL LAYOUT POSITION:', {
-				visibleHeight,
-				visibleWidth,
-				bottomOfViewport: -visibleHeight / 2,
-				fixedAxisPosition: fixedAxisPositionRef.current,
-				offset: SCENE.horizontalOffset,
-			});
 		}
 
-		logger.info('Recalculated viewport/edge positions', {
+		logger.info('Viewport/edge positions updated', {
 			fixedAxisPosition: fixedAxisPositionRef.current,
 			viewportScrollAxisLength: viewportScrollAxisLengthRef.current,
 			viewportFixedAxisLength: viewportFixedAxisLengthRef.current,
 			layoutMode,
 		});
 
-		// Trigger re-initialization if dimensions are ready
-		setIsInitialized(false);
-	}, [camera, size.width, size.height, layoutMode]);
+		// Calculate scaled dimensions and initial positions directly from galleryItems
+		let calculatedTotalLength = 0;
+		const newPlaneStates: PlaneState[] = [];
+		const fixedPos = fixedAxisPositionRef.current;
+		const z = 0;
 
-	// Fetch dimensions and initialize plane states when items, mode, or viewport changes
-	useEffect(() => {
-		if (galleryItems.length === 0 || isInitialized || viewportFixedAxisLengthRef.current === 0) return;
-
-		const fetchAndInitialize = async () => {
-			logger.info(`Initializing plane states for ${layoutMode} mode...`);
-			const newPlaneStates: PlaneState[] = [];
-			let calculatedTotalLength = 0;
-
-			const dimensionPromises = galleryItems.map(async (item) => {
-				const cacheKey = `${item.id}-${layoutMode}`;
-				if (planeDataCache.current.has(cacheKey)) {
-					return planeDataCache.current.get(cacheKey)!;
-				}
-
-				if (disableMedia || !item.url) {
-					const defaultAspect = COMMON_ASPECT_RATIOS.SQUARE;
-					const dims = calculateDimensions(defaultAspect, layoutMode, viewportFixedAxisLengthRef.current);
-					const data = { dims, aspect: 1 };
-					planeDataCache.current.set(cacheKey, data);
-					return data;
-				}
-
-				try {
-					let ratio = 1;
-					if (item.mediaType === 'video') {
-						const video = document.createElement('video');
-						video.src = item.url;
-						await new Promise<void>((resolve, reject) => {
-							video.onloadedmetadata = () => resolve();
-							video.onerror = (e) => reject(new Error(`Video load error: ${e?.toString()}`));
-						});
-						ratio = video.videoWidth / video.videoHeight;
-					} else if (item.mediaType === 'image') {
-						const img = document.createElement('img');
-						img.src = item.url;
-						await new Promise<void>((resolve, reject) => {
-							img.onload = () => resolve();
-							img.onerror = (e) => reject(new Error(`Image load error: ${e?.toString()}`));
-						});
-						ratio = img.width / img.height;
-					}
-					const closest = findClosestAspectRatio(ratio);
-					const dims = calculateDimensions(closest, layoutMode, viewportFixedAxisLengthRef.current);
-					const aspect = closest.width / closest.height;
-					const data = { dims, aspect };
-					planeDataCache.current.set(cacheKey, data);
-					return data;
-				} catch (error) {
-					logger.error('Error detecting aspect ratio during init, defaulting to square:', { url: item.url, error });
-					const defaultAspect = COMMON_ASPECT_RATIOS.SQUARE;
-					const dims = calculateDimensions(defaultAspect, layoutMode, viewportFixedAxisLengthRef.current);
-					const data = { dims, aspect: 1 };
-					planeDataCache.current.set(cacheKey, data);
-					return data;
-				}
-			});
-
-			const planeDataResults = await Promise.all(dimensionPromises);
-
-			// Calculate actual total length based on fetched dimensions
-			calculatedTotalLength = planeDataResults.reduce((sum, data) => {
-				const gap = layoutMode === 'vertical' ? SCENE.verticalGap - SCENE.planeHeight : SCENE.verticalGap - SCENE.planeHeight;
-				const itemLength = layoutMode === 'vertical' ? data.dims[1] + gap : data.dims[0] + gap;
-				return sum + Math.max(0, itemLength); // Ensure non-negative length
-			}, 0);
-			totalContentLengthRef.current = calculatedTotalLength;
-			logger.info('Actual total content length calculated', { calculatedTotalLength });
-
-			const startOffset = calculatedTotalLength / 2;
-			let accumulatedOffset = 0;
-			const fixedPos = fixedAxisPositionRef.current;
-			const z = 0;
-
-			for (let i = 0; i < galleryItems.length; i++) {
-				const item = galleryItems[i]!;
-				const data = planeDataResults[i]!;
-				const dims = data.dims;
-				const gap = layoutMode === 'vertical' ? SCENE.verticalGap - SCENE.planeHeight : SCENE.verticalGap - SCENE.planeHeight;
-				const itemLengthWithGap = layoutMode === 'vertical' ? dims[1] + gap : dims[0] + gap;
-				const itemCenterOffset = (layoutMode === 'vertical' ? dims[1] : dims[0]) / 2;
-
-				// Position along the scroll axis: Start from center, subtract accumulated length, subtract half of *current* item's length
-				const baseScrollAxisPos = startOffset - accumulatedOffset - itemCenterOffset;
-				accumulatedOffset += Math.max(0, itemLengthWithGap);
-
-				newPlaneStates.push({
-					id: `plane-${item.id ?? i}-${layoutMode}`, // Unique key per item and mode
-					itemIndex: i,
-					initialScrollAxisPos: baseScrollAxisPos,
-					fixedAxisPos: fixedPos,
-					z: z,
-					currentScrollAxisPos: baseScrollAxisPos,
-					dimensions: dims,
-					aspect: data.aspect,
-				});
+		// Helper to calculate scaled dimensions based on mode and item aspect ratio
+		const calculateScaledDimensions = (itemAspectRatio: number): [number, number] => {
+			const ratio = itemAspectRatio;
+			if (layoutMode === 'vertical') {
+				const height = SCENE.planeHeight;
+				const width = height * ratio;
+				return [width, height];
+			} else {
+				// Horizontal
+				// NOTE: Using the same fixed height logic as before for horizontal
+				const height = viewportFixedAxisLengthRef.current * 0.2; // 20% of viewport height
+				const width = height * ratio;
+				return [width, height];
 			}
-
-			setPlaneStates(newPlaneStates);
-			setIsInitialized(true);
-			scrollSpring.set(0, false); // Reset scroll on initialization
-			logger.info(`Initialization complete. ${newPlaneStates.length} planes created.`);
 		};
 
-		fetchAndInitialize();
-	}, [galleryItems, layoutMode, isInitialized, disableMedia, scrollSpring]);
+		// Iterate through galleryItems to calculate dimensions and total length
+		const itemsWithDimensions = galleryItems.map((item) => {
+			const itemAspect = item.aspectRatio ?? (item.width && item.height ? item.width / item.height : 1); // Fallback aspect ratio
+			if (!item.aspectRatio && !(item.width && item.height)) {
+				logger.warn(`Missing dimensions/aspectRatio for item ${item.id ?? item.title}, defaulting to square.`);
+			}
+			const dims = calculateScaledDimensions(itemAspect);
+			const gap = layoutMode === 'vertical' ? SCENE.verticalGap - SCENE.planeHeight : SCENE.verticalGap - SCENE.planeHeight;
+			const itemLength = layoutMode === 'vertical' ? dims[1] : dims[0];
+			const itemLengthWithGap = itemLength + gap;
+			return { item, dims, aspect: itemAspect, itemLengthWithGap };
+		});
 
-	// Expose scroll control method via ref
+		calculatedTotalLength = itemsWithDimensions.reduce((sum, data) => sum + Math.max(0, data.itemLengthWithGap), 0);
+		totalContentLengthRef.current = calculatedTotalLength;
+		logger.info('Total content length calculated from item data', { calculatedTotalLength });
+
+		const startOffset = calculatedTotalLength / 2;
+		let accumulatedOffset = 0;
+
+		// Create the plane states
+		for (let i = 0; i < itemsWithDimensions.length; i++) {
+			const { item, dims, aspect, itemLengthWithGap } = itemsWithDimensions[i]!;
+			const itemCenterOffset = (layoutMode === 'vertical' ? dims[1] : dims[0]) / 2;
+			const baseScrollAxisPos = startOffset - accumulatedOffset - itemCenterOffset;
+			accumulatedOffset += Math.max(0, itemLengthWithGap);
+
+			newPlaneStates.push({
+				id: `plane-${item.id ?? i}-${layoutMode}`,
+				itemIndex: i,
+				initialScrollAxisPos: baseScrollAxisPos,
+				fixedAxisPos: fixedPos,
+				z: z,
+				currentScrollAxisPos: baseScrollAxisPos, // Initial position before scroll
+				dimensions: dims,
+				aspect: aspect,
+			});
+		}
+
+		setPlaneStates(newPlaneStates);
+		setIsInitialized(true);
+		scrollSpring.set(0, false); // Reset scroll on re-initialization
+		logger.info(`Initialization/update complete. ${newPlaneStates.length} planes configured.`);
+		// --- END NEW INITIALIZATION LOGIC ---
+	}, [galleryItems, layoutMode, size.width, size.height, camera, scrollSpring]); // Dependencies updated
+
+	// Expose scroll control method via ref (same as before)
 	useImperativeHandle(ref, () => ({
 		addScroll: (delta: number) => {
 			scrollSpring.set(scrollSpring.get() + delta);
 		},
 	}));
 
-	// Setup wheel scroll listener - ALWAYS attach
+	// Setup wheel scroll listener (same as before)
 	useEffect(() => {
 		const handleWheel = (event: WheelEvent) => {
 			scrollSpring.set(scrollSpring.get() - event.deltaY * SCENE.scrollMultiplier);
 		};
 		window.addEventListener('wheel', handleWheel, { passive: true });
 		return () => window.removeEventListener('wheel', handleWheel);
-	}, [scrollSpring]); // Removed isTouchDevice dependency
+	}, [scrollSpring]);
 
-	// Main R3F frame loop
+	// Main R3F frame loop (same as before, but relies on pre-calculated state)
 	useFrame((_state) => {
 		if (!isInitialized || planeStates.length === 0 || totalContentLengthRef.current <= 0) return;
 
 		const currentScroll = scrollSpring.get();
 		const halfViewportScroll = viewportScrollAxisLengthRef.current / 2;
 		const actualTotalLength = totalContentLengthRef.current;
-		const currentFixedPos = fixedAxisPositionRef.current; // Use the ref directly as it's updated by the other useEffect
+		const currentFixedPos = fixedAxisPositionRef.current; // Use the ref directly
 
-		// Debug logging for horizontal layout
+		// Debug logging for horizontal layout (same as before)
 		if (layoutMode === 'horizontal' && planeStates.length > 0) {
 			const firstItem = planeStates[0];
 			if (firstItem) {
@@ -1156,37 +1054,35 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 			}
 		}
 
+		// Update loop (same recycling logic as before)
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialScrollAxisPos = state.initialScrollAxisPos;
 				const currentRelativeScrollPos = state.initialScrollAxisPos - currentScroll;
 				let hasRecycled = false;
 
-				// Use plane dimensions for more accurate recycling buffer
 				const planeLengthOnScrollAxis = layoutMode === 'vertical' ? state.dimensions[1] : state.dimensions[0];
-				const recycleBuffer = SCENE.recycleBuffer * planeLengthOnScrollAxis; // Buffer based on item size
+				// Using fixed buffer value now, adjust if needed
+				const recycleBuffer = SCENE.recycleBuffer * SCENE.planeHeight; // Use base planeHeight for buffer
 
-				// --- Recycling Logic ---
-				// Plane moving beyond positive edge (+halfViewport + buffer)? Move to negative side.
+				// --- Recycling Logic --- (same as before)
 				if (currentRelativeScrollPos - planeLengthOnScrollAxis / 2 > halfViewportScroll + recycleBuffer) {
 					newInitialScrollAxisPos = state.initialScrollAxisPos - actualTotalLength;
 					hasRecycled = true;
-				}
-				// Plane moving beyond negative edge (-halfViewport - buffer)? Move to positive side.
-				else if (currentRelativeScrollPos + planeLengthOnScrollAxis / 2 < -halfViewportScroll - recycleBuffer) {
+				} else if (currentRelativeScrollPos + planeLengthOnScrollAxis / 2 < -halfViewportScroll - recycleBuffer) {
 					newInitialScrollAxisPos = state.initialScrollAxisPos + actualTotalLength;
 					hasRecycled = true;
 				}
 
 				const finalCurrentScrollAxisPos = newInitialScrollAxisPos - currentScroll;
 
-				// Update state only if position or fixed position changes
+				// Update state only if position or fixed position changes (same as before)
 				if (hasRecycled || finalCurrentScrollAxisPos !== state.currentScrollAxisPos || currentFixedPos !== state.fixedAxisPos) {
 					return {
 						...state,
 						initialScrollAxisPos: newInitialScrollAxisPos,
 						currentScrollAxisPos: finalCurrentScrollAxisPos,
-						fixedAxisPos: currentFixedPos, // Update fixed position due to potential resize
+						fixedAxisPos: currentFixedPos,
 					};
 				} else {
 					return state;
@@ -1195,7 +1091,7 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 		);
 	});
 
-	// Render the PlaneWrappers
+	// Render the PlaneWrappers (same as before)
 	return (
 		<group>
 			{planeStates.map((state) => {
@@ -1238,12 +1134,12 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	const inputState = useInputState();
 	const windowSize = useWindowSize();
 	const disableMedia = useMemo(() => FEATURES.disableMedia, []);
-	const scrollPlanesRef = useRef<ScrollingPlanesHandle>(null); // Ref for ScrollingPlanes handle
+	const scrollPlanesRef = useRef<ScrollingPlanesHandle>(null);
 
 	// Refs for touch handling
 	const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 	const lastTouchMoveRef = useRef<{ x: number; y: number } | null>(null);
-	const touchScrollMultiplier = 0.7; // Adjust sensitivity for touch
+	const touchScrollMultiplier = 0.7;
 
 	useEffect(() => {
 		const touchDetected = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
@@ -1275,11 +1171,11 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 			const processedItems = galleryItems.map((item: GalleryItem) => ({
 				description: '',
 				tags: [],
-				...item,
+				...item, // Assume width/height/aspectRatio are present
 				url: item.url || '',
 				mediaType: item.mediaType || 'image',
 			}));
-			logger.info(`Using ${processedItems.length} real gallery items`);
+			logger.info(`Using ${processedItems.length} gallery items with pre-fetched dimensions`);
 			return processedItems as GalleryItem[];
 		} else {
 			logger.info('No gallery items provided.');
@@ -1287,7 +1183,7 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 		}
 	}, [galleryItems]);
 
-	// --- Touch Event Handlers ---
+	// Touch Handlers
 	const handleTouchStart = useCallback((event: React.TouchEvent<HTMLDivElement>) => {
 		if (event.touches.length > 0) {
 			const touch = event.touches[0]!;
