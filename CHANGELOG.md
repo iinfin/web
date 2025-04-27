@@ -1,3 +1,14 @@
+# [1.4.0](https://github.com/iinfin/web/compare/v1.3.0...v1.4.0) (2025-04-27)
+
+### Bug Fixes
+
+- **build:** resolve vercel build and eslint config errors ([5df9b38](https://github.com/iinfin/web/commit/5df9b38789ec4bfbda1284253d0b269452440f17))
+- **config:** attempt to fix eslint flat config for next plugin ([1070779](https://github.com/iinfin/web/commit/1070779fa20bff70257e20e77b40301885a313ca))
+
+### Features
+
+- **r3f:** implement motion blur for scrolling planes ([2bc3fbd](https://github.com/iinfin/web/commit/2bc3fbd52f7a22b88c66642043d896f901b00df6))
+
 # [1.3.0](https://github.com/iinfin/web/compare/v1.2.3...v1.3.0) (2025-04-13)
 
 ### Features
