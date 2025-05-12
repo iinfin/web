@@ -97,6 +97,9 @@ interface AnimatedMaterialUniforms {
 	u_scrollVelocity: number;
 }
 
+// Helper type for uniforms record
+type AnimatedMaterialUniformsRecord = Record<keyof AnimatedMaterialUniforms, THREE.IUniform<AnimatedMaterialUniforms[keyof AnimatedMaterialUniforms]>>;
+
 // Extend shaderMaterial
 const AnimatedShaderMaterial = shaderMaterial(
 	// Uniforms
@@ -444,7 +447,7 @@ const AnimatedMaterial: React.FC<AnimatedMaterialProps> = React.memo(
 		// Update uniforms efficiently
 		useFrame((_, delta) => {
 			if (materialRef.current) {
-				const uniforms = materialRef.current.uniforms as Record<keyof AnimatedMaterialUniforms, THREE.IUniform<any>>; // Type assertion
+				const uniforms = materialRef.current.uniforms as AnimatedMaterialUniformsRecord; // Use helper type
 				uniforms.u_time.value = (uniforms.u_time.value as number) + delta;
 				uniforms.u_planeScrollAxisPos.value = planeScrollAxisPos;
 				uniforms.u_viewportScrollAxisLength.value = viewportScrollAxisLength;
@@ -463,7 +466,7 @@ const AnimatedMaterial: React.FC<AnimatedMaterialProps> = React.memo(
 
 		useEffect(() => {
 			if (materialRef.current) {
-				(materialRef.current.uniforms as Record<keyof AnimatedMaterialUniforms, THREE.IUniform<any>>).map.value = texture;
+				(materialRef.current.uniforms as AnimatedMaterialUniformsRecord).map.value = texture; // Use helper type
 			}
 		}, [texture]);
 

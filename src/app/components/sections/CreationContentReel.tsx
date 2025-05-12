@@ -49,6 +49,9 @@ interface ReelMaterialUniforms {
 	// u_layoutMode, u_visibilityFade, u_scrollVelocity
 }
 
+// Helper type for uniforms record
+type ReelMaterialUniformsRecord = Record<keyof ReelMaterialUniforms, THREE.IUniform<ReelMaterialUniforms[keyof ReelMaterialUniforms]>>;
+
 const ReelShaderMaterial = shaderMaterial(
 	// Uniforms
 	{
@@ -165,11 +168,7 @@ extend({ ReelShaderMaterial });
 // REEL PLAYER COMPONENT
 // =============================================
 
-interface ReelPlaneProps {
-	className?: string | undefined;
-}
-
-const ReelPlane: FC<ReelPlaneProps> = ({ className }) => {
+const ReelPlane: FC = () => {
 	const { size, viewport } = useThree();
 	const materialRef = useRef<THREE.ShaderMaterial>(null!);
 	const [assetLoaded, setAssetLoaded] = useState(0);
@@ -245,8 +244,10 @@ const ReelPlane: FC<ReelPlaneProps> = ({ className }) => {
 
 	useFrame((_state, delta) => {
 		if (materialRef.current) {
-			const uniforms = materialRef.current.uniforms as Record<keyof ReelMaterialUniforms, THREE.IUniform<any>>;
-			uniforms.u_time.value += delta;
+			const uniforms = materialRef.current.uniforms as ReelMaterialUniformsRecord; // Use helper type
+			if (uniforms.u_time.value !== null && typeof uniforms.u_time.value === 'number') {
+				uniforms.u_time.value += delta;
+			}
 			uniforms.u_aspect.value = videoAspect;
 			uniforms.u_viewportAspect.value = size.width / size.height;
 			uniforms.u_assetLoaded.value = assetLoaded;
@@ -280,11 +281,7 @@ const ReelPlane: FC<ReelPlaneProps> = ({ className }) => {
 // MAIN COMPONENT
 // =============================================
 
-interface CreationContentReelProps {
-	className?: string;
-}
-
-const CreationContentReel: FC<CreationContentReelProps> = ({ className }) => {
+const CreationContentReel: FC = () => {
 	const [dprValue, setDprValue] = useState(1);
 	const windowSize = useWindowSize();
 
@@ -313,7 +310,7 @@ const CreationContentReel: FC<CreationContentReelProps> = ({ className }) => {
 					style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
 				>
 					<Suspense fallback={null}>
-						<ReelPlane className={className} />
+						<ReelPlane />
 						<Effects />
 					</Suspense>
 				</Canvas>

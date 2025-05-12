@@ -176,7 +176,7 @@ export class DitheringEffect extends Effect {
 	 * @param inputBuffer - The input render target
 	 * @param deltaTime - Time elapsed since the last frame
 	 */
-	override update(renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget, deltaTime: number): void {
+	override update(_renderer: THREE.WebGLRenderer, inputBuffer: THREE.WebGLRenderTarget, deltaTime: number): void {
 		// Update time uniform
 		const timeUniform = this.uniforms.get('time');
 		if (timeUniform !== undefined && typeof timeUniform.value === 'number') {
