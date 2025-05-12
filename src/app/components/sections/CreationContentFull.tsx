@@ -23,7 +23,7 @@ import { useWindowSize } from '@/hooks/useWindowSize';
 /**
  * Layout modes.
  */
-export type LayoutMode = 'vertical' | 'horizontal';
+export type LayoutMode = 'vertical';
 
 /**
  * Aspect ratio types and configuration.
@@ -48,15 +48,10 @@ export const COMMON_ASPECT_RATIOS = {
  * Scene layout configuration.
  */
 const SCENE = {
-	columns: 1, // Columns in layout (kept for context)
-	planeHeight: 1, // Base height for scaling calculations
-	verticalGap: 1.05, // Spacing between items (larger than planeHeight)
-	scrollMultiplier: 0.1, // Scroll sensitivity factor
-	recycleBuffer: 2, // Viewport buffer (multiple of planeHeight) for recycling items
-	leftPadding: 0.0, // Distance from left edge of canvas
-	autoScrollSpeed: 15, // Speed for automatic scrolling on touch devices
-	initialAnimDuration: 1.8, // Duration for the initial fade-in animation
-	horizontalOffset: 3.5, // Vertical offset for horizontal layout - INCREASED SIGNIFICANTLY
+	scrollMultiplier: 0.1,
+	recycleBufferFactor: 1.5, // Multiplier for viewport height to determine recycle buffer
+	initialAnimDuration: 1.8,
+	verticalGapFactor: 0.005, // Gap as a factor of viewport height
 };
 
 /**
@@ -88,19 +83,18 @@ const FEATURES = {
 interface AnimatedMaterialUniforms {
 	map: THREE.Texture | null;
 	u_time: number;
-	u_planeScrollAxisPos: number; // Replaces u_planeY
-	u_viewportScrollAxisLength: number; // Replaces u_viewportHeight
-	u_planeFixedAxisPos: number; // New: position on the non-scrolling axis
-	u_viewportFixedAxisLength: number; // New: length of the non-scrolling axis
-	u_layoutMode: number; // 0 for vertical, 1 for horizontal
-	u_initialAnimProgress: number; // 0.0 to 1.0 for initial load animation
-	u_visibilityFade: number; // Controls how quickly items fade at edges (0.1 = sharp, 1.0 = gradual)
-	u_aspect: number; // Aspect ratio of the plane (width / height)
-	u_grainIntensity: number; // Controls the intensity of the film grain
-	u_grainScale: number; // Controls the scale/size of grain particles
+	u_planeScrollAxisPos: number;
+	u_viewportScrollAxisLength: number;
+	u_planeFixedAxisPos: number;
+	u_viewportFixedAxisLength: number;
+	u_layoutMode: number; // 0 for vertical (always 0 now)
+	u_initialAnimProgress: number;
+	u_aspect: number;
+	u_grainIntensity: number;
+	u_grainScale: number;
 	u_grainSpeed: number;
-	u_assetLoaded: number; // 0.0 to 1.0 for asset loaded animation
-	u_scrollVelocity: number; // <-- New uniform for motion blur
+	u_assetLoaded: number;
+	u_scrollVelocity: number;
 }
 
 // Extend shaderMaterial
@@ -113,20 +107,18 @@ const AnimatedShaderMaterial = shaderMaterial(
 		u_viewportScrollAxisLength: 1,
 		u_planeFixedAxisPos: 0,
 		u_viewportFixedAxisLength: 1,
-		u_layoutMode: 0, // Default to vertical
+		u_layoutMode: 0, // Fixed to vertical
 		u_initialAnimProgress: 0,
-		u_visibilityFade: 0.1, // Default fade distance factor
 		u_aspect: 1,
 		u_grainIntensity: MATERIAL.grain.intensity,
 		u_grainScale: MATERIAL.grain.scale,
 		u_grainSpeed: MATERIAL.grain.speed,
-		u_assetLoaded: 0, // Default to not loaded
-		u_scrollVelocity: 0.0, // <-- Initialize new uniform
+		u_assetLoaded: 0,
+		u_scrollVelocity: 0.0,
 	},
 	// Vertex Shader
 	/*glsl*/ `
 		varying vec2 vUv;
-		varying float v_visibility; // Pass visibility to fragment shader
 		varying float v_initialAnimProgress; // Pass progress to fragment shader
 		varying float v_assetLoaded; // Pass asset loaded progress to fragment shader
 
@@ -136,30 +128,13 @@ const AnimatedShaderMaterial = shaderMaterial(
 		uniform float u_viewportFixedAxisLength; // Not directly used for visibility
 		uniform int u_layoutMode; // 0: vertical, 1: horizontal
 		uniform float u_initialAnimProgress;
-		uniform float u_visibilityFade; // Smaller = sharper fade edge
 		uniform float u_assetLoaded; // Asset loaded animation progress
 		uniform float u_scrollVelocity; // <-- Get velocity uniform
-
-		const float FADE_DISTANCE_FACTOR = 0.2; // Portion of viewport length used for fade edge
 
 		void main() {
 			vUv = uv;
 			v_initialAnimProgress = u_initialAnimProgress;
 			v_assetLoaded = u_assetLoaded;
-
-			// Calculate visibility based on plane's position relative to viewport edges along the scroll axis
-			float halfViewportScroll = u_viewportScrollAxisLength / 2.0;
-			float positiveEdge = halfViewportScroll;
-			float negativeEdge = -halfViewportScroll;
-
-			// Distance from edge where fade starts/ends
-			float fadeDistance = u_viewportScrollAxisLength * FADE_DISTANCE_FACTOR * u_visibilityFade;
-
-			// Fade-in/out at viewport edges along the scroll axis
-			// smoothstep(edge1, edge2, x): 0 if x <= edge1, 1 if x >= edge2, smooth interpolation in between
-			float visibilityNegativeEdge = smoothstep(negativeEdge - fadeDistance, negativeEdge + fadeDistance, u_planeScrollAxisPos);
-			float visibilityPositiveEdge = smoothstep(positiveEdge + fadeDistance, positiveEdge - fadeDistance, u_planeScrollAxisPos);
-			v_visibility = visibilityNegativeEdge * visibilityPositiveEdge;
 
 			// Simple initial scale animation - no other transformations
 			float initialScale = mix(0.95, 1.0, smoothstep(0.0, 1.0, u_initialAnimProgress));
@@ -179,7 +154,6 @@ const AnimatedShaderMaterial = shaderMaterial(
 	// Fragment Shader
 	/*glsl*/ `
 		varying vec2 vUv;
-		varying float v_visibility;
 		varying float v_initialAnimProgress;
 		varying float v_assetLoaded;
 
@@ -193,8 +167,8 @@ const AnimatedShaderMaterial = shaderMaterial(
 		uniform int u_layoutMode;       // <-- Get layout mode uniform
 
 		// Constants for Motion Blur
-		const int NUM_SAMPLES = 9; // Number of samples for blur (adjust for quality/performance)
-		const float MAX_BLUR_DISTANCE = 0.2; // Max UV offset for blur (adjust intensity)
+		const int NUM_SAMPLES = 5; // Number of samples for blur (adjust for quality/performance)
+		const float MAX_BLUR_DISTANCE = 0.01; // Max UV offset for blur (adjust intensity)
 		const float VELOCITY_SCALE = 0.01; // Scale raw velocity to UV offset (adjust sensitivity)
 
 		// High-quality noise function based on Inigo Quilez's implementation
@@ -239,7 +213,7 @@ const AnimatedShaderMaterial = shaderMaterial(
 			float totalWeight = 0.0;
 
 			// Determine blur direction based on layout mode
-			vec2 blurDirection = (u_layoutMode == 0) ? vec2(0.0, 1.0) : vec2(1.0, 0.0); // Vertical or Horizontal
+			vec2 blurDirection = vec2(0.0, 1.0); // Vertical or Horizontal
 
 			// Calculate blur amount based on velocity, scale, and clamp
 			float blurAmount = clamp(abs(u_scrollVelocity) * VELOCITY_SCALE, 0.0, MAX_BLUR_DISTANCE);
@@ -275,7 +249,7 @@ const AnimatedShaderMaterial = shaderMaterial(
 
 			// Calculate base alpha using original texture alpha (before blurring)
 			float baseAlpha = texture2D(map, correctedUv).a;
-			float alpha = baseAlpha * v_initialAnimProgress * v_visibility * v_assetLoaded;
+			float alpha = baseAlpha * v_initialAnimProgress * v_assetLoaded;
 
 			// Discard transparent pixels early to save computation
 			if (alpha < 0.01) discard;
@@ -308,20 +282,19 @@ extend({ AnimatedShaderMaterial });
 /**
  * Props for the AnimatedMaterial component.
  */
-interface AnimatedMaterialProps extends Partial<AnimatedMaterialUniforms> {
+interface AnimatedMaterialProps extends Partial<Omit<AnimatedMaterialUniforms, 'u_visibilityFade'>> {
 	texture: THREE.Texture;
 	planeScrollAxisPos: number;
 	viewportScrollAxisLength: number;
 	planeFixedAxisPos: number;
 	viewportFixedAxisLength: number;
-	layoutMode: number;
 	initialAnimProgress: number;
-	assetLoaded: number; // New prop for asset loaded animation
+	assetLoaded: number;
 	aspect: number;
 	grainIntensity?: number;
 	grainScale?: number;
 	grainSpeed?: number;
-	scrollVelocity: number; // <-- Add prop
+	scrollVelocity: number;
 }
 
 /**
@@ -354,7 +327,7 @@ interface PlaneContentProps {
 	grainSpeed: number;
 	/** Callback when the asset has loaded */
 	onAssetLoaded: () => void;
-	scrollVelocity: number; // <-- Add prop
+	scrollVelocity: number;
 }
 
 /**
@@ -385,7 +358,7 @@ interface PlaneWrapperProps {
 	grainScale?: number;
 	/** Optional: Film grain animation speed */
 	grainSpeed?: number;
-	scrollVelocity: number; // <-- Add prop
+	scrollVelocity: number;
 }
 
 /**
@@ -415,7 +388,7 @@ interface PlaneState {
 	dimensions: [number, number];
 	/** Calculated aspect ratio of the plane content */
 	aspect: number;
-	scrollVelocity: number; // <-- Add prop
+	scrollVelocity: number;
 }
 
 /**
@@ -432,7 +405,7 @@ interface ScrollingPlanesProps {
 	isTouchDevice: boolean;
 	/** Callback function invoked when a plane's hover state changes */
 	onHoverChange: (name: string | null) => void;
-	scrollVelocity: number; // <-- Add prop
+	scrollVelocity: number;
 }
 
 /**
@@ -450,93 +423,79 @@ export interface ScrollingPlanesHandle {
  * React component wrapper for the `animatedShaderMaterial`.
  * Manages updating shader uniforms via `useFrame` and handles texture updates.
  */
-const AnimatedMaterial: React.FC<AnimatedMaterialProps> = ({
-	texture,
-	planeScrollAxisPos,
-	viewportScrollAxisLength,
-	planeFixedAxisPos,
-	viewportFixedAxisLength,
-	layoutMode,
-	initialAnimProgress,
-	assetLoaded,
-	aspect,
-	u_visibilityFade = MATERIAL.visibility.fade,
-	grainIntensity = MATERIAL.grain.intensity,
-	grainScale = MATERIAL.grain.scale,
-	grainSpeed = MATERIAL.grain.speed,
-	scrollVelocity, // <-- Pass initial value
-	...props // Pass any other standard material props
-}) => {
-	const materialRef = useRef<THREE.ShaderMaterial>(null!); // Use THREE.ShaderMaterial type
+const AnimatedMaterial: React.FC<AnimatedMaterialProps> = React.memo(
+	({
+		texture,
+		planeScrollAxisPos,
+		viewportScrollAxisLength,
+		planeFixedAxisPos,
+		viewportFixedAxisLength,
+		initialAnimProgress,
+		assetLoaded,
+		aspect,
+		grainIntensity = MATERIAL.grain.intensity,
+		grainScale = MATERIAL.grain.scale,
+		grainSpeed = MATERIAL.grain.speed,
+		scrollVelocity,
+		...props
+	}) => {
+		const materialRef = useRef<THREE.ShaderMaterial>(null!); // Use THREE.ShaderMaterial type
 
-	// Update uniforms efficiently
-	useFrame((_, delta) => {
-		if (materialRef.current) {
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_time.value += delta;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_planeScrollAxisPos.value = planeScrollAxisPos;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_viewportScrollAxisLength.value = viewportScrollAxisLength;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_planeFixedAxisPos.value = planeFixedAxisPos;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_viewportFixedAxisLength.value = viewportFixedAxisLength;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_layoutMode.value = layoutMode;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_initialAnimProgress.value = initialAnimProgress;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_assetLoaded.value = assetLoaded;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_aspect.value = aspect;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_visibilityFade.value = u_visibilityFade;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_grainIntensity.value = grainIntensity;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_grainScale.value = grainScale;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_grainSpeed.value = grainSpeed;
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.u_scrollVelocity.value = scrollVelocity; // <-- Update uniform
-		}
-	});
+		// Update uniforms efficiently
+		useFrame((_, delta) => {
+			if (materialRef.current) {
+				const uniforms = materialRef.current.uniforms as Record<keyof AnimatedMaterialUniforms, THREE.IUniform<any>>; // Type assertion
+				uniforms.u_time.value = (uniforms.u_time.value as number) + delta;
+				uniforms.u_planeScrollAxisPos.value = planeScrollAxisPos;
+				uniforms.u_viewportScrollAxisLength.value = viewportScrollAxisLength;
+				uniforms.u_planeFixedAxisPos.value = planeFixedAxisPos;
+				uniforms.u_viewportFixedAxisLength.value = viewportFixedAxisLength;
+				uniforms.u_layoutMode.value = 0; // Always vertical
+				uniforms.u_initialAnimProgress.value = initialAnimProgress;
+				uniforms.u_assetLoaded.value = assetLoaded;
+				uniforms.u_aspect.value = aspect;
+				uniforms.u_grainIntensity.value = grainIntensity;
+				uniforms.u_grainScale.value = grainScale;
+				uniforms.u_grainSpeed.value = grainSpeed;
+				uniforms.u_scrollVelocity.value = scrollVelocity;
+			}
+		});
 
-	useEffect(() => {
-		if (materialRef.current) {
-			// @ts-expect-error - ShaderMaterial uniforms not properly typed
-			materialRef.current.uniforms.map.value = texture;
-		}
-	}, [texture]);
+		useEffect(() => {
+			if (materialRef.current) {
+				(materialRef.current.uniforms as Record<keyof AnimatedMaterialUniforms, THREE.IUniform<any>>).map.value = texture;
+			}
+		}, [texture]);
 
-	return (
-		// @ts-expect-error - Custom extended shader material not correctly typed by `extend`
-		<animatedShaderMaterial
-			ref={materialRef}
-			key={AnimatedShaderMaterial.key}
-			attach="material"
-			map={texture} // Initial map uniform set
-			u_planeScrollAxisPos={planeScrollAxisPos}
-			u_viewportScrollAxisLength={viewportScrollAxisLength}
-			u_planeFixedAxisPos={planeFixedAxisPos}
-			u_viewportFixedAxisLength={viewportFixedAxisLength}
-			u_layoutMode={layoutMode}
-			u_initialAnimProgress={initialAnimProgress}
-			u_assetLoaded={assetLoaded}
-			u_aspect={aspect}
-			u_scrollVelocity={scrollVelocity} // <-- Pass initial value
-			u_visibilityFade={u_visibilityFade}
-			u_grainIntensity={grainIntensity}
-			u_grainScale={grainScale}
-			u_grainSpeed={grainSpeed}
-			transparent // MUST be true for alpha blending
-			side={THREE.DoubleSide} // Assuming double sided planes
-			toneMapped={false} // Match original Video/Image materials
-			{...props}
-		/>
-	);
-};
+		return (
+			// @ts-expect-error - Custom extended shader material not correctly typed by `extend`
+			<animatedShaderMaterial
+				ref={materialRef}
+				key={AnimatedShaderMaterial.key}
+				attach="material"
+				map={texture}
+				u_planeScrollAxisPos={planeScrollAxisPos}
+				u_viewportScrollAxisLength={viewportScrollAxisLength}
+				u_planeFixedAxisPos={planeFixedAxisPos}
+				u_viewportFixedAxisLength={viewportFixedAxisLength}
+				u_layoutMode={0} // Fixed to vertical
+				u_initialAnimProgress={initialAnimProgress}
+				u_assetLoaded={assetLoaded}
+				u_aspect={aspect}
+				u_scrollVelocity={scrollVelocity}
+				u_grainIntensity={grainIntensity}
+				u_grainScale={grainScale}
+				u_grainSpeed={grainSpeed}
+				transparent
+				side={THREE.DoubleSide}
+				toneMapped={false}
+				{...props}
+			/>
+		);
+	},
+);
+
+AnimatedMaterial.displayName = 'AnimatedMaterial';
 
 // =============================================
 // MEDIA COMPONENTS
@@ -552,7 +511,6 @@ const ImagePlaneContent: FC<PlaneContentProps> = React.memo(
 		viewportScrollAxisLength,
 		planeFixedAxisPos,
 		viewportFixedAxisLength,
-		layoutMode,
 		initialAnimProgress,
 		aspect,
 		fallbackMaterial,
@@ -560,7 +518,7 @@ const ImagePlaneContent: FC<PlaneContentProps> = React.memo(
 		grainScale,
 		grainSpeed,
 		onAssetLoaded,
-		scrollVelocity, // <-- Get prop
+		scrollVelocity,
 	}) => {
 		const [assetLoaded, setAssetLoaded] = useState(0);
 		const startTimeRef = useRef<number | null>(null);
@@ -614,14 +572,14 @@ const ImagePlaneContent: FC<PlaneContentProps> = React.memo(
 				viewportScrollAxisLength={viewportScrollAxisLength}
 				planeFixedAxisPos={planeFixedAxisPos}
 				viewportFixedAxisLength={viewportFixedAxisLength}
-				layoutMode={layoutMode}
 				initialAnimProgress={initialAnimProgress}
 				assetLoaded={assetLoaded}
 				aspect={aspect}
 				grainIntensity={grainIntensity}
 				grainScale={grainScale}
 				grainSpeed={grainSpeed}
-				scrollVelocity={scrollVelocity} // <-- Pass prop
+				scrollVelocity={scrollVelocity}
+				u_layoutMode={0} // Match uniform name
 			/>
 		) : (
 			fallbackMaterial
@@ -640,7 +598,6 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 		viewportScrollAxisLength,
 		planeFixedAxisPos,
 		viewportFixedAxisLength,
-		layoutMode,
 		initialAnimProgress,
 		aspect,
 		fallbackMaterial,
@@ -648,7 +605,7 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 		grainScale,
 		grainSpeed,
 		onAssetLoaded,
-		scrollVelocity, // <-- Get prop
+		scrollVelocity,
 	}) => {
 		const [assetLoaded, setAssetLoaded] = useState(0);
 		const startTimeRef = useRef<number | null>(null);
@@ -805,14 +762,14 @@ const VideoPlaneContent: FC<PlaneContentProps> = React.memo(
 				viewportScrollAxisLength={viewportScrollAxisLength}
 				planeFixedAxisPos={planeFixedAxisPos}
 				viewportFixedAxisLength={viewportFixedAxisLength}
-				layoutMode={layoutMode}
 				initialAnimProgress={initialAnimProgress}
 				assetLoaded={assetLoaded}
 				aspect={aspect}
 				grainIntensity={grainIntensity}
 				grainScale={grainScale}
 				grainSpeed={grainSpeed}
-				scrollVelocity={scrollVelocity} // <-- Pass prop
+				scrollVelocity={scrollVelocity}
+				u_layoutMode={0} // Match uniform name
 			/>
 		) : (
 			fallbackMaterial
@@ -833,20 +790,19 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 	({
 		item,
 		position,
-		layoutMode,
 		disableMedia,
 		onHoverChange,
 		viewportScrollAxisLength,
 		viewportFixedAxisLength,
-		dimensions, // Use pre-calculated dimensions
-		aspect, // Use pre-calculated aspect ratio
+		dimensions,
+		aspect,
 		grainIntensity = MATERIAL.grain.intensity,
 		grainScale = MATERIAL.grain.scale,
 		grainSpeed = MATERIAL.grain.speed,
-		scrollVelocity, // <-- Get prop
+		scrollVelocity,
 	}) => {
 		const groupRef = useRef<THREE.Group>(null!); // Use THREE.Group type
-		const [initialAnimProgress, setInitialAnimProgress] = useState(0); // 0 to 1
+		const [initialAnimProgress, setInitialAnimProgress] = useState(0);
 		const [isMounted, setIsMounted] = useState(false);
 		const startTimeRef = useRef<number | null>(null);
 
@@ -899,19 +855,19 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 
 			const contentProps = {
 				url: item.url,
-				planeScrollAxisPos: layoutMode === 'vertical' ? position.y : position.x,
+				planeScrollAxisPos: position.y,
 				viewportScrollAxisLength: viewportScrollAxisLength,
-				planeFixedAxisPos: layoutMode === 'vertical' ? position.x : position.y,
+				planeFixedAxisPos: position.x,
 				viewportFixedAxisLength: viewportFixedAxisLength,
-				layoutMode: layoutMode === 'vertical' ? 0 : 1,
 				initialAnimProgress: initialAnimProgress,
-				aspect: aspect, // Pass pre-calculated aspect
+				aspect: aspect,
 				fallbackMaterial: fallbackMaterial,
 				grainIntensity: grainIntensity,
 				grainScale: grainScale,
 				grainSpeed: grainSpeed,
 				onAssetLoaded: handleAssetLoaded,
-				scrollVelocity: scrollVelocity, // <-- Pass prop
+				scrollVelocity: scrollVelocity,
+				layoutMode: 0, // Fixed to vertical
 			};
 
 			if (item.mediaType === 'video') {
@@ -929,7 +885,7 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 					// Scale uses pre-calculated dimensions
 					scale={[dimensions[0], dimensions[1], 1]}
 					// Adjust position calculation to properly center planes based on layout mode
-					position={[layoutMode === 'vertical' ? dimensions[0] / 2 : 0, layoutMode === 'vertical' ? 0 : dimensions[1] / 2, 0]}
+					position={[0, 0, 0]}
 				>
 					<planeGeometry />
 					<Suspense fallback={fallbackMaterial}>{renderContent()}</Suspense>
@@ -942,7 +898,6 @@ const PlaneWrapper: FC<PlaneWrapperProps> = React.memo(
 		return (
 			prevProps.item.id === nextProps.item.id &&
 			prevProps.position.equals(nextProps.position) &&
-			prevProps.layoutMode === nextProps.layoutMode &&
 			prevProps.disableMedia === nextProps.disableMedia &&
 			prevProps.viewportScrollAxisLength === nextProps.viewportScrollAxisLength &&
 			prevProps.viewportFixedAxisLength === nextProps.viewportFixedAxisLength &&
@@ -959,7 +914,7 @@ PlaneWrapper.displayName = 'PlaneWrapper';
 // SCROLLING SYSTEM
 // =============================================
 
-const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(({ galleryItems, layoutMode, disableMedia, isTouchDevice: _isTouchDevice, onHoverChange }, ref) => {
+const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(({ galleryItems, disableMedia, isTouchDevice: _isTouchDevice, onHoverChange }, ref) => {
 	const { camera, size } = useThree();
 
 	const scrollSpring = useSpring(0, {
@@ -972,113 +927,74 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 	const [isInitialized, setIsInitialized] = useState(false); // Keep this flag
 	const viewportScrollAxisLengthRef = useRef<number>(0);
 	const viewportFixedAxisLengthRef = useRef<number>(0);
-	const fixedAxisPositionRef = useRef<number>(0);
 	const totalContentLengthRef = useRef<number>(0);
 	const currentScrollVelocityRef = useRef(0); // Ref to store latest velocity
 
 	// Calculate viewport dimensions AND initialize plane states whenever items, size, or layoutMode changes
 	useEffect(() => {
-		logger.info('Recalculating viewport and initializing/updating plane states...');
-		// Calculate viewport dimensions (same as before)
+		logger.info('Recalculating viewport and initializing/updating plane states for FullScreen...');
 		const cameraZ = camera.position.z;
 		const vFov = THREE.MathUtils.degToRad((camera as THREE.PerspectiveCamera).fov);
 		const visibleHeight = 2 * Math.tan(vFov / 2) * cameraZ;
 		const aspectRatio = size.width / size.height;
 		const visibleWidth = visibleHeight * aspectRatio;
 
-		// --- START NEW INITIALIZATION LOGIC ---
 		if (galleryItems.length === 0 || size.width === 0 || size.height === 0) {
-			setPlaneStates([]); // Clear states if no items or size
+			setPlaneStates([]);
 			setIsInitialized(false);
 			return;
 		}
 
-		// Update viewport refs based on layout mode
-		if (layoutMode === 'vertical') {
-			viewportScrollAxisLengthRef.current = visibleHeight;
-			viewportFixedAxisLengthRef.current = visibleWidth;
-			fixedAxisPositionRef.current = -visibleWidth / 2 + SCENE.leftPadding;
-		} else {
-			viewportScrollAxisLengthRef.current = visibleWidth;
-			viewportFixedAxisLengthRef.current = visibleHeight;
-			fixedAxisPositionRef.current = -visibleHeight / 2 + SCENE.horizontalOffset;
-		}
+		// For fullscreen, layoutMode is always vertical
+		viewportScrollAxisLengthRef.current = visibleHeight;
+		viewportFixedAxisLengthRef.current = visibleWidth;
 
-		logger.info('Viewport/edge positions updated', {
-			fixedAxisPosition: fixedAxisPositionRef.current,
-			viewportScrollAxisLength: viewportScrollAxisLengthRef.current,
-			viewportFixedAxisLength: viewportFixedAxisLengthRef.current,
-			layoutMode,
-		});
-
-		// Calculate scaled dimensions and initial positions directly from galleryItems
-		let calculatedTotalLength = 0;
-		const newPlaneStates: PlaneState[] = [];
-		const fixedPos = fixedAxisPositionRef.current;
+		const fixedXPosition = 0; // Centered for full-width planes
 		const z = 0;
+		const verticalGap = visibleHeight * SCENE.verticalGapFactor;
 
-		// Helper to calculate scaled dimensions based on mode and item aspect ratio
-		const calculateScaledDimensions = (itemAspectRatio: number): [number, number] => {
-			const ratio = itemAspectRatio;
-			if (layoutMode === 'vertical') {
-				const height = SCENE.planeHeight;
-				const width = height * ratio;
-				return [width, height];
-			} else {
-				// Horizontal
-				// NOTE: Using the same fixed height logic as before for horizontal
-				const height = viewportFixedAxisLengthRef.current * 0.2; // 20% of viewport height
-				const width = height * ratio;
-				return [width, height];
-			}
-		};
-
-		// Iterate through galleryItems to calculate dimensions and total length
 		const itemsWithDimensions = galleryItems.map((item) => {
-			const itemAspect = item.aspectRatio ?? (item.width && item.height ? item.width / item.height : 1); // Fallback aspect ratio
+			const itemAspect = item.aspectRatio ?? (item.width && item.height ? item.width / item.height : 1);
 			if (!item.aspectRatio && !(item.width && item.height)) {
 				logger.warn(`Missing dimensions/aspectRatio for item ${item.id ?? item.title}, defaulting to square.`);
 			}
-			const dims = calculateScaledDimensions(itemAspect);
-			const gap = SCENE.verticalGap - SCENE.planeHeight; // Gap is defined relative to plane height
-			const itemLength = layoutMode === 'vertical' ? dims[1] : dims[0]; // Define itemLength based on layout mode
-			const itemLengthWithGap = itemLength + gap;
-			return { item, dims, aspect: itemAspect, itemLengthWithGap };
+			const planeWidth = viewportFixedAxisLengthRef.current; // Full viewport width
+			const planeHeight = planeWidth / itemAspect;
+			const itemLengthWithGap = planeHeight + verticalGap;
+			return { item, dims: [planeWidth, planeHeight] as [number, number], aspect: itemAspect, itemLengthWithGap };
 		});
 
-		calculatedTotalLength = itemsWithDimensions.reduce((sum, data) => sum + Math.max(0, data.itemLengthWithGap), 0);
+		const calculatedTotalLength = itemsWithDimensions.reduce((sum, data) => sum + data.itemLengthWithGap, 0) - verticalGap; // Subtract last gap
 		totalContentLengthRef.current = calculatedTotalLength;
-		logger.info('Total content length calculated from item data', { calculatedTotalLength });
 
 		const startOffset = calculatedTotalLength / 2;
 		let accumulatedOffset = 0;
+		const newPlaneStates: PlaneState[] = [];
 
-		// Create the plane states
 		for (let i = 0; i < itemsWithDimensions.length; i++) {
 			const { item, dims, aspect, itemLengthWithGap } = itemsWithDimensions[i]!;
-			const itemCenterOffset = (layoutMode === 'vertical' ? dims[1] : dims[0]) / 2;
+			const itemCenterOffset = dims[1] / 2; // Height is dims[1]
 			const baseScrollAxisPos = startOffset - accumulatedOffset - itemCenterOffset;
-			accumulatedOffset += Math.max(0, itemLengthWithGap);
+			accumulatedOffset += itemLengthWithGap;
 
 			newPlaneStates.push({
-				id: `plane-${item.id ?? i}-${layoutMode}`,
+				id: `plane-fs-${item.id ?? i}`,
 				itemIndex: i,
 				initialScrollAxisPos: baseScrollAxisPos,
-				fixedAxisPos: fixedPos,
+				fixedAxisPos: fixedXPosition,
 				z: z,
-				currentScrollAxisPos: baseScrollAxisPos, // Initial position before scroll
+				currentScrollAxisPos: baseScrollAxisPos,
 				dimensions: dims,
 				aspect: aspect,
-				scrollVelocity: 0.0, // <-- Initialize new uniform
+				scrollVelocity: 0.0,
 			});
 		}
 
 		setPlaneStates(newPlaneStates);
 		setIsInitialized(true);
-		scrollSpring.set(0, false); // Reset scroll on re-initialization
-		logger.info(`Initialization/update complete. ${newPlaneStates.length} planes configured.`);
-		// --- END NEW INITIALIZATION LOGIC ---
-	}, [galleryItems, layoutMode, size.width, size.height, camera, scrollSpring]); // Dependencies updated
+		scrollSpring.set(0, false);
+		logger.info(`FullScreen Initialization complete. ${newPlaneStates.length} planes configured.`);
+	}, [galleryItems, windowSize.width, windowSize.height, camera, scrollSpring]);
 
 	// Expose scroll control method via ref (same as before)
 	useImperativeHandle(ref, () => ({
@@ -1101,51 +1017,31 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 		if (!isInitialized || planeStates.length === 0 || totalContentLengthRef.current <= 0) return;
 
 		const currentScroll = scrollSpring.get();
-		currentScrollVelocityRef.current = scrollSpring.getVelocity(); // <-- Correctly get velocity
+		currentScrollVelocityRef.current = scrollSpring.getVelocity();
 		const halfViewportScroll = viewportScrollAxisLengthRef.current / 2;
 		const actualTotalLength = totalContentLengthRef.current;
-		const currentFixedPos = fixedAxisPositionRef.current; // Use the ref directly
 
-		// Debug logging for horizontal layout (same as before)
-		if (layoutMode === 'horizontal' && planeStates.length > 0) {
-			const firstItem = planeStates[0];
-			if (firstItem) {
-				logger.info('HORIZONTAL PLANE POSITION:', {
-					currentScroll,
-					itemFixedPos: firstItem.fixedAxisPos,
-					itemScrollPos: firstItem.currentScrollAxisPos,
-					halfViewportScroll,
-					viewportFixedAxisLength: viewportFixedAxisLengthRef.current,
-				});
-			}
-		}
-
-		// Update loop (same recycling logic as before)
 		setPlaneStates((prevStates) =>
 			prevStates.map((state) => {
 				let newInitialScrollAxisPos = state.initialScrollAxisPos;
 				const currentRelativeScrollPos = state.initialScrollAxisPos - currentScroll;
+				const planeHeight = state.dimensions[1];
+				const recycleBuffer = viewportScrollAxisLengthRef.current * SCENE.recycleBufferFactor;
 
-				const planeLengthOnScrollAxis = layoutMode === 'vertical' ? state.dimensions[1] : state.dimensions[0];
-				// Using fixed buffer value now, adjust if needed
-				const recycleBuffer = SCENE.recycleBuffer * SCENE.planeHeight; // Use base planeHeight for buffer
-
-				// --- Recycling Logic --- (same as before)
-				if (currentRelativeScrollPos - planeLengthOnScrollAxis / 2 > halfViewportScroll + recycleBuffer) {
-					newInitialScrollAxisPos = state.initialScrollAxisPos - actualTotalLength;
-				} else if (currentRelativeScrollPos + planeLengthOnScrollAxis / 2 < -halfViewportScroll - recycleBuffer) {
-					newInitialScrollAxisPos = state.initialScrollAxisPos + actualTotalLength;
+				if (currentRelativeScrollPos - planeHeight / 2 > halfViewportScroll + recycleBuffer) {
+					newInitialScrollAxisPos -= actualTotalLength;
+				} else if (currentRelativeScrollPos + planeHeight / 2 < -halfViewportScroll - recycleBuffer) {
+					newInitialScrollAxisPos += actualTotalLength;
 				}
 
 				const finalCurrentScrollAxisPos = newInitialScrollAxisPos - currentScroll;
 
-				// Update state only if position or fixed position changes (same as before)
 				return {
 					...state,
-					initialScrollAxisPos: newInitialScrollAxisPos, // Update even if same, recycling logic depends on it
+					initialScrollAxisPos: newInitialScrollAxisPos,
 					currentScrollAxisPos: finalCurrentScrollAxisPos,
-					fixedAxisPos: currentFixedPos,
-					scrollVelocity: currentScrollVelocityRef.current, // <-- Always pass current velocity
+					fixedAxisPos: 0, // Always centered for X
+					scrollVelocity: currentScrollVelocityRef.current,
 				};
 			}),
 		);
@@ -1158,22 +1054,21 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 				const item = galleryItems[state.itemIndex];
 				if (!item) return null;
 
-				const position =
-					layoutMode === 'vertical' ? new THREE.Vector3(state.fixedAxisPos, state.currentScrollAxisPos, state.z) : new THREE.Vector3(state.currentScrollAxisPos, state.fixedAxisPos, state.z);
+				const position = new THREE.Vector3(state.fixedAxisPos, state.currentScrollAxisPos, state.z);
 
 				return (
 					<PlaneWrapper
 						key={state.id}
 						item={item}
 						position={position}
-						layoutMode={layoutMode}
 						disableMedia={disableMedia}
 						onHoverChange={onHoverChange}
 						viewportScrollAxisLength={viewportScrollAxisLengthRef.current}
 						viewportFixedAxisLength={viewportFixedAxisLengthRef.current}
 						dimensions={state.dimensions}
 						aspect={state.aspect}
-						scrollVelocity={state.scrollVelocity} // <-- Pass prop
+						scrollVelocity={state.scrollVelocity}
+						layoutMode="vertical" // Fixed for fullscreen
 					/>
 				);
 			})}
@@ -1187,11 +1082,10 @@ ScrollingPlanes.displayName = 'ScrollingPlanes';
 // MAIN COMPONENT
 // =============================================
 
-const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
+const CreationContentFull: FC<CreationContentProps> = ({ galleryItems }) => {
 	const [dprValue, setDprValue] = useState(1);
 	const [isTouchDevice, setIsTouchDevice] = useState(false);
 	const [hoveredName, setHoveredName] = useState<string | null>(null);
-	const [layoutMode, setLayoutMode] = useState<LayoutMode>('vertical');
 	const inputState = useInputState();
 	const windowSize = useWindowSize();
 	const disableMedia = useMemo(() => FEATURES.disableMedia, []);
@@ -1216,12 +1110,11 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	useEffect(() => {
 		if (windowSize.width !== undefined) {
 			const newMode = windowSize.width >= 1024 ? 'vertical' : 'horizontal';
-			if (newMode !== layoutMode) {
+			if (newMode !== 'vertical') {
 				logger.info(`Layout mode changed to: ${newMode} (window width: ${windowSize.width}px)`);
-				setLayoutMode(newMode);
 			}
 		}
-	}, [windowSize.width, layoutMode]);
+	}, [galleryItems, windowSize.width, windowSize.height]);
 
 	const handleHoverChange = useCallback((name: string | null) => {
 		setHoveredName(name);
@@ -1236,10 +1129,10 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 				url: item.url || '',
 				mediaType: item.mediaType || 'image',
 			}));
-			logger.info(`Using ${processedItems.length} gallery items with pre-fetched dimensions`);
+			logger.info(`Using ${processedItems.length} gallery items (FullScreen)`);
 			return processedItems as GalleryItem[];
 		} else {
-			logger.info('No gallery items provided.');
+			logger.info('No gallery items provided (FullScreen).');
 			return [];
 		}
 	}, [galleryItems]);
@@ -1257,25 +1150,12 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 		(event: React.TouchEvent<HTMLDivElement>) => {
 			if (event.touches.length > 0 && lastTouchMoveRef.current && scrollPlanesRef.current) {
 				const touch = event.touches[0]!;
-				const currentX = touch.clientX;
-				const currentY = touch.clientY;
-				const lastX = lastTouchMoveRef.current.x;
-				const lastY = lastTouchMoveRef.current.y;
-
-				const deltaX = currentX - lastX;
-				const deltaY = currentY - lastY;
-
-				// Determine scroll delta based on layout mode
-				const scrollDelta = layoutMode === 'vertical' ? -deltaY : -deltaX;
-
-				// Apply scroll using the exposed ref method
-				scrollPlanesRef.current.addScroll(scrollDelta * touchScrollMultiplier);
-
-				// Update last touch position for the next move calculation
-				lastTouchMoveRef.current = { x: currentX, y: currentY };
+				const deltaY = touch.clientY - lastTouchMoveRef.current.y;
+				scrollPlanesRef.current.addScroll(-deltaY * touchScrollMultiplier);
+				lastTouchMoveRef.current = { x: touch.clientX, y: touch.clientY };
 			}
 		},
-		[layoutMode, touchScrollMultiplier], // Dependency includes layoutMode
+		[touchScrollMultiplier],
 	);
 
 	const handleTouchEnd = useCallback(() => {
@@ -1305,7 +1185,7 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 					frameloop="always"
 					onCreated={({ gl }) => {
 						gl.setClearColor('#ffffff');
-						logger.info('Canvas created');
+						logger.info('FullScreen Canvas created');
 					}}
 					style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
 				>
@@ -1313,13 +1193,13 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 						<ambientLight intensity={0.8} />
 						<directionalLight position={[5, 15, 10]} intensity={1.2} />
 						<ScrollingPlanes
-							ref={scrollPlanesRef} // Assign ref
+							ref={scrollPlanesRef}
 							galleryItems={items}
-							layoutMode={layoutMode}
 							disableMedia={disableMedia}
 							isTouchDevice={isTouchDevice}
 							onHoverChange={handleHoverChange}
-							scrollVelocity={0.0} // <-- Pass initial value
+							scrollVelocity={0.0}
+							layoutMode="vertical" // Fixed for fullscreen
 						/>
 						<Effects />
 					</Suspense>
@@ -1328,7 +1208,7 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 
 			{hoveredName && (
 				<span
-					className="pointer-events-none absolute z-100 whitespace-nowrap text-white opacity-100 mix-blend-difference transition-opacity duration-200 ease-out select-none"
+					className="pointer-events-none absolute z-100 bg-white whitespace-nowrap text-black opacity-100 transition-opacity duration-200 ease-out select-none"
 					style={{
 						left: `${inputState.pixel.x + 3}px`,
 						top: `${inputState.pixel.y - 14}px`,
@@ -1341,4 +1221,4 @@ const CreationContent: FC<CreationContentProps> = ({ galleryItems }) => {
 	);
 };
 
-export default CreationContent;
+export default CreationContentFull;

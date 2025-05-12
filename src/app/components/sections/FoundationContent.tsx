@@ -19,19 +19,15 @@ const CONTENT = {
 	introduction: [
 		'Incomplete Infinity is an evolving, multifaceted creative practice working with companies and institutions in pursuit of a better future. Embracing an enigmatic style, creates work that is completed by the viewer and lives on in their minds.',
 
-		'It crafts aesthetic experiences that wait, suspended, until you step into the frame. It reveals and conceals simultaneously. It offers structure while refusing closure. It embodies the paradox embedded in its name — stretches toward boundlessness while remaining perpetually beyond complete comprehension.',
-
 		'It operates in the deliberate pause, dwells in the charged moment.',
 
-		'It rejects the obvious intersections, inhabits the unmapped territories, ventures where conventional disciplines dare not, thrives in fertile absences.',
+		'It rejects the obvious intersections, searches for the unmapped territories.',
 
-		'It chooses to inhabit the space between chaos and order, between revelation and mystery, the shadows between what is seen and what is felt.',
+		'It inhabit the shadows between what is seen and what is felt.',
 
 		'It finds in the unresolved not deficiency, but authenticity.',
 
-		'',
-
-		'It expresses reality itself... in incomplete form.',
+		'It expresses itself... in incomplete form.',
 
 		"After all, isn't true infinity always incomplete?",
 	],
@@ -144,7 +140,7 @@ const DetailsSection: FC = (): JSX.Element => {
 			<div
 				className={clsx(
 					'col-span-1 flex flex-col justify-between space-y-4',
-					'order-3 md:order-2', // Responsive order
+					'order-3 md:order-3', // Responsive order
 				)}
 			>
 				{/* Services Title */}
@@ -164,7 +160,7 @@ const DetailsSection: FC = (): JSX.Element => {
 			<div
 				className={clsx(
 					'col-span-1 flex flex-col justify-between space-y-4',
-					'order-2 md:order-1', // Responsive order
+					'order-2 md:order-2', // Responsive order
 				)}
 			>
 				{/* Contact Links */}
@@ -188,7 +184,7 @@ const DetailsSection: FC = (): JSX.Element => {
 			<div
 				className={clsx(
 					'col-span-1 flex flex-col justify-between space-y-4',
-					'hidden md:order-3 md:flex', // Hidden on mobile
+					'hidden md:order-1 md:flex', // Hidden on mobile
 				)}
 			>
 				{/* Clients Title */}

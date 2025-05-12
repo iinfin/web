@@ -24,6 +24,7 @@ export default function Home(): JSX.Element {
 
 						// Desktop layout
 						'lg:col-span-5 lg:col-start-1 lg:row-span-full lg:row-start-1',
+						// 'lg:col-span-full lg:col-start-1 lg:row-span-full lg:row-start-1',
 					)}
 				>
 					<Creation />
