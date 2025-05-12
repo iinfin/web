@@ -994,7 +994,7 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 		setIsInitialized(true);
 		scrollSpring.set(0, false);
 		logger.info(`FullScreen Initialization complete. ${newPlaneStates.length} planes configured.`);
-	}, [galleryItems, windowSize.width, windowSize.height, camera, scrollSpring]);
+	}, [galleryItems, size.width, size.height, camera, scrollSpring]);
 
 	// Expose scroll control method via ref (same as before)
 	useImperativeHandle(ref, () => ({
