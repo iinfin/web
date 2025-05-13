@@ -1,3 +1,14 @@
+# [1.5.0](https://github.com/iinfin/web/compare/v1.4.0...v1.5.0) (2025-05-12)
+
+### Bug Fixes
+
+- **build:** resolve build errors and eslint warnings ([f876d19](https://github.com/iinfin/web/commit/f876d19fd1f29b845693308ee122fbb3bf76e431))
+- **r3f:** correct dependency array in scrollingplanes component ([bd5d324](https://github.com/iinfin/web/commit/bd5d3241d9810c8d1f76f1eb08972129553038c4))
+
+### Features
+
+- **components:** implement 3d gallery view ([5b776f2](https://github.com/iinfin/web/commit/5b776f23b0d281a3526c4b294912d59d3dc49852))
+
 # [1.4.0](https://github.com/iinfin/web/compare/v1.3.0...v1.4.0) (2025-04-27)
 
 ### Bug Fixes
