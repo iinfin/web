@@ -1,8 +1,8 @@
 import type { FC } from 'react';
 
-// import CreationContent from '@/components/sections/CreationContent';
 // import CreationContentReel from '@/components/sections/CreationContentReel';
-import CreationContentFull from '@/components/sections/CreationContentFull';
+// import CreationContentFull from '@/components/sections/CreationContentFull';
+import CreationContent from '@/components/sections/CreationContent';
 
 import { getGalleryItems } from '@/lib/db';
 import type { GalleryItem } from '@/lib/db/types';
@@ -20,8 +20,8 @@ const Creation: FC = async (): Promise<JSX.Element> => {
 
 	return (
 		<section id="creation" className="relative h-full w-full overflow-hidden">
-			{/* <CreationContent galleryItems={galleryItems} /> */}
-			<CreationContentFull galleryItems={galleryItems} />
+			<CreationContent galleryItems={galleryItems} />
+			{/* <CreationContentFull galleryItems={galleryItems} /> */}
 			{/* <CreationContentReel /> */}
 		</section>
 	);
