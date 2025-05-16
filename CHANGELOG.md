@@ -1,3 +1,9 @@
+## [1.5.1](https://github.com/iinfin/web/compare/v1.5.0...v1.5.1) (2025-05-16)
+
+### Bug Fixes
+
+- **r3f:** update hover state during scroll without mouse movement ([717ce00](https://github.com/iinfin/web/commit/717ce001e39e1fbbfdbdb2ba151037d3bc99d853))
+
 # [1.5.0](https://github.com/iinfin/web/compare/v1.4.0...v1.5.0) (2025-05-12)
 
 ### Bug Fixes
