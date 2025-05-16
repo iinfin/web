@@ -960,7 +960,7 @@ PlaneWrapper.displayName = 'PlaneWrapper';
 // =============================================
 
 const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(({ galleryItems, layoutMode, disableMedia, isTouchDevice: _isTouchDevice, onHoverChange }, ref) => {
-	const { camera, size } = useThree();
+	const { camera, size, raycaster, mouse, scene } = useThree();
 
 	const scrollSpring = useSpring(0, {
 		stiffness: 100,
@@ -975,6 +975,7 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 	const fixedAxisPositionRef = useRef<number>(0);
 	const totalContentLengthRef = useRef<number>(0);
 	const currentScrollVelocityRef = useRef(0); // Ref to store latest velocity
+	const previousScrollRef = useRef<number>(0); // Track scroll position for detecting changes
 
 	// Calculate viewport dimensions AND initialize plane states whenever items, size, or layoutMode changes
 	useEffect(() => {
@@ -1096,27 +1097,51 @@ const ScrollingPlanes = forwardRef<ScrollingPlanesHandle, ScrollingPlanesProps>(
 		return () => window.removeEventListener('wheel', handleWheel);
 	}, [scrollSpring]);
 
-	// Main R3F frame loop (same as before, but relies on pre-calculated state)
+	// Main R3F frame loop - update to include raycasting
 	useFrame((_state) => {
 		if (!isInitialized || planeStates.length === 0 || totalContentLengthRef.current <= 0) return;
 
 		const currentScroll = scrollSpring.get();
-		currentScrollVelocityRef.current = scrollSpring.getVelocity(); // <-- Correctly get velocity
+		currentScrollVelocityRef.current = scrollSpring.getVelocity();
 		const halfViewportScroll = viewportScrollAxisLengthRef.current / 2;
 		const actualTotalLength = totalContentLengthRef.current;
-		const currentFixedPos = fixedAxisPositionRef.current; // Use the ref directly
+		const currentFixedPos = fixedAxisPositionRef.current;
 
-		// Debug logging for horizontal layout (same as before)
-		if (layoutMode === 'horizontal' && planeStates.length > 0) {
-			const firstItem = planeStates[0];
-			if (firstItem) {
-				logger.info('HORIZONTAL PLANE POSITION:', {
-					currentScroll,
-					itemFixedPos: firstItem.fixedAxisPos,
-					itemScrollPos: firstItem.currentScrollAxisPos,
-					halfViewportScroll,
-					viewportFixedAxisLength: viewportFixedAxisLengthRef.current,
-				});
+		// Check if scroll position has changed significantly enough to warrant a raycasting check
+		const SCROLL_THRESHOLD = 0.01; // Adjust as needed
+		const hasScrolled = Math.abs(currentScroll - previousScrollRef.current) > SCROLL_THRESHOLD;
+		previousScrollRef.current = currentScroll;
+
+		// If scrolled, perform raycasting to detect what's under the cursor
+		if (hasScrolled) {
+			// Cast ray from current mouse position
+			raycaster.setFromCamera(mouse, camera);
+			const intersects = raycaster.intersectObjects(scene.children, true);
+
+			// Find the first intersection with an object that has userData.itemId
+			for (let i = 0; i < intersects.length; i++) {
+				// Traverse up the object hierarchy to find a parent with itemId
+				let obj: THREE.Object3D | null = intersects[i]?.object || null;
+				while (obj && !obj.userData['itemId']) {
+					obj = obj.parent;
+				}
+
+				if (obj && obj.userData['itemId']) {
+					// Find the corresponding gallery item
+					const item = galleryItems.find((item) => item.id === obj?.userData['itemId']);
+					if (item && item.title) {
+						onHoverChange(item.title);
+						break;
+					}
+				} else if (i === intersects.length - 1) {
+					// If we reached the end without finding an item, clear hover state
+					onHoverChange(null);
+				}
+			}
+
+			// If no intersections at all, clear hover state
+			if (intersects.length === 0) {
+				onHoverChange(null);
 			}
 		}
 
