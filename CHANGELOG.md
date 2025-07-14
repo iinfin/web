@@ -1,3 +1,9 @@
+## [1.5.2](https://github.com/iinfin/web/compare/v1.5.1...v1.5.2) (2025-07-14)
+
+### Bug Fixes
+
+- **components:** remove all uses of any in animatedtextfadein for type safety ([c0282b9](https://github.com/iinfin/web/commit/c0282b96bd342d66ddfb5a51c84c7d114dcdcdfe))
+
 ## [1.5.1](https://github.com/iinfin/web/compare/v1.5.0...v1.5.1) (2025-05-16)
 
 ### Bug Fixes
