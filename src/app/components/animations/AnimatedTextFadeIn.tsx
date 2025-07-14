@@ -3,7 +3,7 @@
 import { type ElementType } from 'react';
 
 import { clsx } from 'clsx';
-import { motion, type Variants } from 'framer-motion';
+import { type Easing, motion, type Variants } from 'framer-motion';
 
 /**
  * Props for the AnimatedTextFadeIn component.
@@ -20,7 +20,7 @@ type AnimatedTextFadeInProps = {
 	/** Animation duration for each line reveal in seconds. Defaults to 0.6. */
 	duration?: number;
 	/** Easing function for the animation. Defaults to 'easeInOut'. */
-	ease?: string | number[];
+	ease?: Easing | Easing[];
 };
 
 /**
@@ -59,9 +59,15 @@ export function AnimatedTextFadeIn({ text, el: Wrapper = 'div', className, stagg
 		},
 	};
 
-	// Handle dynamic element types with motion
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	const MotionWrapper = typeof Wrapper === 'string' ? (motion as any)[Wrapper] : motion(Wrapper);
+	// Type-safe dynamic element types with motion
+	function getMotionWrapper(el: ElementType): React.ComponentType<any> {
+		if (typeof el === 'string' && el in motion) {
+			// @ts-expect-error: TypeScript can't infer this, but Framer Motion supports all HTML tags as keys
+			return motion[el];
+		}
+		return motion(el);
+	}
+	const MotionWrapper = getMotionWrapper(Wrapper);
 
 	return (
 		<MotionWrapper className={clsx('font-inherit', className)} variants={containerVariants} initial="hidden" animate="visible" aria-label={Array.isArray(text) ? text.join(' ') : text}>
