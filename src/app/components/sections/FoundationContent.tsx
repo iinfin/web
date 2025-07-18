@@ -18,17 +18,11 @@ const CONTENT = {
 	// Fixed introduction paragraph
 	introduction: [
 		'Incomplete Infinity is an evolving, multifaceted creative practice working with companies and institutions in pursuit of a better future. Embracing an enigmatic style, creates work that is completed by the viewer and lives on in their minds.',
-
 		'It operates in the deliberate pause, dwells in the charged moment.',
-
 		'It rejects the obvious intersections, searches for the unmapped territories.',
-
 		'It inhabit the shadows between what is seen and what is felt.',
-
 		'It finds in the unresolved not deficiency, but authenticity.',
-
 		'It expresses itself... in incomplete form.',
-
 		"After all, isn't true infinity always incomplete?",
 	],
 	// Lists for section content
