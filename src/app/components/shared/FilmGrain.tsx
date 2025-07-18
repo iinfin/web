@@ -124,11 +124,9 @@ export default function FilmGrain({ intensity: intensityProp, scale: scaleProp, 
 				// Multiple noise layers with slightly different frequencies and orientations
 				float noise1 = hash(uvScaled + t);
 				float noise2 = hash(uvScaled * 1.4 + t * 1.2);
-				float noise3 = hash(uvScaled * 0.8 - t * 0.7);
 
 				// Mix the layers for a more organic look
 				float grainLayer = mix(noise1, noise2, 0.4);
-				grainLayer = mix(grainLayer, noise3, 0.3);
 
 				// Curve the distribution for a more film-like appearance
 				return pow(grainLayer, 1.5);

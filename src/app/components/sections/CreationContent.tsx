@@ -193,7 +193,7 @@ const AnimatedShaderMaterial = shaderMaterial(
 		uniform int u_layoutMode;       // <-- Get layout mode uniform
 
 		// Constants for Motion Blur
-		const int NUM_SAMPLES = 9; // Number of samples for blur (adjust for quality/performance)
+		const int NUM_SAMPLES = 5; // Number of samples for blur (adjust for quality/performance)
 		const float MAX_BLUR_DISTANCE = 0.2; // Max UV offset for blur (adjust intensity)
 		const float VELOCITY_SCALE = 0.01; // Scale raw velocity to UV offset (adjust sensitivity)
 
