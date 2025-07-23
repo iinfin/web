@@ -1,6 +1,6 @@
 ---
 description: Web Performance Optimization and Core Web Vitals Rule
-globs: ["**/*.ts", "**/*.tsx", "next.config.ts"]
+globs: []
 alwaysApply: true
 ---
 <rule>

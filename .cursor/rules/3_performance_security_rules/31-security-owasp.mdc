@@ -1,6 +1,6 @@
 ---
 description: Web Application Security Best Practices (OWASP Inspired)
-globs: ["**/*.ts", "**/*.tsx", "src/app/**/route.ts", "src/middleware.ts"]
+globs: []
 alwaysApply: true
 ---
 <rule>

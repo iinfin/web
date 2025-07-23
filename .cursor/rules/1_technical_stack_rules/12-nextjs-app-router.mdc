@@ -1,6 +1,6 @@
 ---
 description: Next.js 15 App Router Conventions Rule
-globs: ["src/app/**/page.tsx", "src/app/**/layout.tsx", "src/app/**/loading.tsx", "src/app/**/error.tsx", "src/app/**/not-found.tsx", "src/app/**/route.ts", "next.config.ts", "src/middleware.ts"]
+globs: []
 alwaysApply: true
 ---
 <rule>

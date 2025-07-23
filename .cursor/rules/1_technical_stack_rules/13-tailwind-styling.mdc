@@ -1,6 +1,6 @@
 ---
 description: Tailwind CSS Styling Conventions Rule
-globs: ["**/*.tsx", "src/app/styles/global.css", "tailwind.config.ts"]
+globs: []
 alwaysApply: true
 ---
 <rule>

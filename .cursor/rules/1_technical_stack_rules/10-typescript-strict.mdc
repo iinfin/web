@@ -1,6 +1,6 @@
 ---
 description: TypeScript Strictness and Best Practices Rule
-globs: ["**/*.ts", "**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>

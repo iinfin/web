@@ -1,6 +1,6 @@
 ---
 description: Framer Motion Animation Best Practices Rule
-globs: ["**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>

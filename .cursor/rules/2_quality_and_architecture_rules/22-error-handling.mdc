@@ -1,6 +1,6 @@
 ---
 description: Robust Error Handling Rule
-globs: ["**/*.ts", "**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>

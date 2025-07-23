@@ -1,6 +1,6 @@
 ---
 description: React Component Design and Architecture Rule
-globs: ["src/app/components/**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>

@@ -1,6 +1,6 @@
 ---
 description: React Three Fiber (R3F) and Three.js Best Practices
-globs: ["**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>

@@ -1,6 +1,6 @@
 ---
 description: Code Commenting Standards Rule
-globs: ["**/*.ts", "**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>

@@ -1,6 +1,6 @@
 ---
 description: Code Quality and Linting (ESLint with xo/xo-typescript) Rule
-globs: ["**/*.ts", "**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>

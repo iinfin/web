@@ -1,6 +1,6 @@
 ---
 description: React 19 and Modern Patterns Rule
-globs: ["**/*.tsx"]
+globs: []
 alwaysApply: true
 ---
 <rule>
